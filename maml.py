@@ -6,6 +6,7 @@ import gym
 import numpy as np
 from gym.spaces import Box, Discrete
 import setup
+import os 
 from algos.memory import Memory
 from algos.agents.vpg import VPG
 from algos.agents.ppo import PPO
@@ -73,7 +74,7 @@ def get_log(file_name):
     return logger
 
 
-def make_cart_env(seed):
+def make_cart_env(seed, env="CartPole-v0"):
     # need to tune
     mass = 0.1 * np.random.randn() + args.mass 
     print("a new env of mass:", mass)
@@ -84,12 +85,36 @@ def make_cart_env(seed):
     # check_env(env, warn=True)
     return env
 
-
-def make_lunar_env(seed):
+def make_lunar_env(seed, env="LunarLander-v2"):
     # need to tune
+    # mass = 0.1 * np.random.randn() + 1.0
+    # print("a new env of mass:", mass)
+    # env = NewCartPoleEnv(masscart=mass)
     goal = np.random.uniform(-1, 1)
     print("a new env of goal:", goal)
     env = NewLunarLander(goal=goal)
+    # check_env(env, warn=True)
+    return env
+
+def make_car_env(seed, env="MountainCarContinuous-v0"):
+    # need to tune
+    env = gym.make("MountainCarContinuous-v0")
+    return env
+
+def make_mujoco_env(seed, env="Swimmer"):
+    if env == "Swimmer":
+        env = SwimmerEnvRandVel()
+    elif env == "Halfcdir":
+        env = HalfCheetahEnvRandDir()
+    elif env == "Halfcvel":
+        env = HalfCheetahEnvRandVel()
+    elif env == "Antdir":
+        env = AntEnvRandDir()
+    elif env == "Antgol":
+        env = AntEnvRandGoal()
+    elif env == "Antvel":
+        env = AntEnvRandVel()
+#     check_env(env, warn=True)
     return env
 
 def make_env(env, seed):
@@ -97,20 +122,17 @@ def make_env(env, seed):
         env = make_cart_env(seed)
     elif env == "LunarLander-v2":
         env = make_lunar_env(seed)
+    elif env == 'Swimmer':
+        env = make_mujoco_env(seed, env_name)
     return env
 
-def make_mujoco_env(env="Swimmer"):
-    if env == "Swimmer":
-        env = SwimmerEnvRandVel()
-    elif env == "Antdir":
-        env = HalfCheetahEnvRandDir()
-#     check_env(env, warn=True)
-    return env
+
+envs = {'Swimmer':make_mujoco_env, 'LunarLander-v2': make_lunar_env, \
+    'CartPole-v0':make_cart_env}
 
 if __name__ == '__main__':
     ############## Hyperparameters ##############
-    env_name = args.env  # "LunarLander-v2"
-    env_name = "LunarLander-v2"
+    env_name = args.env  
     samples = args.samples
     max_episodes = args.episodes  # max training episodes
     max_steps = args.steps  # max timesteps in one episode
@@ -143,15 +165,13 @@ if __name__ == '__main__':
     if args.run >= 0:
         filename += "_run" + str(args.run)
 
+    if not os.path.exists(args.resdir):
+        os.makedirs(args.resdir) 
     rew_file = open(args.resdir + "maml_" + filename + ".txt", "w")
     meta_rew_file = open(args.resdir + "maml_" + "meta_" + filename + ".txt", "w")
 
     # env = gym.make(env_name)
-    # env = make_cart_env(args.seed)
-	if env_name == "Swimmer":
-		env = make_mujoco_env(env_name)
-	else:
-    	env = make_env(env_name, args.seed)
+    env = make_env(env_name, args.seed)
 
     if learner == "vpg":
         actor_policy = VPG(env.observation_space, env.action_space, hidden_sizes=hidden_sizes,
@@ -160,13 +180,7 @@ if __name__ == '__main__':
     meta_memory = Memory()
     for sample in range(samples):
         print("sample " + str(sample))
-        # env = make_cart_env(sample)
-		if env_name == "Swimmer":
-			env = make_mujoco_env(env_name)
-		else:
-			env = make_env(env_name, sample)
-		
-
+        env = make_env(env_name, sample)
         memory = Memory()
 
         start_episode = 0
@@ -202,8 +216,8 @@ if __name__ == '__main__':
         memory.clear_memory()
 
         # obtain meta_memory using updated policy_m
-		if env_name == "Swimmer":
-			meta_episodes = max_episodes
+        if env_name == "Swimmer":
+            meta_episodes = max_episodes
         for episode in range(start_episode, meta_episodes):
             state = env.reset()
             rewards = []

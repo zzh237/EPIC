@@ -157,12 +157,12 @@ if __name__ == '__main__':
     if env_name == 'Swimmer':
         filename = env_name + "_" + learner + "_s" + str(samples) + "_n" + str(max_episodes) \
             + "_every" + str(meta_update_every) \
-                + "_size" + str(hidden_sizes[0]) + "_c" + str(coeff) + "_tau" + str(tau) + "_usemodel" + str(use_model)
+                + "_size" + str(hidden_sizes[0]) + "_c" + str(coeff) + "_tau" + str(tau)
     else:
         filename = env_name + "_" + learner + "_s" + str(samples) + "_n" + str(max_episodes) \
             + "_every" + str(meta_update_every) + "_goal" + str(args.goal)\
             + "_size" + str(hidden_sizes[0]) + "_c" + str(coeff) + "_tau" + str(tau)\
-            + "_mass" + str(args.mass) + "_usemodel" + str(use_model)
+            + "_mass" + str(args.mass)
     if not use_meta:
         filename += "_nometa"
 
