@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import argparse
 import gym
+import os 
 # import mujoco_py
 import numpy as np
 from gym.spaces import Box, Discrete
@@ -31,7 +32,7 @@ current_time = now.strftime("%m-%d %H:%M:%S")
 parser = argparse.ArgumentParser()
 # change cpu to cuda if running on server
 parser.add_argument('--device', type=str, default="cpu")
-parser.add_argument('--run', type=int, default=-1)
+parser.add_argument('--run', type=int, default=0)
 # env settings
 # Swimmer for majuco environment
 parser.add_argument('--env', type=str, default="CartPole-v0")
@@ -78,7 +79,7 @@ def get_log(file_name):
     logger.addHandler(fh)  
     return logger
 
-def make_cart_env(seed):
+def make_cart_env(seed, env="CartPole-v0"):
     # need to tune
     mass = 0.1 * np.random.randn() + args.mass 
     print("a new env of mass:", mass)
@@ -88,7 +89,7 @@ def make_cart_env(seed):
     # env = NewCartPoleEnv(goal=goal)
     # check_env(env, warn=True)
     return env
-def make_lunar_env(seed):
+def make_lunar_env(seed, env="LunarLander-v2"):
     # need to tune
     # mass = 0.1 * np.random.randn() + 1.0
     # print("a new env of mass:", mass)
@@ -99,12 +100,12 @@ def make_lunar_env(seed):
     # check_env(env, warn=True)
     return env
 
-def make_car_env(seed):
+def make_car_env(seed, env="MountainCarContinuous-v0"):
     # need to tune
     env = gym.make("MountainCarContinuous-v0")
     return env
 
-def make_mujoco_env(env="Swimmer"):
+def make_mujoco_env(seed, env="Swimmer"):
     if env == "Swimmer":
         env = SwimmerEnvRandVel()
     elif env == "Halfcdir":
@@ -119,6 +120,9 @@ def make_mujoco_env(env="Swimmer"):
         env = AntEnvRandVel()
 #     check_env(env, warn=True)
     return env
+
+envs = {'Swimmer':make_mujoco_env, 'LunarLander-v2': make_lunar_env, \
+    'CartPole-v0':make_cart_env}
 
 if __name__ == '__main__':
     ############## Hyperparameters ##############
@@ -149,31 +153,30 @@ if __name__ == '__main__':
     use_model = False
     
     torch.cuda.empty_cache()
-    ########## file related 
-	if args.env_name == 'Swimmer':
-		filename = env_name + "_" + learner + "_s" + str(samples) + "_n" + str(max_episodes) \
-	        + "_every" + str(meta_update_every) \
-	        + "_size" + str(hidden_sizes[0]) + "_c" + str(coeff) + "_tau" + str(tau) + “_usemodel” + str(usemodel)
-	else:
-	    filename = env_name + "_" + learner + "_s" + str(samples) + "_n" + str(max_episodes) \
-	        + "_every" + str(meta_update_every) + "_goal" + str(args.goal)\
-	        + "_size" + str(hidden_sizes[0]) + "_c" + str(coeff) + "_tau" + str(tau)\
-			+ "_mass" + str(args.mass) + “_usemodel” + str(usemodel)
+    ########## file related ####
+    if env_name == 'Swimmer':
+        filename = env_name + "_" + learner + "_s" + str(samples) + "_n" + str(max_episodes) \
+            + "_every" + str(meta_update_every) \
+                + "_size" + str(hidden_sizes[0]) + "_c" + str(coeff) + "_tau" + str(tau) + "_usemodel" + str(use_model)
+    else:
+        filename = env_name + "_" + learner + "_s" + str(samples) + "_n" + str(max_episodes) \
+            + "_every" + str(meta_update_every) + "_goal" + str(args.goal)\
+            + "_size" + str(hidden_sizes[0]) + "_c" + str(coeff) + "_tau" + str(tau)\
+            + "_mass" + str(args.mass) + "_usemodel" + str(use_model)
     if not use_meta:
         filename += "_nometa"
-    # could remove this if using argument
-	args.run = 0
+
     if args.run >=0:
         filename += "_run" + str(args.run)
-        
+    
+    if not os.path.exists(args.resdir):
+        os.makedirs(args.resdir)  
     rew_file = open(args.resdir + filename + ".txt", "w")
     meta_rew_file = open(args.resdir + "meta_" + filename + ".txt", "w")
 
     # env = gym.make(env_name)
-	if args.env_name == 'Swimmer':
-		env = make_mujoco_env(env_name)
-	else:
-    	env = make_cart_env(args.seed)
+    envfunc = envs[env_name]
+    env = envfunc(args.seed, env_name)
 
     if learner == "vpg":
         print("-----initialize meta policy-------")
@@ -184,7 +187,7 @@ if __name__ == '__main__':
 
     if learner == "ppo":
         print("-----initialize meta policy-------")
-		# here we could also use PPO, need to check difference between them
+        # here we could also use PPO, need to check difference between them
         meta_policy = GaussianPPO(env.observation_space, env.action_space, meta_update_every,
                 hidden_sizes=hidden_sizes, activation=activation, gamma=gamma, device=device, 
                 learning_rate=lr, coeff=coeff, tau=tau)
@@ -192,16 +195,13 @@ if __name__ == '__main__':
         
     if use_model:
         model_list = []
-	else:
-		meta_memory = Memory()
+    else:
+        meta_memory = Memory()
     for sample in range(samples):
         print("#### Learning environment sample {}".format(sample))
         ########## creating environment
         # env = gym.make(env_name)
-		if args.env_name == 'Swimmer':
-			env = make_mujoco_env(env_name)
-        else:
-			env = make_cart_env(sample)
+        env = envfunc(env_name, args.seed)
         # env.seed(sample)
         
         ########## sample a meta learner
@@ -211,29 +211,29 @@ if __name__ == '__main__':
         
         ######### meta training
         if not use_model:
-			print("### meta learning")
-	        start_episode = 0
-	        for episode in range(start_episode, meta_episodes):
-	            state = env.reset()
-	            rewards = []
-	            for steps in range(max_steps):
-	                state_tensor, action_tensor, log_prob_tensor = sample_policy.act(state, device)
-	                if isinstance(env.action_space, Discrete):
-	                    action = action_tensor.item()
-	                else:
-	                    action = action_tensor.cpu().data.numpy().flatten()
-	                new_state, reward, done, _ = env.step(action)
-	                rewards.append(reward)
-	                meta_memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
-	                state = new_state
-	                if done or steps == max_steps-1:
-	                    meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
-	                        sample, episode, np.round(np.sum(rewards), decimals = 3)))
-	                    break
+            print("### meta learning")
+            start_episode = 0
+            for episode in range(start_episode, meta_episodes):
+                state = env.reset()
+                rewards = []
+                for steps in range(max_steps):
+                    state_tensor, action_tensor, log_prob_tensor = sample_policy.act(state, device)
+                    if isinstance(env.action_space, Discrete):
+                        action = action_tensor.item()
+                    else:
+                        action = action_tensor.cpu().data.numpy().flatten()
+                    new_state, reward, done, _ = env.step(action)
+                    rewards.append(reward)
+                    meta_memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
+                    state = new_state
+                    if done or steps == max_steps-1:
+                        meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
+                            sample, episode, np.round(np.sum(rewards), decimals = 3)))
+                        break
 
-	        if (sample+1) % meta_update_every == 0:
-	            meta_policy.meta_update(meta_memory)
-	            meta_memory.clear_memory()
+            if (sample+1) % meta_update_every == 0:
+                meta_policy.meta_update(meta_memory)
+                meta_memory.clear_memory()
 
         ######### single-task learning
         if learner == "vpg":
@@ -278,8 +278,7 @@ if __name__ == '__main__':
                 memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
                 if use_model:
                     op_memory.push(state_tensor, action_tensor, reward, new_state, done)
-                # if timestep % update_every == 0: #done or steps == max_steps-1: 
-                    
+                # if timestep % update_every == 0: #done or steps == max_steps-1:    
                 #     policy_net.update_policy(memory)
                 #     memory.clear_memory()
                 #     timestep = 0
@@ -289,9 +288,9 @@ if __name__ == '__main__':
                 if done or steps == max_steps-1:
                     actor_policy.update_policy(memory)
                     memory.clear_memory()
-					# here we could remove op_memory.size()
+                    # here we could remove op_memory.size()
                     if use_model and op_memory.size() > 256:
-                    	model_loss = actor_policy.update_model(op_memory)
+                        model_loss = actor_policy.update_model(op_memory)
                         # print(episode, model_loss)
                     all_rewards.append(np.sum(rewards))
                     if use_model and episode <= 10:
@@ -300,9 +299,9 @@ if __name__ == '__main__':
                         rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
                             sample, episode, np.round(np.sum(rewards), decimals = 3)))
                     if not use_model:
-						rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
-	                        sample, episode, np.round(np.sum(rewards), decimals = 3)))
-					break
+                        rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
+                            sample, episode, np.round(np.sum(rewards), decimals = 3)))
+                    break
                 # if (episode+1) % save_every == 0:
                 #     path = args.moddir + filename
                 #     torch.save({
@@ -312,22 +311,22 @@ if __name__ == '__main__':
                 #     }, path)
 
         if use_model:
-			print(sample, "model loss", model_loss)  
-	        # print("a test")
-	        # states, actions, rewards, next_states, dones = op_memory.sample(100)
-	        # actions = np.array([actions]).transpose()
-	        # pred_delta, pred_rewards, pred_dones = actor_policy.model.predict(states, actions) 
-	        # print("next state true", next_states)
-	        # print("next state pred", pred_delta.detach().numpy() + np.array(states))
-	        # print("rewards true", rewards)
-	        # print("rewards pred", pred_rewards.detach().numpy().flatten())
-	        # print("dones true", 1*dones)
-	        # print("dones pred", pred_dones.detach().numpy().flatten())
-	        # converted = np.where(pred_dones.detach().numpy().flatten() > 0.5, True, False)
-	        # print("dones truned", converted)
-	        # for name, param in actor_policy.model.named_parameters():
-	        #     print(name, param.data)   
-	        model_list.append(actor_policy.model)
+            print(sample, "model loss", model_loss)  
+            # print("a test")
+            # states, actions, rewards, next_states, dones = op_memory.sample(100)
+            # actions = np.array([actions]).transpose()
+            # pred_delta, pred_rewards, pred_dones = actor_policy.model.predict(states, actions) 
+            # print("next state true", next_states)
+            # print("next state pred", pred_delta.detach().numpy() + np.array(states))
+            # print("rewards true", rewards)
+            # print("rewards pred", pred_rewards.detach().numpy().flatten())
+            # print("dones true", 1*dones)
+            # print("dones pred", pred_dones.detach().numpy().flatten())
+            # converted = np.where(pred_dones.detach().numpy().flatten() > 0.5, True, False)
+            # print("dones truned", converted)
+            # for name, param in actor_policy.model.named_parameters():
+            #     print(name, param.data)   
+            model_list.append(actor_policy.model)
 
         if use_model and (sample+1) % meta_update_every == 0:
             print("### Meta Learning")
