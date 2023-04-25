@@ -114,20 +114,27 @@ class VPG(nn.Module):
             discounted_reward.insert(0, Gt)
 
         policy_gradient = []
-        for log_prob, Gt in zip(memory.logprobs, discounted_reward):
-            policy_gradient.append(-log_prob * Gt)
+        gamma_pow = 1
+
+        for log_prob, Gt, is_terminal in zip(memory.logprobs, discounted_reward, memory.is_terminals):
+            policy_gradient.append(-log_prob * Gt * gamma_pow)
+            if is_terminal:
+                gamma_pow = 1
+            else:
+                gamma_pow *= self.gamma
 
         self.optimizer.zero_grad()
         policy_gradient = torch.stack(policy_gradient).sum()
         policy_gradient.backward()
+        self.optimizer.step()
 
         # create policy_m
         if isinstance(self.action_space, Discrete):
             policy_m = Actor(self.state_dim, self.action_dim, self.hidden_sizes, self.activation, with_clone=True,
-                                  prior=self.policy.action_layer, lr = self.lr).to(self.device)
+                             prior=self.policy.action_layer, lr = self.lr).to(self.device)
         elif isinstance(self.action_space, Box):
             policy_m = ContActor(self.state_dim, self.action_dim, self.hidden_sizes, self.activation, self.action_std,
-                                      self.device, with_clone=True, prior=self.policy.action_layer, lr = self.lr).to(self.device)
+                                 self.device, with_clone=True, prior=self.policy.action_layer, lr = self.lr).to(self.device)
 
         # # apply gradient descent
         # for layer, layer_m in zip(self.policy.action_layer, policy_m.action_layer):

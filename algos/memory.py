@@ -40,7 +40,7 @@ class Memory:
         del self.rewards[:]
         del self.is_terminals[:]
         
-    def add (self, state, action, logprob, reward, is_terminal):
+    def add(self, state, action, logprob, reward, is_terminal):
         self.states.append(state)
         self.actions.append(action)
         self.logprobs.append(logprob)

@@ -30,7 +30,7 @@ parser.add_argument('--device', type=str, default="cpu")
 parser.add_argument('--run', type=int, default=-1)
 # env settings Swimmer for majuto
 parser.add_argument('--env', type=str, default="CartPole-v0")
-parser.add_argument('--samples', type=int, default=2000) # need to tune
+parser.add_argument('--samples', type=int, default=200) # need to tune
 parser.add_argument('--episodes', type=int, default=10)
 parser.add_argument('--steps', type=int, default=300)
 parser.add_argument('--goal', type=float, default=0.5)
@@ -46,7 +46,7 @@ parser.add_argument('--coeff', type=float, default=0.5)  # need to tune
 parser.add_argument('--tau', type=float, default=0.5)  # need to tune
 
 # learner settings
-parser.add_argument('--learner', type=str, default="vpg", help="vpg, ppo, sac")
+parser.add_argument('--learner', type=str, default="ppo", help="vpg, ppo, sac")
 parser.add_argument('--lr', type=float, default=1e-4)
 parser.add_argument('--update_every', type=int, default=300)
 parser.add_argument('--meta_update_every', type=int, default=50)  # need to tune
@@ -176,6 +176,10 @@ if __name__ == '__main__':
     if learner == "vpg":
         actor_policy = VPG(env.observation_space, env.action_space, hidden_sizes=hidden_sizes,
                            activation=activation, gamma=gamma, device=device, learning_rate=lr, with_meta=True)
+    if learner == "PPO":
+        actor_policy = PPO(env.observation_space, env.action_space, hidden_sizes=hidden_sizes,
+                           activation=activation, gamma=gamma, device=device, learning_rate=lr)
+
 
     meta_memory = Memory()
     for sample in range(samples):
@@ -211,7 +215,7 @@ if __name__ == '__main__':
                         sample, episode, np.round(np.sum(rewards), decimals=3)))
                     break
 
-        # obtain policy_m and apple gradient descent
+        # obtain policy_m and apply gradient descent
         policy_m = actor_policy.update_policy_m(memory)
         memory.clear_memory()
 

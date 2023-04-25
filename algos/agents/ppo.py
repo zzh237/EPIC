@@ -38,16 +38,14 @@ class PPO(nn.Module):
     
     def act(self, state):
         return self.policy.act(state, self.device)
-        
-    
+
     def update_policy(self, memory):
         
         old_logprobs = torch.stack(memory.logprobs).to(self.device).detach()
         
         ppo_update(self.policy, self.optimizer, old_logprobs, memory.rewards, 
                    memory, self.gamma, self.K_epochs, self.eps_clip, self.loss_fn, self.device)
-        
-    
+
     def get_state_dict(self):
         return self.policy.state_dict(), self.optimizer.state_dict()
     

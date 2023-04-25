@@ -89,6 +89,7 @@ def make_cart_env(seed, env="CartPole-v0"):
     # env = NewCartPoleEnv(goal=goal)
     # check_env(env, warn=True)
     return env
+
 def make_lunar_env(seed, env="LunarLander-v2"):
     # need to tune
     # mass = 0.1 * np.random.randn() + 1.0
