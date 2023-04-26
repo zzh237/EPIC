@@ -55,6 +55,8 @@ parser.add_argument('--tau', type=float, default=0.5)  # need to tune
 # learner settings
 parser.add_argument('--learner', type=str, default="vpg", help="vpg, ppo, sac")
 parser.add_argument('--lr', type=float, default=1e-4)
+parser.add_argument('--alpha', type=float, default=1e-4)
+parser.add_argument('--beta', type=float, default=1e-4)
 parser.add_argument('--update_every', type=int, default=300)
 parser.add_argument('--meta_update_every', type=int, default=50)  # need to tune
 parser.add_argument('--hiddens', nargs='+', type=int)
@@ -128,13 +130,15 @@ envs = {'Swimmer':make_mujoco_env, 'LunarLander-v2': make_lunar_env, \
 if __name__ == '__main__':
     ############## Hyperparameters ##############
     env_name = args.env #"LunarLander-v2"
-    env_name = "LunarLander-v2"
+    # env_name = "LunarLander-v2"
     samples = args.samples
     max_episodes = args.episodes        # max training episodes
     max_steps = args.steps         # max timesteps in one episode
     meta_episodes = args.meta_episodes
     learner = args.learner
     lr = args.lr
+    alpha = args.alpha
+    beta = args.beta
     device = args.device
     update_every = args.update_every
     meta_update_every = args.meta_update_every
@@ -206,7 +210,7 @@ if __name__ == '__main__':
         # env.seed(sample)
         
         ########## sample a meta learner
-        sample_policy = meta_policy.sample_policy()
+        sample_policy = meta_policy.sample_policy() # initial policy theta
         print("-----sample a new policy-------")
         # print("weight of layer 0", sample_policy.action_layer[0].weight) 
         
@@ -239,7 +243,7 @@ if __name__ == '__main__':
         ######### single-task learning
         if learner == "vpg":
             actor_policy = VPG(env.observation_space, env.action_space, hidden_sizes=hidden_sizes, 
-            activation=activation, gamma=gamma, device=device, learning_rate=lr, with_model=use_model)
+            activation=activation, gamma=gamma, device=device, alpha=alpha, beta=beta, with_model=use_model)
             if use_meta:
                 actor_policy.set_params(sample_policy)
 
@@ -266,7 +270,7 @@ if __name__ == '__main__':
                 if render:
                     env.render()
                     
-                state_tensor, action_tensor, log_prob_tensor = actor_policy.act(state)
+                state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state)
                 
                 if isinstance(env.action_space, Discrete):
                     action = action_tensor.item()

@@ -20,6 +20,7 @@ from envs.half_cheetah_rand_dir import HalfCheetahEnvRandDir
 
 import logging
 from datetime import datetime
+import copy
 
 now = datetime.now()
 current_time = now.strftime("%m-%d %H:%M:%S")
@@ -30,7 +31,7 @@ parser.add_argument('--device', type=str, default="cpu")
 parser.add_argument('--run', type=int, default=-1)
 # env settings Swimmer for majuto
 parser.add_argument('--env', type=str, default="CartPole-v0")
-parser.add_argument('--samples', type=int, default=200) # need to tune
+parser.add_argument('--samples', type=int, default=2000) # need to tune
 parser.add_argument('--episodes', type=int, default=10)
 parser.add_argument('--steps', type=int, default=300)
 parser.add_argument('--goal', type=float, default=0.5)
@@ -46,11 +47,16 @@ parser.add_argument('--coeff', type=float, default=0.5)  # need to tune
 parser.add_argument('--tau', type=float, default=0.5)  # need to tune
 
 # learner settings
-parser.add_argument('--learner', type=str, default="ppo", help="vpg, ppo, sac")
-parser.add_argument('--lr', type=float, default=1e-4)
+parser.add_argument('--learner', type=str, default="vpg", help="vpg, ppo, sac")
+parser.add_argument('--alpha', type=float, default=1e-4, help="lr of single task policy")
+parser.add_argument('--beta', type=float, default=1e-4, help="lr of meta policy")
+
 parser.add_argument('--update_every', type=int, default=300)
 parser.add_argument('--meta_update_every', type=int, default=50)  # need to tune
 parser.add_argument('--hiddens', nargs='+', type=int)
+# parser.add_argument('--grad_clip_norm', type=float, default=7.0)
+# parser.add_argument('--iter_per_round', type=int, default=5)
+
 
 # file settings
 parser.add_argument('--logdir', type=str, default="logs/")
@@ -138,13 +144,16 @@ if __name__ == '__main__':
     max_steps = args.steps  # max timesteps in one episode
     meta_episodes = args.meta_episodes
     learner = args.learner
-    lr = args.lr
+    alpha = args.alpha
+    beta = args.beta
     device = args.device
     update_every = args.update_every
     meta_update_every = args.meta_update_every
     use_meta = args.meta
     coeff = args.coeff
     tau = args.tau
+    # grad_clip_norm = args.grad_clip_norm
+    # iter_per_round = args.iter_per_round
     ############ For All #########################
     gamma = 0.99  # discount factor
     render = False
@@ -152,7 +161,7 @@ if __name__ == '__main__':
     if args.hiddens:
         hidden_sizes = tuple(args.hiddens) # need to tune
     else:
-        hidden_sizes = (32,32)
+        hidden_sizes = (32, 32)
     activation = nn.Tanh  # need to tune
 
     torch.cuda.empty_cache()
@@ -175,21 +184,24 @@ if __name__ == '__main__':
 
     if learner == "vpg":
         actor_policy = VPG(env.observation_space, env.action_space, hidden_sizes=hidden_sizes,
-                           activation=activation, gamma=gamma, device=device, learning_rate=lr, with_meta=True)
-    if learner == "PPO":
+                           activation=activation, gamma=gamma, device=device, alpha=alpha,
+                           beta=beta)
+    if learner == "ppo":
         actor_policy = PPO(env.observation_space, env.action_space, hidden_sizes=hidden_sizes,
-                           activation=activation, gamma=gamma, device=device, learning_rate=lr)
+                           activation=activation, gamma=gamma, device=device, learning_rate=lr,
+                           grad_clip_norm=grad_clip_norm, iter_per_round=iter_per_round)
 
 
-    meta_memory = Memory()
     for sample in range(samples):
+        meta_memory = Memory()
         print("sample " + str(sample))
         env = make_env(env_name, sample)
         memory = Memory()
 
         start_episode = 0
         timestep = 0
-
+        # for each task, we need to initialize policy_m
+        actor_policy.initialize_policy_m()
         for episode in range(start_episode, max_episodes):
             state = env.reset()
             rewards = []
@@ -197,7 +209,7 @@ if __name__ == '__main__':
                 if render:
                     env.render()
 
-                state_tensor, action_tensor, log_prob_tensor = actor_policy.act(state)
+                state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state)
 
                 if isinstance(env.action_space, Discrete):
                     action = action_tensor.item()
@@ -207,16 +219,15 @@ if __name__ == '__main__':
 
                 rewards.append(reward)
                 memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
-
                 state = new_state
 
                 if done or steps == max_steps - 1:
                     rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
                         sample, episode, np.round(np.sum(rewards), decimals=3)))
                     break
-
         # obtain policy_m and apply gradient descent
-        policy_m = actor_policy.update_policy_m(memory)
+        actor_policy.update_policy_m(memory)
+        if learner == 'ppo': actor_policy.equalize_policies()
         memory.clear_memory()
 
         # obtain meta_memory using updated policy_m
@@ -228,8 +239,7 @@ if __name__ == '__main__':
             for steps in range(max_steps):
                 if render:
                     env.render()
-
-                state_tensor, action_tensor, log_prob_tensor = policy_m.act(state, device)
+                state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state)
 
                 if isinstance(env.action_space, Discrete):
                     action = action_tensor.item()
@@ -243,12 +253,13 @@ if __name__ == '__main__':
 
                 if done or steps == max_steps - 1:
                     meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
-                                sample, episode, np.round(np.sum(rewards), decimals=3)))
+                        sample, episode, np.round(np.sum(rewards), decimals=3)))
                     break
 
+        actor_policy.update_policy(meta_memory)
+        meta_memory.clear_memory()
         if (sample+1) % meta_update_every == 0:
-            actor_policy.update_policy(meta_memory)
-            meta_memory.clear_memory()
+            actor_policy.policy.load_state_dict(copy.deepcopy(actor_policy.new_policy.state_dict()))
 
         env.close()
 

@@ -81,10 +81,6 @@ class BayesianLinear(nn.Module):
     #         self.log_prior, self.log_variational_posterior = 0, 0
 
     #     return F.linear(input, weight, bias)
-
-        
-            
-
     def flatten_params(self):
         cur_mu = torch.cat((torch.flatten(self.weight.mu), torch.flatten(self.bias.mu)))
         prior_mu = torch.cat((torch.flatten(self.weight_prior.mu), torch.flatten(self.bias_prior.mu)))
