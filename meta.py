@@ -84,7 +84,7 @@ def get_log(file_name):
 def make_cart_env(seed, env="CartPole-v0"):
     # need to tune
     mass = 0.1 * np.random.randn() + args.mass 
-    print("a new env of mass:", mass)
+    # print("a new env of mass:", mass)
     env = NewCartPoleEnv(masscart=mass)
     # goal = args.goal * np.random.randn() + 0.0
     # print("a new env of goal:", goal)
@@ -98,7 +98,7 @@ def make_lunar_env(seed, env="LunarLander-v2"):
     # print("a new env of mass:", mass)
     # env = NewCartPoleEnv(masscart=mass)
     goal = np.random.uniform(-1, 1)
-    print("a new env of goal:", goal)
+    # print("a new env of goal:", goal)
     env = NewLunarLander(goal=goal)
     # check_env(env, warn=True)
     return env
@@ -206,7 +206,7 @@ if __name__ == '__main__':
         print("#### Learning environment sample {}".format(sample))
         ########## creating environment
         # env = gym.make(env_name)
-        env = envfunc(env_name, args.seed)
+        env = envfunc(args.seed, env_name)
         # env.seed(sample)
         
         ########## sample a meta learner

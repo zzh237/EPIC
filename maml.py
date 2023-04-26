@@ -83,7 +83,7 @@ def get_log(file_name):
 def make_cart_env(seed, env="CartPole-v0"):
     # need to tune
     mass = 0.1 * np.random.randn() + args.mass 
-    print("a new env of mass:", mass)
+    # print("a new env of mass:", mass)
     env = NewCartPoleEnv(masscart=mass)
     # goal = args.goal * np.random.randn() + 0.0
     # print("a new env of goal:", goal)
@@ -97,7 +97,7 @@ def make_lunar_env(seed, env="LunarLander-v2"):
     # print("a new env of mass:", mass)
     # env = NewCartPoleEnv(masscart=mass)
     goal = np.random.uniform(-1, 1)
-    print("a new env of goal:", goal)
+    # print("a new env of goal:", goal)
     env = NewLunarLander(goal=goal)
     # check_env(env, warn=True)
     return env
@@ -194,7 +194,7 @@ if __name__ == '__main__':
 
     for sample in range(samples):
         meta_memory = Memory()
-        print("sample " + str(sample))
+        # print("sample " + str(sample))
         env = make_env(env_name, sample)
         memory = Memory()
 
