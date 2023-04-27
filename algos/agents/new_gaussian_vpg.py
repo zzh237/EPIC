@@ -175,7 +175,7 @@ class GaussianVPG(nn.Module):
     def update_default_and_prior_policy(self):
         # update prior distribution
         for prior_param, new_default_param in zip(self.prior_policy.parameters(), self.new_default_policy.parameters()):
-            prior_param.data.copy_(self.lam *new_default_param.data + (1.0-self.lam)*prior_param.data)
+            prior_param.data.copy_((1-self.lam) *new_default_param.data + self.lam*prior_param.data)
         # update default distribution
         self.default_policy.load_state_dict(copy.deepcopy(self.new_default_policy.state_dict()))
         self.lam *= self.lam*self.lam_decay
