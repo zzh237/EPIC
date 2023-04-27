@@ -3,7 +3,7 @@ import torch.nn as nn
 import argparse
 import gym
 import os 
-# import mujoco_py
+import mujoco_py
 import numpy as np
 from gym.spaces import Box, Discrete
 import setup
@@ -35,7 +35,7 @@ parser.add_argument('--run', type=int, default=0)
 parser.add_argument('--env', type=str, default="CartPole-v0")
 parser.add_argument('--samples', type=int, default=2000) # need to tune
 parser.add_argument('--episodes', type=int, default=10)
-parser.add_argument('--steps', type=int, default=300)
+parser.add_argument('--steps', type=int, default=50)
 parser.add_argument('--goal', type=float, default=0.5) 
 parser.add_argument('--seed', default=1, type=int)
 parser.add_argument('--mass', type=float, default=1.0) 
@@ -84,7 +84,7 @@ def get_log(file_name):
 def make_cart_env(seed, env="CartPole-v0"):
     # need to tune
     mass = 0.1 * np.random.randn() + args.mass 
-    print("a new env of mass:", mass)
+    # print("a new env of mass:", mass)
     env = NewCartPoleEnv(masscart=mass)
     # goal = args.goal * np.random.randn() + 0.0
     # print("a new env of goal:", goal)
@@ -98,7 +98,7 @@ def make_lunar_env(seed, env="LunarLander-v2"):
     # print("a new env of mass:", mass)
     # env = NewCartPoleEnv(masscart=mass)
     goal = np.random.uniform(-1, 1)
-    print("a new env of goal:", goal)
+    # print("a new env of goal:", goal)
     env = NewLunarLander(goal=goal)
     # check_env(env, warn=True)
     return env
@@ -165,12 +165,15 @@ if __name__ == '__main__':
     if env_name == 'Swimmer':
         filename = env_name + "_" + learner + "_s" + str(samples) + "_n" + str(max_episodes) \
             + "_every" + str(meta_update_every) \
-                + "_size" + str(hidden_sizes[0]) + "_c" + str(coeff) + "_tau" + str(tau)
+                + "_size" + str(hidden_sizes[0]) + "_c" + str(coeff) + "_tau" + str(tau)\
+                    + "_steps" + str(max_steps)
     else:
         filename = env_name + "_" + learner + "_s" + str(samples) + "_n" + str(max_episodes) \
-            + "_every" + str(meta_update_every) + "_goal" + str(args.goal)\
-            + "_size" + str(hidden_sizes[0]) + "_c" + str(coeff) + "_tau" + str(tau)\
-            + "_mass" + str(args.mass)
+            + "_every" + str(meta_update_every) + "_size" + str(hidden_sizes[0]) \
+                + "_c" + str(coeff) + "_tau" + str(tau) \
+                    + "_goal" + str(args.goal)\
+                        + "_steps" + str(max_steps)\
+                            + "_mass" + str(args.mass)
     if not use_meta:
         filename += "_nometa"
 
@@ -207,7 +210,7 @@ if __name__ == '__main__':
         print("#### Learning environment sample {}".format(sample))
         ########## creating environment
         # env = gym.make(env_name)
-        env = envfunc(env_name, args.seed)
+        env = envfunc(args.seed, env_name)
         # env.seed(sample)
 
         ########## sample a meta learner

@@ -1,0 +1,10 @@
+sample: 0, episode: 0, total reward: -178.548
+sample: 0, episode: 1, total reward: -177.67
+sample: 0, episode: 2, total reward: -191.451
+sample: 0, episode: 3, total reward: -176.568
+sample: 0, episode: 4, total reward: -185.5
+sample: 0, episode: 5, total reward: -237.125
+sample: 0, episode: 6, total reward: -156.464
+sample: 0, episode: 7, total reward: -181.312
+sample: 0, episode: 8, total reward: -181.378
+sample: 0, episode: 9, total reward: -188.414
