@@ -61,10 +61,10 @@ class plot_all:
         # self.lunar = envs['lunar']
         # self.swimmer = envs['swimmer']
         self.envsparams = envsparams 
-        self.params = {'algos':['meta','maml','single'], \
+        self.params = {'algos':['epic','maml','single'], \
             'everys': None, \
                 'ss':[2000], \
-                    'ns':[10], \
+                    'ns':[1], \
                         'runs':1}
 
         self.params.update(params)
@@ -85,13 +85,13 @@ class plot_all:
             return out  
         # for tau in [0.8]:
         def draw_meta(xs):
-            res, std = read_rewards_multi(dname+"/results/meta_{}_vpg_s{}_n{}_every{}_size32_c0.5_tau0.5".format(env, s,n,every)+ env_out, s, n, runs)
+            res, std = read_rewards_multi(dname+"/results/noreg/epic_{}_vpg_s{}_n{}_every{}_size32_c0.5_tau0.5".format(env, s,n,every)+ env_out, s, n, runs)
             mu1 = np.array(smooth(res, 0.99))
             sigma1=  0.1 * np.array(smooth(std, 0.99))
             plt.plot(xs, mu1, color = 'b', label="EPIC")
             plt.fill_between(xs,mu1+ sigma1, mu1-sigma1, color='b', alpha=0.1)
         def draw_maml(xs):
-            res, std = read_rewards_multi(dname+"/results_maml/maml_{}_vpg_s{}_n{}_every{}_size32".format(env,s,n,every) + env_out, s, n, runs)
+            res, std = read_rewards_multi(dname+"/results_maml/maml_meta_{}_vpg_s{}_n{}_every{}_size32".format(env,s,n,every) + env_out, s, n, runs)
             mu1 = np.array(smooth(res, 0.99))
             sigma1 = 0.1 * np.array(smooth(std, 0.99))
             plt.plot(xs, mu1, color="#2ca02c", label="MAML")
