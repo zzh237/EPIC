@@ -3,6 +3,8 @@ import torch.nn as nn
 from torch.distributions import Categorical, MultivariateNormal
 from algos.agents.gaussian_model import CloneLinear
 import numpy
+import numpy as np
+
 
 def mlp(sizes, activation, output_activation=nn.Identity()):
     layers = []
@@ -19,6 +21,18 @@ def clone_mlp(prior, sizes, activation, output_activation=nn.Identity(), lr = -1
         layers += [CloneLinear(sizes[j], sizes[j + 1], prior[j*2], lr = lr), act]
 
     return nn.Sequential(*layers)
+
+class EltwiseLayer(nn.Module):
+    def __init__(self, size, weight, bias):
+        super(EltwiseLayer, self).__init__()
+        self.weight = nn.Parameter(torch.Tensor(size))  # define the trainable parameter
+        self.bias = nn.Parameter(torch.Tensor(size))
+        nn.init.constant_(self.weight, val=weight)
+        nn.init.constant_(self.bias, val=bias)
+
+    def forward(self, x):
+        # assuming x is of size b-n-h-w
+        return x * self.weight + self.bias
 
 class Dynamics(nn.Module):
     def __init__(self, state_dim, action_dim, hidden_sizes, activation, device):
@@ -45,6 +59,7 @@ class Dynamics(nn.Module):
         # sampled = mu + sigma * epsilon
         done = self.done(mu)
         return mu, reward, done
+
 
 class Actor(nn.Module):
     def __init__(self, state_dim, action_dim, hidden_sizes, activation, with_clone = False, prior = [], lr = -1):
@@ -86,6 +101,7 @@ class Actor(nn.Module):
         dist = Categorical(action_probs)
         
         return dist
+
 
 class ContActor(nn.Module):
     def __init__(self, state_dim, action_dim, hidden_sizes, activation, action_std, device, with_clone = False, prior = [], lr = -1):
@@ -133,6 +149,105 @@ class ContActor(nn.Module):
         return dist
 
 
+class GaussianActor(nn.Module):
+    def __init__(self, state_dim, action_dim, hidden_sizes, activation, mu=None, sigma=None):
+        super(GaussianActor, self).__init__()
+        if type(hidden_sizes) == int:
+            hid = [hidden_sizes]
+        else:
+            hid = list(hidden_sizes)
+        # actor
+        layers = []
+        sizes = [state_dim] + hid + [action_dim]
+        output_activation = nn.Softmax(dim=-1)
+        for j in range(len(sizes) - 1):
+            act = activation() if j < len(sizes) - 2 else output_activation
+            layers += [nn.Linear(sizes[j], sizes[j + 1])]
+            nn.init.normal_(layers[-1].weight, mean=0.0, std=1.0)
+            nn.init.constant_(layers[-1].bias, val=0.0)
+            if sigma is None and mu is None:
+                layers += [EltwiseLayer(sizes[j+1], weight=1/np.sqrt(sizes[j]+sizes[j+1]), bias=0.0), act]
+            else:
+                layers += [EltwiseLayer(sizes[j+1], weight=sigma[j], bias=mu[j]), act]
+
+        self.action_layer = nn.Sequential(*layers)
+
+    def act(self, state, device):
+        state = torch.from_numpy(state).float().to(device)
+        action_probs = self.action_layer(state)
+        dist = Categorical(action_probs)
+        action = dist.sample()
+
+        return state, action, dist.log_prob(action)
+
+    def act_prob(self, state, action, device):
+        action_probs = self.action_layer(state)
+        dist = Categorical(action_probs)
+        action_logprobs = dist.log_prob(action)
+
+        return action_logprobs
+
+    def get_dist(self, state, device):
+        if type(state) == numpy.ndarray:
+            state = torch.from_numpy(state).float().to(device)
+        action_probs = self.action_layer(state)
+        dist = Categorical(action_probs)
+
+        return dist
+
+
+class GaussianContActor(nn.Module):
+    def __init__(self, state_dim, action_dim, hidden_sizes, activation, action_std, mu, sigma, device):
+        super(GaussianContActor, self).__init__()
+        if type(hidden_sizes) == int:
+            hid = [hidden_sizes]
+        else:
+            hid = list(hidden_sizes)
+        # actor
+        layers = []
+        sizes = [state_dim] + hid + [action_dim]
+        output_activation = nn.Tanh()
+        for j in range(len(sizes) - 1):
+            act = activation() if j < len(sizes) - 2 else output_activation
+            layers += [nn.Linear(sizes[j], sizes[j + 1])]
+            nn.init.normal_(layers[-1].weight, mean=0.0, std=1.0)
+            nn.init.constant_(layers[-1].bias, val=0.0)
+            layers += [EltwiseLayer(sizes[j + 1], weight=sigma[j], bias=mu[j]), act]
+        self.action_layer = nn.Sequential(*layers).to(device)
+        self.action_var = torch.full((action_dim,), action_std * action_std).to(device)
+        self.device = device
+
+    def act(self, state):
+        if type(state) == numpy.ndarray:
+            state = torch.from_numpy(state).float().to(self.device)
+        action_mean = self.action_layer(state)
+        cov_mat = torch.diag(self.action_var).to(self.device)
+        dist = MultivariateNormal(action_mean, cov_mat)
+        action = dist.sample()
+        action_logprob = dist.log_prob(action)
+
+        return state, action.detach(), action_logprob
+
+    def act_prob(self, state, action):
+        action_mean = self.action_layer(state)
+        cov_mat = torch.diag(self.action_var).to(self.device)
+
+        dist = MultivariateNormal(action_mean, cov_mat)
+        action_logprobs = dist.log_prob(action)
+
+        return action_logprobs
+
+    def get_dist(self, state):
+        if type(state) == numpy.ndarray:
+            state = torch.from_numpy(state).float().to(self.device)
+        action_mean = self.action_layer(state)
+        cov_mat = torch.diag(self.action_var).to(self.device)
+
+        dist = MultivariateNormal(action_mean, cov_mat)
+
+        return dist
+
+
 class Value(nn.Module):
 
     def __init__(self, obs_dim, hidden_sizes, activation):
@@ -145,7 +260,8 @@ class Value(nn.Module):
 
     def forward(self, obs):
         return torch.squeeze(self.v_net(obs), -1) # Critical to ensure v has right shape.
-    
+
+
 class QValue(nn.Module):
     
     def __init__(self, obs_dim, act_dim, hidden_sizes, activation):

@@ -54,15 +54,15 @@ class VPG(nn.Module):
         self.alpha = alpha
         self.beta = beta
         self.optimizer_m = optim.Adam(self.policy_m.parameters(), lr=alpha)
-        self.optimizer = optim.Adam(self.policy.parameters(), lr=beta)
+        # self.optimizer = optim.Adam(self.policy.parameters(), lr=beta)
 
         if with_model:
             self.model_optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
             self.mse_loss = nn.MSELoss()
             self.bce_loss = nn.BCELoss()
     
-    def act_policy(self, state):
-        return self.policy.act(state, self.device)
+    # def act_policy(self, state):
+    #     return self.policy.act(state, self.device)
 
     def act_policy_m(self, state):
         return self.policy_m.act(state, self.device)

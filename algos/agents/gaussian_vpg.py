@@ -9,8 +9,8 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from gym.spaces import Box, Discrete
 from .model import Actor, ContActor, Dynamics
-from .gaussian_model import PolicyHub
-from .updates import vpg_update
+# from .gaussian_model import PolicyHub
+# from .updates import vpg_update
 from algos.memory import Memory
 from torch.distributions import Categorical
 
@@ -18,14 +18,14 @@ class GaussianVPG(nn.Module):
     """
     A meta policy (maintaining a gaussian distribution of policies)
     """
-    def __init__(self, state_space, action_space, sample_size, hidden_sizes=(4,4), 
-                 activation=nn.Tanh, learning_rate=3e-4, gamma=0.9, device="cpu", 
+    def __init__(self, state_space, action_space, sample_size, hidden_sizes=(4,4),
+                 activation=nn.Tanh, learning_rate=3e-4, gamma=0.9, device="cpu",
                  action_std=0.5, delta=0.1, coeff=1.0, tau=0.5):
         super(GaussianVPG, self).__init__()
-        
+
         # deal with 1d state input
         state_dim = state_space.shape[0]
-        
+
         self.gamma = gamma
         self.device = device
         self.learning_rate = learning_rate
@@ -42,16 +42,16 @@ class GaussianVPG(nn.Module):
         if isinstance(action_space, Discrete):
             self.cont_action = False
             self.action_dim = action_space.n
-            self.policy_hub = PolicyHub(state_dim, self.action_dim, hidden_sizes, activation, type(self).__name__, tau, self.device)
-            
+            # self.policy_hub = PolicyHub(state_dim, self.action_dim, hidden_sizes, activation, type(self).__name__, tau, self.device)
+
         elif isinstance(action_space, Box):
             self.cont_action = True
             self.action_dim = action_space.shape[0]
-            self.policy_hub = PolicyHub(state_dim, self.action_dim, hidden_sizes, activation, type(self).__name__, tau, self.device)
+            # self.policy_hub = PolicyHub(state_dim, self.action_dim, hidden_sizes, activation, type(self).__name__, tau, self.device)
         # print(self.policy_hub.get_parameters())
         self.meta_optimizer = optim.SGD(self.policy_hub.get_parameters(), lr=self.learning_rate)
 
-        
+
 
     def sample_policy(self):
         if self.cont_action:
@@ -61,8 +61,8 @@ class GaussianVPG(nn.Module):
         # print(self.cur_policy.get_parameters())
         # self.cur_optimizer = optim.Adam(self.cur_policy.get_parameters(), lr=self.learning_rate)
         return self.cur_policy
-    
-    
+
+
     # def policy_update(self, memory):
     #     print("policy update", memory.logprobs)
     #     discounted_reward = []
@@ -75,13 +75,13 @@ class GaussianVPG(nn.Module):
     #     policy_gradient = []
     #     for log_prob, Gt in zip(memory.logprobs, discounted_reward):
     #         policy_gradient.append(-log_prob * Gt)
-        
+
     #     loss = torch.stack(policy_gradient).sum()
     #     loss.backward()
     #     print("gradient of policy sample network")
     #     for l in self.cur_policy.get_parameters():
     #         print(l.grad)
-        
+
     def meta_update(self, memory):
         print("meta update", len(memory.rewards))
 
@@ -92,7 +92,7 @@ class GaussianVPG(nn.Module):
                 Gt = 0
             Gt = reward + (self.gamma * Gt)
             discounted_reward.insert(0, Gt)
-        
+
         # Normalizing the rewards:
         # discounted_reward = torch.tensor(discounted_reward).to(self.device)
         # discounted_reward = (discounted_reward - discounted_reward.mean()) / (discounted_reward.std() + 1e-5)
@@ -101,7 +101,7 @@ class GaussianVPG(nn.Module):
         for log_prob, Gt in zip(memory.logprobs, discounted_reward):
             policy_gradient.append(-log_prob * Gt)
         # print("policy gradient", len(policy_gradient))
-        
+
         # regularizer
         # regularize_loss = []
         # ori_params = self.policy_hub.get_parameters().detach().clone()
@@ -131,11 +131,11 @@ class GaussianVPG(nn.Module):
     def meta_update_with_model(self, models, state, maxiter=3):
         # generate a copy of the policy distribution
         print("build a copy")
-        temp_hub = PolicyHub(self.policy_hub.state_dim, self.policy_hub.action_dim, 
+        temp_hub = PolicyHub(self.policy_hub.state_dim, self.policy_hub.action_dim,
             self.policy_hub.hidden_sizes, self.policy_hub.activation, self.policy_hub.tau, self.device)
         temp_hub.load_params(self.policy_hub)
         temp_optimizer = optim.SGD(temp_hub.get_parameters(), lr=self.learning_rate)
-        
+
         # print("weight", temp_hub.gaussian_policy_layers[0].weight_mu)
         # print("weight prior", temp_hub.gaussian_policy_layers[0].weight_prior_mu)
 
@@ -155,7 +155,7 @@ class GaussianVPG(nn.Module):
             loss.backward()
             print("grad norm", torch.norm(temp_hub.gaussian_policy_layers[0].weight_mu.grad))
             temp_optimizer.step()
-        
+
         # print("after weight", temp_hub.gaussian_policy_layers[0].weight_mu)
         # print("after weight prior", temp_hub.gaussian_policy_layers[0].weight_prior_mu)
 
@@ -184,7 +184,7 @@ class GaussianVPG(nn.Module):
                 state = new_state
                 if done:
                     break
-        
+
         discounted_reward = []
         Gt = 0
         for reward, is_terminal in zip(reversed(memory.rewards), reversed(memory.is_terminals)):
@@ -195,18 +195,18 @@ class GaussianVPG(nn.Module):
         policy_gradient = []
         for log_prob, Gt in zip(memory.logprobs, discounted_reward):
             policy_gradient.append(-log_prob * Gt)
-    
+
         policy_gradient = torch.stack(policy_gradient).sum()
 
         return policy_gradient
 
-    
+
     def get_state_dict(self):
         return self.policy.state_dict(), self.optimizer.state_dict()
-    
+
     def set_state_dict(self, state_dict, optim):
         self.policy.load_state_dict(state_dict)
         self.optimizer.load_state_dict(optim)
-    
+
         
         
