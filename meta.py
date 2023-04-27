@@ -38,7 +38,7 @@ parser.add_argument('--run', type=int, default=0)
 parser.add_argument('--env', type=str, default="CartPole-v0")
 parser.add_argument('--samples', type=int, default=2000) # need to tune
 parser.add_argument('--episodes', type=int, default=10)
-parser.add_argument('--steps', type=int, default=300)
+parser.add_argument('--steps', type=int, default=50)
 parser.add_argument('--goal', type=float, default=0.5) 
 parser.add_argument('--seed', default=1, type=int)
 parser.add_argument('--mass', type=float, default=1.0) 
@@ -162,11 +162,14 @@ if __name__ == '__main__':
     if env_name == 'Swimmer':
         filename = env_name + "_" + learner + "_s" + str(samples) + "_n" + str(max_episodes) \
             + "_every" + str(meta_update_every) \
-                + "_size" + str(hidden_sizes[0]) + "_c" + str(coeff) + "_tau" + str(tau)
+                + "_size" + str(hidden_sizes[0]) + "_c" + str(coeff) + "_tau" + str(tau)\
+                    + "_steps" + str(max_steps)
     else:
         filename = env_name + "_" + learner + "_s" + str(samples) + "_n" + str(max_episodes) \
-            + "_every" + str(meta_update_every) + "_goal" + str(args.goal)\
+            + "_every" + str(meta_update_every) 
             + "_size" + str(hidden_sizes[0]) + "_c" + str(coeff) + "_tau" + str(tau)\
+            + "_goal" + str(args.goal)\
+            + "_steps" + str(max_steps)\    
             + "_mass" + str(args.mass)
     if not use_meta:
         filename += "_nometa"

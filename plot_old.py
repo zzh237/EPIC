@@ -3,7 +3,10 @@ import numpy as np
 import re
 import math
 import pandas as pd
-
+import os
+abspath = os.path.abspath(__file__)
+dname = os.path.dirname(abspath)
+os.chdir(dname)
 def read_rewards(filename, samples, episodes):
     rewards = []
     with open(filename, "r") as f:
@@ -29,10 +32,10 @@ def read_rewards_multi_old(samples, episodes, coeff, runs, nometa=False):
     rewards = []
     for run in range(runs):
         if nometa:
-            reward = read_rewards("results/CartPole-v0_vpg_s{}_n{}_goal0.5_c{}_nometa_run{}.txt".format(
+            reward = read_rewards("/results/CartPole-v0_vpg_s{}_n{}_goal0.5_c{}_nometa_run{}.txt".format(
             samples,episodes,coeff, run), samples,episodes)
         else:
-            reward = read_rewards("results/CartPole-v0_vpg_s{}_n{}_goal0.5_c{}_run{}.txt".format(
+            reward = read_rewards("/results/CartPole-v0_vpg_s{}_n{}_goal0.5_c{}_run{}.txt".format(
                 samples,episodes,coeff, run), samples,episodes)
         rewards.append(reward)
     rewards = np.array(rewards)
@@ -53,7 +56,7 @@ def smooth(scalars, weight):  # Weight between 0 and 1
 if __name__ == "__main__":
     n = 10
     s = 2000
-    runs = 1
+    runs = 5
     xs = list(range(s))
 
     SMALL_SIZE = 20
@@ -70,6 +73,7 @@ if __name__ == "__main__":
 
     plt.rcParams["figure.figsize"] = (20,10)
 
+##### Lunar baseline comparison
 # for baselines
 #     for tau in [0.8]:
 #         for every in [50]:
@@ -192,28 +196,28 @@ if __name__ == "__main__":
     
     
     
-    ##### cartpole baseline comparison
-    dirname = "results/goal0.1"
+##### cartpole baseline comparison
+    
     s = 2000
-    runs = 10
+    runs =6
     xs = list(range(s))
 
-    # for tau in [0.5]:
-    #     for every in [25]:
-    #         # if every in [10,75]:
-    #         #     res, std = read_rewards_multi(dirname+"/CartPole-v0_vpg_s{}_n{}_every{}_size32_c0.5_tau{}".format(s,n,every,tau), s, n, runs)
-    #         # else:
-    #         #     res, std = read_rewards_multi(dirname+"/CartPole-v0_vpg_s{}_n{}_every{}_goal0.5_c0.5_tau{}".format(s,n,every,tau), s, n, runs)
-    #         res, std = read_rewards_multi(dirname+"/CartPole-v0_vpg_s{}_n{}_every{}_size32_c0.5_tau{}".format(s,n,every,tau), s, n, runs)
-    #         mu1 = np.array(smooth(res, 0.99))
-    #         sigma1=  0.1 * np.array(smooth(std, 0.99))
-    #         plt.plot(xs, mu1, color = 'b', label="PB-LRL")
-    #         plt.fill_between(xs,mu1+ sigma1, mu1-sigma1, color='b', alpha=0.1)
+    for tau in [0.5]:
+        for every in [50]:
+            # if every in [10,75]:
+            #     res, std = read_rewards_multi(dirname+"/CartPole-v0_vpg_s{}_n{}_every{}_size32_c0.5_tau{}".format(s,n,every,tau), s, n, runs)
+            # else:
+            #     res, std = read_rewards_multi(dirname+"/CartPole-v0_vpg_s{}_n{}_every{}_goal0.5_c0.5_tau{}".format(s,n,every,tau), s, n, runs)
+            res, std = read_rewards_multi(dname+"/results/CartPole-v0_vpg_s{}_n{}_every{}_goal0.5_size32_c0.5_tau{}_mass1.0".format(s,n,every,tau), s, n, runs)
+            mu1 = np.array(smooth(res, 0.99))
+            sigma1=  0.1 * np.array(smooth(std, 0.99))
+            plt.plot(xs, mu1, color = 'b', label="EPIC")
+            plt.fill_between(xs,mu1+ sigma1, mu1-sigma1, color='b', alpha=0.1)
 
 
     for tau in [0.5]:
-        for every in [25]:
-            res, std = read_rewards_multi("results/goal0.1/maml_CartPole-v0_vpg_s{}_n{}_every{}_size32".format(s,n,every), s, n, runs)
+        for every in [50]:
+            res, std = read_rewards_multi(dname+"/results_maml/maml_meta_CartPole-v0_vpg_s{}_n{}_every{}_size32_mass1.0".format(s,n,every), s, n, runs)
             mu1 = np.array(smooth(res, 0.99))
             sigma1 = 0.1 * np.array(smooth(std, 0.99))
             plt.plot(xs, mu1, color="#2ca02c", label="MAML")
@@ -231,7 +235,7 @@ if __name__ == "__main__":
     plt.xlabel("Tasks (environments)")
     plt.ylabel("Mean reward")
     plt.show()
-    # plt.savefig("plots/cart_goal0.1.png", format="png")
+    plt.savefig("plots/cart_goal0.5_mass1.0.png", format="png")
     # tikzplotlib.save("plots/swimmer.tex")
     
     
