@@ -166,11 +166,11 @@ if __name__ == '__main__':
                     + "_steps" + str(max_steps)
     else:
         filename = env_name + "_" + learner + "_s" + str(samples) + "_n" + str(max_episodes) \
-            + "_every" + str(meta_update_every) 
-            + "_size" + str(hidden_sizes[0]) + "_c" + str(coeff) + "_tau" + str(tau)\
-            + "_goal" + str(args.goal)\
-            + "_steps" + str(max_steps)\    
-            + "_mass" + str(args.mass)
+            + "_every" + str(meta_update_every) + "_size" + str(hidden_sizes[0]) \
+                + "_c" + str(coeff) + "_tau" + str(tau) \
+                    + "_goal" + str(args.goal)\
+                        + "_steps" + str(max_steps)\
+                            + "_mass" + str(args.mass)
     if not use_meta:
         filename += "_nometa"
 
