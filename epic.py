@@ -63,7 +63,7 @@ parser.add_argument('--lam_decay', type=float, default=0.99)
 
 # file settings
 parser.add_argument('--logdir', type=str, default="logs/")
-parser.add_argument('--resdir', type=str, default="results/")
+parser.add_argument('--resdir', type=str, default="results/divideN/")
 parser.add_argument('--moddir', type=str, default="models/")
 parser.add_argument('--loadfile', type=str, default="")
 
