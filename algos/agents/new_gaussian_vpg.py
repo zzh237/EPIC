@@ -99,8 +99,7 @@ class GaussianVPG(nn.Module):
             if isinstance(layer,nn.Linear):
                 nn.init.normal_(layer.weight, mean=0.0, std=1.0)
                 nn.init.constant_(layer.bias, val=0.0)
-        # for policy_layer, policy_m_layer in zip(self.policy., self.policy_m.parameters()):
-        # policy_m_param.data.copy_(policy_param.data)
+
 
     def update_policy_m(self, memory):
         # caculate policy gradient
@@ -147,7 +146,6 @@ class GaussianVPG(nn.Module):
             else:
                 gamma_pow *= self.gamma
 
-        self.optimizer.zero_grad()
         policy_gradient = torch.stack(policy_gradient).sum()
 
         # calculate regularizer
@@ -159,7 +157,8 @@ class GaussianVPG(nn.Module):
                                     mu2=prior_layer.bias, sigma2=prior_layer.weight)
         reg = torch.sqrt((reg + torch.log(2*np.sqrt(torch.tensor(N))/0.01))/(2*N))
         # calculate total loss and back propagate
-        total_loss = policy_gradient + reg
+        total_loss = policy_gradient + reg/N
+        self.optimizer.zero_grad()
         total_loss.backward()
 
         self.optimizer.step()
@@ -167,6 +166,7 @@ class GaussianVPG(nn.Module):
     def update_mu_theta_for_default(self, memory, N):
         policy_m_para_before = copy.deepcopy(self.policy_m.state_dict())
         self.update_policy_m_with_regularizer(memory, N)
+        # self.update_policy_m(memory)
         policy_m_para_after = copy.deepcopy(self.policy_m.state_dict())
         for key, meta_para in zip(policy_m_para_before, self.new_default_policy.parameters()):
             meta_para.data.copy_(meta_para.data +
@@ -175,8 +175,8 @@ class GaussianVPG(nn.Module):
     def update_default_and_prior_policy(self):
         # update prior distribution
         for prior_param, new_default_param in zip(self.prior_policy.parameters(), self.new_default_policy.parameters()):
-            prior_param.data.copy_(self.lam *new_default_param.data + (1.0-self.lam)*prior_param.data)
+            prior_param.data.copy_((1-self.lam) *new_default_param.data + self.lam*prior_param.data)
         # update default distribution
         self.default_policy.load_state_dict(copy.deepcopy(self.new_default_policy.state_dict()))
-        self.lam *= self.lam*self.lam_decay
+        self.lam *= self.lam_decay
 

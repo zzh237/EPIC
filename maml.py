@@ -196,7 +196,7 @@ if __name__ == '__main__':
 
     for sample in range(samples):
         meta_memory = Memory()
-        # print("sample " + str(sample))
+        print("sample " + str(sample))
         env = make_env(env_name, sample)
         memory = Memory()
 

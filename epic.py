@@ -57,8 +57,8 @@ parser.add_argument('--beta', type=float, default=1e-4)
 parser.add_argument('--update_every', type=int, default=300)
 parser.add_argument('--meta_update_every', type=int, default=50)  # need to tune
 parser.add_argument('--hiddens', nargs='+', type=int)
-parser.add_argument('--lam', type=float, default=0.9)
-parser.add_argument('--lam_decay', type=float, default=0.99)
+parser.add_argument('--lam', type=float, default=0.5)
+parser.add_argument('--lam_decay', type=float, default=0.95)
 
 
 # file settings
@@ -124,8 +124,7 @@ def make_mujoco_env(seed, env="Swimmer"):
 #     check_env(env, warn=True)
     return env
 
-envs = {'Swimmer':make_mujoco_env, 'LunarLander-v2': make_lunar_env, \
-    'CartPole-v0':make_cart_env}
+envs = {'Swimmer':make_mujoco_env, 'LunarLander-v2': make_lunar_env, 'CartPole-v0':make_cart_env}
 
 if __name__ == '__main__':
     ############## Hyperparameters ##############
