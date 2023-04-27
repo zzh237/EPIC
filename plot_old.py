@@ -4,9 +4,11 @@ import re
 import math
 import pandas as pd
 import os
+import itertools
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
 os.chdir(dname)
+
 def read_rewards(filename, samples, episodes):
     rewards = []
     with open(filename, "r") as f:
@@ -25,22 +27,8 @@ def read_rewards_multi(filename, samples, episodes, runs):
         reward = read_rewards(filename+"_run{}.txt".format(run), samples,episodes)
         rewards.append(reward)
     rewards = np.array(rewards)
-    # print("rewards", rewards)
     return np.mean(rewards, axis=0), np.std(rewards, axis=0)
 
-def read_rewards_multi_old(samples, episodes, coeff, runs, nometa=False):
-    rewards = []
-    for run in range(runs):
-        if nometa:
-            reward = read_rewards("/results/CartPole-v0_vpg_s{}_n{}_goal0.5_c{}_nometa_run{}.txt".format(
-            samples,episodes,coeff, run), samples,episodes)
-        else:
-            reward = read_rewards("/results/CartPole-v0_vpg_s{}_n{}_goal0.5_c{}_run{}.txt".format(
-                samples,episodes,coeff, run), samples,episodes)
-        rewards.append(reward)
-    rewards = np.array(rewards)
-    # print("rewards", rewards)
-    return np.mean(rewards, axis=0)
 
 def smooth(scalars, weight):  # Weight between 0 and 1
     last = scalars[0]  # First value in the plot (first timestep)
@@ -52,17 +40,12 @@ def smooth(scalars, weight):  # Weight between 0 and 1
 
     return smoothed
 
-
-if __name__ == "__main__":
-    n = 10
-    s = 2000
-    runs = 5
-    xs = list(range(s))
-
+# s, smaples, tasks; every, meta update; algo: algos, n: max episodes
+class plot_all:
+    
     SMALL_SIZE = 20
     MEDIUM_SIZE = 25
     BIGGER_SIZE = 25
-
     # plt.rc('font', size=SMALL_SIZE)  # controls default text sizes
     # plt.rc('axes', titlesize=SMALL_SIZE)  # fontsize of the axes title
     plt.rc('axes', labelsize=MEDIUM_SIZE)  # fontsize of the x and y labels
@@ -70,8 +53,89 @@ if __name__ == "__main__":
     plt.rc('ytick', labelsize=SMALL_SIZE)  # fontsize of the tick labels
     plt.rc('legend', fontsize=SMALL_SIZE)  # legend fontsize
     plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
-
     plt.rcParams["figure.figsize"] = (20,10)
+
+    def __init__(self, params,envsparams):
+        envs = ['CartPole-v0','lunar','swimmer']
+        # self.cartpole = envs['cartpole']
+        # self.lunar = envs['lunar']
+        # self.swimmer = envs['swimmer']
+        self.envsparams = envsparams 
+        self.params = {'algos':['meta','maml','single'], \
+            'everys': None, \
+                'ss':[2000], \
+                    'ns':[10], \
+                        'runs':1}
+
+        self.params.update(params)
+        self._plot() 
+    
+    def _plot(self):  
+        
+        algos = self.params['algos']
+        everys = self.params['everys']
+        ss = self.params['ss']
+        ns = self.params['ns']
+        runs = self.params['runs']
+        
+        def temp(d):
+            out = ''
+            for k, v in d.items(): 
+                out+= '_{}{}'.format(k,v[0])
+            return out  
+        # for tau in [0.8]:
+        def draw_meta(xs):
+            res, std = read_rewards_multi(dname+"/results/meta_{}_vpg_s{}_n{}_every{}_size32_c0.5_tau0.5".format(env, s,n,every)+ env_out, s, n, runs)
+            mu1 = np.array(smooth(res, 0.99))
+            sigma1=  0.1 * np.array(smooth(std, 0.99))
+            plt.plot(xs, mu1, color = 'b', label="EPIC")
+            plt.fill_between(xs,mu1+ sigma1, mu1-sigma1, color='b', alpha=0.1)
+        def draw_maml(xs):
+            res, std = read_rewards_multi(dname+"/results_maml/maml_{}_vpg_s{}_n{}_every{}_size32".format(env,s,n,every) + env_out, s, n, runs)
+            mu1 = np.array(smooth(res, 0.99))
+            sigma1 = 0.1 * np.array(smooth(std, 0.99))
+            plt.plot(xs, mu1, color="#2ca02c", label="MAML")
+            plt.fill_between(xs, mu1 + sigma1, mu1 - sigma1, color="#2ca02c", alpha=0.1)
+        def draw_single(xs):
+            res,std  = read_rewards_multi(dname+"/results/{}_vpg_s{}_n{}_every{}_size32_c0.5_tau0.5".format(env, s,n,every) + env_out, s, n, runs)
+            mu1 = np.array(smooth(res, 0.99))
+            sigma1 = 0.1 * np.array(smooth(std, 0.99))
+            plt.plot(xs, mu1, color="#ff7f0e", label="Singe task")
+            plt.fill_between(xs, mu1 + sigma1, mu1 - sigma1, color="#ff7f0e", alpha=0.1)
+        
+        algodraws = {'meta': draw_meta, \
+            'maml':draw_maml,\
+                'single':draw_single}
+        for env in envs:
+            envparam = self.envsparams[env]
+            if envparam is None:
+                continue
+            env_out = temp(envparam)
+            for every in everys:
+                for n in ns:
+                    for s in ss:
+                        xs = list(range(s))
+                        for algo in algos:
+                            algodraws[algo](xs)
+
+            plt.legend()
+            plt.xlabel("Tasks (environments)")
+            plt.ylabel("Mean reward")
+            plt.show()
+            plt.savefig("plots/{}_{}.png".format(env, env_out), format="png")
+
+if __name__ == "__main__":
+
+    envs = {'CartPole-v0':{'goal':[0.5],'steps':[50], 'mass':[1.0]},\
+        'lunar':None,\
+            'swimmer':None} 
+    params = {'algos':['meta','maml','single'], \
+            'everys': [50], \
+                'ss':[2000], \
+                    'ns':[10], \
+                        'runs':1}
+    pl = plot_all(params, envs)
+    
 
 ##### Lunar baseline comparison
 # for baselines
@@ -118,8 +182,9 @@ if __name__ == "__main__":
 
 
 
-    # res = read_rewards_multi("results/Lunar_vpg_s{}_n{}_c0.5_maml".format(s,n), s, n, runs)
-    # plt.plot(xs, smooth(res, 0.99), label="every"+str(50))
+#     res = read_rewards_multi("results/Lunar_vpg_s{}_n{}_c0.5_maml".format(s,n), s, n, runs)
+#     plt.plot(xs, smooth(res, 0.99), label="every"+str(50))
+
 
 
 ##### Swimmer baseline comparison
@@ -191,56 +256,43 @@ if __name__ == "__main__":
     # # plt.show()
     # plt.savefig("plots/swimmer_N.png", format="png")
 
+    ##### cartpole baseline comparison
     
-    
-    
-    
-    
-##### cartpole baseline comparison
-    
-    s = 2000
-    runs =6
-    xs = list(range(s))
-
-    for tau in [0.5]:
-        for every in [50]:
-            # if every in [10,75]:
-            #     res, std = read_rewards_multi(dirname+"/CartPole-v0_vpg_s{}_n{}_every{}_size32_c0.5_tau{}".format(s,n,every,tau), s, n, runs)
-            # else:
-            #     res, std = read_rewards_multi(dirname+"/CartPole-v0_vpg_s{}_n{}_every{}_goal0.5_c0.5_tau{}".format(s,n,every,tau), s, n, runs)
-            res, std = read_rewards_multi(dname+"/results/CartPole-v0_vpg_s{}_n{}_every{}_goal0.5_size32_c0.5_tau{}_mass1.0".format(s,n,every,tau), s, n, runs)
-            mu1 = np.array(smooth(res, 0.99))
-            sigma1=  0.1 * np.array(smooth(std, 0.99))
-            plt.plot(xs, mu1, color = 'b', label="EPIC")
-            plt.fill_between(xs,mu1+ sigma1, mu1-sigma1, color='b', alpha=0.1)
-
-
-    for tau in [0.5]:
-        for every in [50]:
-            res, std = read_rewards_multi(dname+"/results_maml/maml_meta_CartPole-v0_vpg_s{}_n{}_every{}_size32_mass1.0".format(s,n,every), s, n, runs)
-            mu1 = np.array(smooth(res, 0.99))
-            sigma1 = 0.1 * np.array(smooth(std, 0.99))
-            plt.plot(xs, mu1, color="#2ca02c", label="MAML")
-            plt.fill_between(xs, mu1 + sigma1, mu1 - sigma1, color="#2ca02c", alpha=0.1)
+    # s = 2000
+    # runs =1
+    # xs = list(range(s))
 
     # for tau in [0.5]:
     #     for every in [50]:
-    #         res,std  = read_rewards_multi(dirname+"/CartPole-v0_vpg_s{}_n{}_every50_size32_c0.5_tau0.5_nometa".format(s,n), s, n, runs)
+    #         res, std = read_rewards_multi(dname+"/results/meta_CartPole-v0_vpg_s{}_n{}_every{}_size32_c0.5_tau{}_goal0.5_steps50_mass1.0".format(s,n,every,tau), s, n, runs)
+    #         mu1 = np.array(smooth(res, 0.99))
+    #         sigma1=  0.1 * np.array(smooth(std, 0.99))
+    #         plt.plot(xs, mu1, color = 'b', label="EPIC")
+    #         plt.fill_between(xs,mu1+ sigma1, mu1-sigma1, color='b', alpha=0.1)
+
+
+    # for tau in [0.5]:
+    #     for every in [50]:
+    #         res, std = read_rewards_multi(dname+"/results_maml/maml_meta_CartPole-v0_vpg_s{}_n{}_every{}_size32_steps50_mass1.0".format(s,n,every), s, n, runs)
+    #         mu1 = np.array(smooth(res, 0.99))
+    #         sigma1 = 0.1 * np.array(smooth(std, 0.99))
+    #         plt.plot(xs, mu1, color="#2ca02c", label="MAML")
+    #         plt.fill_between(xs, mu1 + sigma1, mu1 - sigma1, color="#2ca02c", alpha=0.1)
+
+    # for tau in [0.5]:
+    #     for every in [50]:
+    #         res,std  = read_rewards_multi(dname+"/results/CartPole-v0_vpg_s{}_n{}_every50_size32_c0.5_tau0.5_goal0.5_steps50_mass1.0".format(s,n), s, n, runs)
     #         mu1 = np.array(smooth(res, 0.99))
     #         sigma1 = 0.1 * np.array(smooth(std, 0.99))
     #         plt.plot(xs, mu1, color="#ff7f0e", label="Singe-task")
     #         plt.fill_between(xs, mu1 + sigma1, mu1 - sigma1, color="#ff7f0e", alpha=0.1)
 
-    plt.legend()
-    plt.xlabel("Tasks (environments)")
-    plt.ylabel("Mean reward")
-    plt.show()
-    plt.savefig("plots/cart_goal0.5_mass1.0.png", format="png")
+    # plt.legend()
+    # plt.xlabel("Tasks (environments)")
+    # plt.ylabel("Mean reward")
+    # plt.show()
+    # plt.savefig("plots/cart_goal0.5_mass1.0.png", format="png")
     # tikzplotlib.save("plots/swimmer.tex")
-    
-    
-    
-    
 ##### CartPole N comparison
     # dirname = "results"
     # s = 2000
