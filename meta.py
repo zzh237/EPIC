@@ -3,7 +3,7 @@ import torch.nn as nn
 import argparse
 import gym
 import os 
-# import mujoco_py
+import mujoco_py
 import numpy as np
 from gym.spaces import Box, Discrete
 import setup
