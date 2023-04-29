@@ -57,7 +57,7 @@ parser.add_argument('--beta', type=float, default=1e-4)
 parser.add_argument('--update_every', type=int, default=300)
 parser.add_argument('--meta_update_every', type=int, default=50)  # need to tune
 parser.add_argument('--hiddens', nargs='+', type=int)
-parser.add_argument('--lam', type=float, default=0.5)
+parser.add_argument('--lam', type=float, default=0.9)
 parser.add_argument('--lam_decay', type=float, default=0.95)
 
 
