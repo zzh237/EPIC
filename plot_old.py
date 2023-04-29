@@ -85,7 +85,7 @@ class plot_all:
             return out  
         # for tau in [0.8]:
         def draw_meta(xs):
-            res, std = read_rewards_multi(dname+"/results/noreg/epic_{}_vpg_s{}_n{}_every{}_size32_c0.5_tau0.5".format(env, s,n,every)+ env_out, s, n, runs)
+            res, std = read_rewards_multi(dname+"/results/stochastic/soft_update_EPIC_{}_vpg_s{}_n{}_every{}_size32_c0.5_tau0.5".format(env, s,n,every)+ env_out, s, n, runs)
             mu1 = np.array(smooth(res, 0.99))
             sigma1=  0.1 * np.array(smooth(std, 0.99))
             plt.plot(xs, mu1, color = 'b', label="EPIC")
@@ -121,8 +121,8 @@ class plot_all:
             plt.legend()
             plt.xlabel("Tasks (environments)")
             plt.ylabel("Mean reward")
-            plt.show()
-            plt.savefig("plots/{}_{}.png".format(env, env_out), format="png")
+            # plt.show()
+            plt.savefig("plots/{}{}stochastic_soft.png".format(env, env_out), format="png")
 
 if __name__ == "__main__":
 
