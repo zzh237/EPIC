@@ -54,11 +54,12 @@ parser.add_argument('--learner', type=str, default="vpg", help="vpg, ppo, sac")
 parser.add_argument('--lr', type=float, default=1e-4)
 parser.add_argument('--alpha', type=float, default=1e-4)
 parser.add_argument('--beta', type=float, default=1e-4)
-parser.add_argument('--update_every', type=int, default=300)
-parser.add_argument('--meta_update_every', type=int, default=50)  # need to tune
+# parser.add_argument('--update_every', type=int, default=300)
+parser.add_argument('--meta_update_every', type=int, default=25)  # need to tune
 parser.add_argument('--hiddens', nargs='+', type=int)
 parser.add_argument('--lam', type=float, default=0.9)
 parser.add_argument('--lam_decay', type=float, default=0.95)
+parser.add_argument('--prm_log_var_init', type=float, default={'mean': -10, 'std': 0.1})
 
 
 # file settings
@@ -147,6 +148,7 @@ if __name__ == '__main__':
     action_std = args.action_std
     lam = args.lam
     lam_decay = args.lam_decay
+    prm_log_var_init = args.prm_log_var_init
     ############ For All #########################
     gamma = 0.99                # discount factor
     render = False
@@ -193,7 +195,7 @@ if __name__ == '__main__':
         actor_policy = GaussianVPG(env.observation_space, env.action_space,
                                   hidden_sizes=hidden_sizes, activation=activation, alpha=alpha,
                                   beta=beta, action_std=action_std, gamma=gamma, device=device,
-                                  lam=lam, lam_decay=lam_decay)
+                                  lam=lam, lam_decay=lam_decay, prm_log_var_init=prm_log_var_init)
     if learner == "ppo":
         print("-----initialize meta policy-------")
         # here we could also use PPO, need to check difference between them
@@ -262,7 +264,7 @@ if __name__ == '__main__':
                         sample, episode, np.round(np.sum(rewards), decimals=3)))
                     break
 
-        actor_policy.update_mu_theta_for_default(meta_memory, meta_update_every)
+        actor_policy.update_mu_theta_for_default(meta_memory, meta_update_every, sample)
         meta_memory.clear_memory()
 
         if (sample+1) % meta_update_every == 0:

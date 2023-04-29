@@ -128,7 +128,7 @@ class StochasticLinear(nn.Module):
 
 
 class GaussianActor(nn.Module):
-    def __init__(self, state_dim, action_dim, hidden_sizes, activation):
+    def __init__(self, state_dim, action_dim, hidden_sizes, activation, prm_log_var_init):
         super(GaussianActor, self).__init__()
         if type(hidden_sizes) == int:
             hid = [hidden_sizes]
@@ -140,7 +140,7 @@ class GaussianActor(nn.Module):
         output_activation = nn.Softmax(dim=-1)
         for j in range(len(sizes) - 1):
             act = activation() if j < len(sizes) - 2 else output_activation
-            layers += [StochasticLinear(sizes[j], sizes[j + 1]), act]
+            layers += [StochasticLinear(sizes[j], sizes[j + 1], prm_log_var_init), act]
 
         self.action_layer = nn.Sequential(*layers)
 
@@ -169,7 +169,7 @@ class GaussianActor(nn.Module):
 
 
 class GaussianContActor(nn.Module):
-    def __init__(self, state_dim, action_dim, hidden_sizes, activation, action_std, device):
+    def __init__(self, state_dim, action_dim, hidden_sizes, activation, action_std, device, prm_log_var_init):
         super(GaussianContActor, self).__init__()
         if type(hidden_sizes) == int:
             hid = [hidden_sizes]
@@ -181,7 +181,7 @@ class GaussianContActor(nn.Module):
         output_activation = nn.Tanh()
         for j in range(len(sizes) - 1):
             act = activation() if j < len(sizes) - 2 else output_activation
-            layers += [StochasticLinear(sizes[j], sizes[j + 1]), act]
+            layers += [StochasticLinear(sizes[j], sizes[j + 1], prm_log_var_init), act]
 
         self.action_layer = nn.Sequential(*layers).to(device)
         self.action_var = torch.full((action_dim,), action_std * action_std).to(device)
@@ -223,7 +223,8 @@ class GaussianContActor(nn.Module):
 
 class GaussianVPG(nn.Module):
     def __init__(self, state_space, action_space, hidden_sizes=(64, 64), activation=nn.Tanh,
-                 alpha=3e-4, beta=3e-4, gamma=0.9, device="cpu", action_std=0.5, lam=0.9, lam_decay=0.999):
+                 alpha=3e-4, beta=3e-4, gamma=0.9, device="cpu", action_std=0.5, lam=0.9, lam_decay=0.999,
+                 prm_log_var_init={'mean': -10, 'std': 0.1}):
         super(GaussianVPG, self).__init__()
         state_dim = state_space.shape[0]
 
@@ -236,13 +237,13 @@ class GaussianVPG(nn.Module):
             self.discrete_action = True
             self.action_dim = action_space.n
             # new policy is for meta learning, every few iters, we update policy to new_policy
-            self.new_default_policy = GaussianActor(state_dim, self.action_dim, hidden_sizes, activation).to(
+            self.new_default_policy = GaussianActor(state_dim, self.action_dim, hidden_sizes, activation, prm_log_var_init).to(
                 self.device)
-            self.default_policy = GaussianActor(state_dim, self.action_dim, hidden_sizes, activation).to(
+            self.default_policy = GaussianActor(state_dim, self.action_dim, hidden_sizes, activation, prm_log_var_init).to(
                 self.device)
-            self.prior_policy = GaussianActor(state_dim, self.action_dim, hidden_sizes, activation).to(
+            self.prior_policy = GaussianActor(state_dim, self.action_dim, hidden_sizes, activation, prm_log_var_init).to(
                 self.device)
-            self.policy_m = GaussianActor(state_dim, self.action_dim, hidden_sizes, activation).to(
+            self.policy_m = GaussianActor(state_dim, self.action_dim, hidden_sizes, activation, prm_log_var_init).to(
                 self.device)
 
             self.policy_m.load_state_dict(copy.deepcopy(self.default_policy.state_dict()))
@@ -254,16 +255,16 @@ class GaussianVPG(nn.Module):
             self.action_dim = action_space.shape[0]
 
             self.new_default_policy = GaussianContActor(state_dim, self.action_dim, hidden_sizes, activation,
-                                                        action_std, device).to(self.device)
+                                                        action_std, device, prm_log_var_init).to(self.device)
 
             self.default_policy = GaussianContActor(state_dim, self.action_dim, hidden_sizes, activation,
-                                                    action_std, device).to(self.device)
+                                                    action_std, device, prm_log_var_init).to(self.device)
 
             self.prior_policy = GaussianContActor(state_dim, self.action_dim, hidden_sizes, activation,
-                                                  action_std, device).to(self.device)
+                                                  action_std, device, prm_log_var_init).to(self.device)
 
             self.policy_m = GaussianContActor(state_dim, self.action_dim, hidden_sizes, activation,
-                                              action_std, device).to(self.device)
+                                              action_std, device, prm_log_var_init).to(self.device)
 
             self.policy_m.load_state_dict(copy.deepcopy(self.default_policy.state_dict()))
             self.prior_policy.load_state_dict(copy.deepcopy(self.default_policy.state_dict()))
@@ -310,7 +311,7 @@ class GaussianVPG(nn.Module):
         policy_gradient.backward()
         self.optimizer_m.step()
 
-    def update_policy_m_with_regularizer(self, memory, N):
+    def update_policy_m_with_regularizer(self, memory, N, samples):
         # caculate policy gradient
         discounted_reward = []
         Gt = 0
@@ -344,7 +345,7 @@ class GaussianVPG(nn.Module):
                                        mu2=prior_layer.b_mu, sigma2=prior_layer.b_log_var))
         KL = torch.stack(KL).sum()
 
-        reg = torch.sqrt((KL + torch.log(2 * np.sqrt(torch.tensor(N)) / 0.01)) / (2 * N))
+        reg = torch.sqrt((KL + torch.log(2 * np.sqrt(torch.tensor(samples)) / 0.01)) / (2 * samples))
         # reg = torch.sqrt(reg/(2*N))
         # calculate total loss and back propagate
         total_loss = policy_gradient + reg / N
@@ -352,9 +353,9 @@ class GaussianVPG(nn.Module):
         total_loss.backward()
         self.optimizer.step()
 
-    def update_mu_theta_for_default(self, memory, N):
+    def update_mu_theta_for_default(self, memory, N, samples):
         policy_m_para_before = copy.deepcopy(self.policy_m.state_dict())
-        self.update_policy_m_with_regularizer(memory, N)
+        self.update_policy_m_with_regularizer(memory, N, samples)
         # self.update_policy_m(memory)
         policy_m_para_after = copy.deepcopy(self.policy_m.state_dict())
         for key, meta_para in zip(policy_m_para_before, self.new_default_policy.parameters()):
@@ -369,7 +370,7 @@ class GaussianVPG(nn.Module):
         self.default_policy.load_state_dict(copy.deepcopy(self.new_default_policy.state_dict()))
         # #update prior distribution
         # self.prior_policy.load_state_dict(copy.deepcopy(self.new_default_policy.state_dict()))
-        for prior_param, new_default_param in zip(self.prior_policy.parameters(), self.new_default_policy.parameters()):
-            prior_param.data.copy_((1-self.lam)*new_default_param.data + self.lam*prior_param.data)
+        # for prior_param, new_default_param in zip(self.prior_policy.parameters(), self.new_default_policy.parameters()):
+        #     prior_param.data.copy_((1-self.lam)*new_default_param.data + self.lam*prior_param.data)
 
-        self.lam *= self.lam_decay
+        # self.lam *= self.lam_decay
