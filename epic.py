@@ -190,7 +190,7 @@ if __name__ == '__main__':
 
     if learner == "vpg":
         print("-----initialize meta policy-------")
-        actor_policy = GaussianVPG(env.observation_space, env.action_space, mu=None, sigma=None,
+        actor_policy = GaussianVPG(env.observation_space, env.action_space,
                                   hidden_sizes=hidden_sizes, activation=activation, alpha=alpha,
                                   beta=beta, action_std=action_std, gamma=gamma, device=device,
                                   lam=lam, lam_decay=lam_decay)
