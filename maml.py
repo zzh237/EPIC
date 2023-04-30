@@ -255,8 +255,8 @@ if __name__ == '__main__':
                 state = new_state
 
                 if done or steps == max_steps - 1:
-                    meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
-                        sample, episode, np.round(np.sum(rewards), decimals=3)))
+                    # meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
+                    #     sample, episode, np.round(np.sum(rewards), decimals=3)))
                     break
 
         actor_policy.update_policy(meta_memory)

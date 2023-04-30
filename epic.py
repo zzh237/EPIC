@@ -4,6 +4,7 @@ import argparse
 import gym
 import os 
 import mujoco_py
+import random
 import numpy as np
 from gym.spaces import Box, Discrete
 import setup
@@ -83,6 +84,7 @@ def get_log(file_name):
 
 def make_cart_env(seed, env="CartPole-v0"):
     # need to tune
+    # args.mass=random.choices([1,2,3,4,5],weights=[0.15,0.18,0.34,0.18,0.15],k=1)[0]
     mass = 0.1 * np.random.randn() + args.mass 
     # print("a new env of mass:", mass)
     env = NewCartPoleEnv(masscart=mass)
@@ -232,8 +234,8 @@ if __name__ == '__main__':
                 memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
                 state = new_state
                 if done or steps == max_steps-1:
-                    # meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
-                    #     sample, episode, np.round(np.sum(rewards), decimals = 3)))
+                    meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
+                        sample, episode, np.round(np.sum(rewards), decimals = 3)))
                     break
         #update single task policy using the trajectory
         actor_policy.update_policy_m(memory)
@@ -258,8 +260,8 @@ if __name__ == '__main__':
                 state = new_state
 
                 if done or steps == max_steps - 1:
-                    meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
-                        sample, episode, np.round(np.sum(rewards), decimals=3)))
+                    # meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
+                    #     sample, episode, np.round(np.sum(rewards), decimals=3)))
                     break
 
         actor_policy.update_mu_theta_for_default(meta_memory, meta_update_every)
