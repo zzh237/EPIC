@@ -1,6 +1,9 @@
 #! /bin/bash  
 RUNS=1
+for n in 1 5 10 25 
+do 
 for ((i=0;i<${RUNS};i++));
 do
-    python3 epic.py --run ${i} --env "CartPole-v0"
+    python epic.py --run ${i} --env "CartPole-v0" --meta_update_every $n --steps 500
 done
+done 
