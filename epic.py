@@ -41,7 +41,6 @@ parser.add_argument('--goal', type=float, default=0.5)
 parser.add_argument('--seed', default=1, type=int)
 parser.add_argument('--mass', type=float, default=1.0) 
 parser.add_argument('--action_std', type=float, default=0.5)
-
 # meta settings
 parser.add_argument('--meta', dest='meta', action='store_true')
 parser.add_argument('--no-meta', dest='meta', action='store_false')
@@ -84,7 +83,8 @@ def get_log(file_name):
 
 def make_cart_env(seed, env="CartPole-v0"):
     # need to tune
-    # args.mass=random.choices([1,2,3,4,5],weights=[0.15,0.18,0.34,0.18,0.15],k=1)[0]
+    if args.mass>1:
+      args.mass=random.choices(np.arange(args.mass+1),weights=[0.15,0.18,0.34,0.18,0.15],k=1)[0]
     mass = 0.1 * np.random.randn() + args.mass 
     # print("a new env of mass:", mass)
     env = NewCartPoleEnv(masscart=mass)
@@ -174,7 +174,7 @@ if __name__ == '__main__':
                 + "_c" + str(coeff) + "_tau" + str(tau) \
                     + "_goal" + str(args.goal)\
                         + "_steps" + str(max_steps)\
-                            + "_mass" + str(args.mass)
+                            + "_mass" + str(args.mass) + "fixedprior"  
     if not use_meta:
         filename += "_nometa"
 

@@ -85,14 +85,14 @@ class plot_all:
             return out  
         # for tau in [0.8]:
         def draw_meta(xs):
-            res, std = read_rewards_multi(dname+"/results/EPIC_{}_vpg_s{}_n{}_every{}_size32_c0.5_tau0.5".format(env, s,n,every)+ env_out, s, n, runs)
+            res, std = read_rewards_multi(dname+"/results/EPIC_{}_vpg_s{}_n{}_every{}_size32_c0.5_tau0.5".format(env, s,n,every)+ env_out+"fixedprior", s, n, runs)
             mu1 = np.array(smooth(res, 0.99))
             sigma1=  0.1 * np.array(smooth(std, 0.99))
             color = 'b',
             plt.plot(xs, mu1, label="EPIC_{}".format(every))
             plt.fill_between(xs,mu1+ sigma1, mu1-sigma1, color='b', alpha=0.1)
         def draw_maml(xs):
-            res, std = read_rewards_multi(dname+"/results_maml/maml_meta_{}_vpg_s{}_n{}_every{}_size32".format(env,s,n,every) + env_out, s, n, runs)
+            res, std = read_rewards_multi(dname+"/results_maml/maml_{}_vpg_s{}_n{}_every{}_size32".format(env,s,n,every) + env_out+"fixedprior", s, n, runs)
             mu1 = np.array(smooth(res, 0.99))
             sigma1 = 0.1 * np.array(smooth(std, 0.99))
             color="#2ca02c"
@@ -100,7 +100,7 @@ class plot_all:
             plt.fill_between(xs, mu1 + sigma1, mu1 - sigma1, color="#2ca02c", alpha=0.1)
         def draw_single(xs):
             every = 50
-            res,std  = read_rewards_multi(dname+"/results/{}_vpg_s{}_n{}_every{}_size32_c0.5_tau0.5".format(env, s,n,every) + env_out, s, n, runs)
+            res,std  = read_rewards_multi(dname+"/results/{}_vpg_s{}_n{}_every{}_size32_c0.5_tau0.5".format(env, s,n,every) + env_out+"fixedprior", s, n, runs)
             mu1 = np.array(smooth(res, 0.99))
             sigma1 = 0.1 * np.array(smooth(std, 0.99))
             plt.plot(xs, mu1, color="#ff7f0e", label="Singe task")
@@ -127,17 +127,17 @@ class plot_all:
                             plt.ylabel("Mean reward")
                             plt.title("{}_metafrequency{}_episodes{}{}".format(env, every, n, env_out))
                             # plt.show()
-                            plt.savefig("plots/epic_{}_metafrequency{}_episodes{}{}stochastic_soft.png".format(env, 0, n, env_out), format="png")
+                            plt.savefig("plots/epic_{}_metafrequency{}_episodes{}{}fixedprior.png".format(env, 0, n, env_out), format="png")
 
         
 
 if __name__ == "__main__":
 
-    envs = {'CartPole-v0':{'goal':[0.5],'steps':[300], 'mass':[1.0]},\
+    envs = {'CartPole-v0':{'goal':[0.5],'steps':[100], 'mass':[1.0]},\
         'lunar':None,\
             'swimmer':None} 
     params = {'algos':['epic'], \
-            'everys': [1,5,10,25], \
+            'everys': [10,25,50,100,200],\
                 'ss':[2000], \
                     'ns':[10], \
                         'runs':1}

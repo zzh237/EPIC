@@ -4,6 +4,7 @@ import argparse
 import gym
 import mujoco_py
 import numpy as np
+import random
 from gym.spaces import Box, Discrete
 import setup
 import os 
@@ -82,6 +83,8 @@ def get_log(file_name):
 
 def make_cart_env(seed, env="CartPole-v0"):
     # need to tune
+    if args.mass>1:
+      args.mass=random.choices(np.arange(args.mass+1),weights=[0.15,0.18,0.34,0.18,0.15],k=1)[0]
     mass = 0.1 * np.random.randn() + args.mass 
     # print("a new env of mass:", mass)
     env = NewCartPoleEnv(masscart=mass)
@@ -171,7 +174,7 @@ if __name__ == '__main__':
         + "_size" + str(hidden_sizes[0]) \
             + "_goal" + str(args.goal)\
             + "_steps" + str(max_steps) \
-            + "_mass" + str(args.mass) 
+            + "_mass" + str(args.mass) + "fixedprior" 
 
     if args.run >= 0:
         filename += "_run" + str(args.run)
@@ -179,7 +182,7 @@ if __name__ == '__main__':
     if not os.path.exists(args.resdir):
         os.makedirs(args.resdir) 
     rew_file = open(args.resdir + "maml_" + filename + ".txt", "w")
-    meta_rew_file = open(args.resdir + "maml_" + "meta_" + filename + ".txt", "w")
+    #meta_rew_file = open(args.resdir + "maml_" + "meta_" + filename + ".txt", "w")
 
     # env = gym.make(env_name)
     env = make_env(env_name, args.seed)
