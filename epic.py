@@ -33,7 +33,7 @@ parser.add_argument('--device', type=str, default="cpu")
 parser.add_argument('--run', type=int, default=0)
 # env settings
 # Swimmer for majuco environment
-parser.add_argument('--env', type=str, default="CartPole-v0")
+parser.add_argument('--env', type=str, default="LunarLander-v2", help=['Swimmer', 'LunarLander-v2', 'CartPole-v0'])
 parser.add_argument('--samples', type=int, default=2000) # need to tune
 parser.add_argument('--episodes', type=int, default=10)
 parser.add_argument('--steps', type=int, default=50)
@@ -81,38 +81,48 @@ def get_log(file_name):
     logger.addHandler(fh)  
     return logger
 
-def make_cart_env(seed, env="CartPole-v0"):
+def make_cart_env(env="CartPole-v0"):
     # need to tune
-    if args.mass>1:
-      args.mass=random.choices(np.arange(args.mass+1),weights=[0.15,0.18,0.34,0.18,0.15],k=1)[0]
-    mass = 0.1 * np.random.randn() + args.mass 
-    # print("a new env of mass:", mass)
-    env = NewCartPoleEnv(masscart=mass)
+    assert env=="CartPole-v0", "env_name should be CartPole-v0."
+    # if args.mass>1:
+    #   args.mass=random.choices(np.arange(args.mass+1),weights=[0.15,0.18,0.34,0.18,0.15],k=1)[0]
+    masscart = np.random.uniform(1, 3)
+    masspole = np.random.uniform(0.1,0.5)
+    length = np.random.uniform(0.4,0.6)
+    env = NewCartPoleEnv(masscart=masscart,
+                         masspole=masspole,
+                         length=length)
     # goal = args.goal * np.random.randn() + 0.0
     # print("a new env of goal:", goal)
     # env = NewCartPoleEnv(goal=goal)
     # check_env(env, warn=True)
     return env
 
-def make_lunar_env(seed, env="LunarLander-v2"):
+def make_lunar_env(env="LunarLander-v2"):
     # need to tune
     # mass = 0.1 * np.random.randn() + 1.0
     # print("a new env of mass:", mass)
     # env = NewCartPoleEnv(masscart=mass)
-    goal = np.random.uniform(-1, 1)
+    # goal = np.random.uniform(-1, 1)
     # print("a new env of goal:", goal)
-    env = NewLunarLander(goal=goal)
+    main_engine_power = np.random.uniform(11, 15)
+    side_engine_power = np.random.uniform(0.45, 0.75)
+    env = NewLunarLander(main_engine_power=main_engine_power,
+                         side_engine_power=side_engine_power)
     # check_env(env, warn=True)
     return env
 
-def make_car_env(seed, env="MountainCarContinuous-v0"):
+def make_car_env(env="MountainCarContinuous-v0"):
     # need to tune
     env = gym.make("MountainCarContinuous-v0")
     return env
 
-def make_mujoco_env(seed, env="Swimmer"):
+def make_mujoco_env(env="Swimmer"):
     if env == "Swimmer":
-        env = SwimmerEnvRandVel()
+        # goal = np.random.uniform(0.1, 0.2)
+        # env = SwimmerEnvRandVel(goal=goal)
+        from gym.envs.mujoco.swimmer import SwimmerEnv
+        env = SwimmerEnv()
     elif env == "Halfcdir":
         env = HalfCheetahEnvRandDir()
     elif env == "Halfcvel":
@@ -174,7 +184,7 @@ if __name__ == '__main__':
                 + "_c" + str(coeff) + "_tau" + str(tau) \
                     + "_goal" + str(args.goal)\
                         + "_steps" + str(max_steps)\
-                            + "_mass" + str(args.mass) + "fixedprior"  
+                            + "_mass" + str(args.mass)
     if not use_meta:
         filename += "_nometa"
 
@@ -182,13 +192,12 @@ if __name__ == '__main__':
         filename += "_run" + str(args.run)
     
     if not os.path.exists(args.resdir):
-        os.makedirs(args.resdir)  
-    # rew_file = open(args.resdir + filename + ".txt", "w")
+        os.makedirs(args.resdir)
     meta_rew_file = open(args.resdir + "EPIC_" + filename + ".txt", "w")
 
     # env = gym.make(env_name)
     envfunc = envs[env_name]
-    env = envfunc(args.seed, env_name)
+    env = envfunc(env_name)
 
     if learner == "vpg":
         print("-----initialize meta policy-------")
@@ -211,7 +220,7 @@ if __name__ == '__main__':
         print("#### Learning environment sample {}".format(sample))
         ########## creating environment
         # env = gym.make(env_name)
-        env = envfunc(args.seed, env_name)
+        env = envfunc(env_name)
         # env.seed(sample)
 
         ########## sample a meta learner

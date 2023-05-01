@@ -3,6 +3,7 @@ import gym
 from gym import spaces, logger
 from gym.utils import seeding
 import numpy as np
+# from gym.envs.classic_control import cartpole
 
 
 class NewCartPoleEnv(gym.Env):
@@ -81,6 +82,7 @@ class NewCartPoleEnv(gym.Env):
         self.state = None
 
         self.steps_beyond_done = None
+        assert -self.x_threshold * 2 < goal < self.x_threshold * 2, "goal needs to fall in the interval [-4.8, 4.8]"
         self.goal = goal
 
     def seed(self, seed=None):

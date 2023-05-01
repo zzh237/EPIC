@@ -27,12 +27,14 @@ from Box2D.b2 import (edgeShape, circleShape, fixtureDef, polygonShape, revolute
 import gym
 from gym import spaces
 from gym.utils import seeding, EzPickle
+# from gym.envs.box2d import lunar_lander
+
 
 FPS = 50
 SCALE = 30.0   # affects how fast-paced the game is, forces should be adjusted as well
 
-MAIN_ENGINE_POWER = 13.0
-SIDE_ENGINE_POWER = 0.6
+# MAIN_ENGINE_POWER = 13.0
+# SIDE_ENGINE_POWER = 0.6
 
 INITIAL_RANDOM = 1000.0   # Set 1500 to make game harder
 
@@ -78,7 +80,7 @@ class NewLunarLander(gym.Env, EzPickle):
 
     continuous = False
 
-    def __init__(self , goal= 0):
+    def __init__(self, main_engine_power=13, side_engine_power=0.6, goal=0):
         EzPickle.__init__(self)
         self.seed()
         self.viewer = None
@@ -88,8 +90,9 @@ class NewLunarLander(gym.Env, EzPickle):
         self.lander = None
         self.particles = []
 
-        self.goal= goal
-
+        self.goal = goal
+        self.MAIN_ENGINE_POWER = main_engine_power
+        self.SIDE_ENGINE_POWER = side_engine_power
 
 
         self.prev_reward = None
@@ -266,10 +269,10 @@ class NewLunarLander(gym.Env, EzPickle):
                                       impulse_pos[0],
                                       impulse_pos[1],
                                       m_power)  # particles are just a decoration
-            p.ApplyLinearImpulse((ox * MAIN_ENGINE_POWER * m_power, oy * MAIN_ENGINE_POWER * m_power),
+            p.ApplyLinearImpulse((ox * self.MAIN_ENGINE_POWER * m_power, oy * self.MAIN_ENGINE_POWER * m_power),
                                  impulse_pos,
                                  True)
-            self.lander.ApplyLinearImpulse((-ox * MAIN_ENGINE_POWER * m_power, -oy * MAIN_ENGINE_POWER * m_power),
+            self.lander.ApplyLinearImpulse((-ox * self.MAIN_ENGINE_POWER * m_power, -oy * self.MAIN_ENGINE_POWER * m_power),
                                            impulse_pos,
                                            True)
 
@@ -288,10 +291,10 @@ class NewLunarLander(gym.Env, EzPickle):
             impulse_pos = (self.lander.position[0] + ox - tip[0] * 17/SCALE,
                            self.lander.position[1] + oy + tip[1] * SIDE_ENGINE_HEIGHT/SCALE)
             p = self._create_particle(0.7, impulse_pos[0], impulse_pos[1], s_power)
-            p.ApplyLinearImpulse((ox * SIDE_ENGINE_POWER * s_power, oy * SIDE_ENGINE_POWER * s_power),
+            p.ApplyLinearImpulse((ox * self.SIDE_ENGINE_POWER * s_power, oy * self.SIDE_ENGINE_POWER * s_power),
                                  impulse_pos
                                  , True)
-            self.lander.ApplyLinearImpulse((-ox * SIDE_ENGINE_POWER * s_power, -oy * SIDE_ENGINE_POWER * s_power),
+            self.lander.ApplyLinearImpulse((-ox * self.SIDE_ENGINE_POWER * s_power, -oy * self.SIDE_ENGINE_POWER * s_power),
                                            impulse_pos,
                                            True)
 

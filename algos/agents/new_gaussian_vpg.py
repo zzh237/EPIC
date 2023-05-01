@@ -7,10 +7,8 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.autograd import Variable
 from gym.spaces import Box, Discrete
-from .model import GaussianActor, GaussianContActor
 from torch.distributions import Categorical, MultivariateNormal
 import copy
-from algos.agents.model import EltwiseLayer
 import math
 
 
@@ -344,7 +342,7 @@ class GaussianVPG(nn.Module):
                                        mu2=prior_layer.b_mu, sigma2=prior_layer.b_log_var))
         KL = torch.stack(KL).sum()
 
-        reg = torch.sqrt((KL + torch.log(2 * np.sqrt(torch.tensor(N)) / 0.01)) / (N))
+        reg = torch.sqrt((KL + torch.log(2 * np.sqrt(torch.tensor(N)) / 0.01)) / (2*N))
         # reg = torch.sqrt(reg/(2*N))
         # calculate total loss and back propagate
         total_loss = policy_gradient + reg / N
