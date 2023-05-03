@@ -86,9 +86,9 @@ def make_cart_env(env="CartPole-v0"):
     # need to tune
     assert env=="CartPole-v0", "env_name should be CartPole-v0."
 
-    masscart=np.random.choice(np.arrrange([1.0, 2.0, 3.0, 4.0, 5.0]), p=[0.15,0.18,0.34,0.18,0.15])
-    masspole=np.random.choice(np.arrrange([0.1, 0.2, 0.3, 0.4, 0.5]), p=[0.34,0.18, 0.18, 0.15, 0.15])
-    length=np.random.choice(np.arrrange([0.3, 0.4, 0.5, 0.6, 0.7]), p=[0.15,0.18,0.34,0.18,0.15])
+    masscart=np.random.choice(np.array([1.0, 2.0, 3.0, 4.0, 5.0]), p=[0.15,0.18,0.34,0.18,0.15])
+    masspole=np.random.choice(np.array([0.1, 0.2, 0.3, 0.4, 0.5]), p=[0.34,0.18, 0.18, 0.15, 0.15])
+    length=np.random.choice(np.array([0.3, 0.4, 0.5, 0.6, 0.7]), p=[0.15,0.18,0.34,0.18,0.15])
 
     masscart = 0.1 * np.random.randn() + masscart
     masspole = 0.01 * np.random.rand() + masspole
@@ -109,9 +109,9 @@ def make_lunar_env(env="LunarLander-v2"):
     # main_engine_power = np.random.uniform(11, 15)
     # side_engine_power = np.random.uniform(0.45, 0.75)
     assert env=="LunarLander-v2"
-    main_engine_power = np.random.choice(np.arrrange([11.0, 12.0, 13.0, 14.0, 15.0]),
+    main_engine_power = np.random.choice(np.array([11.0, 12.0, 13.0, 14.0, 15.0]),
                                          p=[0.15,0.18,0.34,0.18,0.15])
-    side_engine_power = np.random.choice(np.arrrange([0.45, 0.55, 0.65, 0.75, 0.85]),
+    side_engine_power = np.random.choice(np.array([0.45, 0.55, 0.65, 0.75, 0.85]),
                                          p=[0.15,0.18,0.34,0.18,0.15])
     main_engine_power = main_engine_power + 0.1*np.random.randn()
     side_engine_power = side_engine_power + 0.01*np.random.randn()
