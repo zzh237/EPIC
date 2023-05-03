@@ -23,6 +23,7 @@ from envs.ant_rand_vel import AntEnvRandVel
 
 import logging
 from datetime import datetime
+## this is version 2.0
 
 now = datetime.now()
 current_time = now.strftime("%m-%d %H:%M:%S")
