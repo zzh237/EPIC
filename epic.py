@@ -281,7 +281,7 @@ if __name__ == '__main__':
                     #     sample, episode, np.round(np.sum(rewards), decimals=3)))
                     break
 
-        actor_policy.update_mu_theta_for_default(meta_memory, meta_update_every, H=1/(1-gamma))
+        actor_policy.update_mu_theta_for_default(meta_memory, meta_update_every, H=1*(1-gamma**max_steps)/(1-gamma))
         meta_memory.clear_memory()
 
         if (sample+1) % meta_update_every == 0:
