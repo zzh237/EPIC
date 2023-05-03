@@ -345,7 +345,7 @@ class GaussianVPG(nn.Module):
         c = 1.5
         delta = 0.01
         epsilon = np.log(2)/(2*np.log(c)) * (1+np.log(KL/np.log(2/delta)))
-        reg = (1+c)/2*np.sqrt(2) * np.sqrt((KL + np.log(2/delta) + epsilon) * N* H**2)
+        reg = (1+c)/2*np.sqrt(2) * np.sqrt((KL + np.log(2/delta) + epsilon) * N * H**2)
 
         # reg = torch.sqrt((KL + torch.log(2 * np.sqrt(torch.tensor(N)) / 0.01)) / (2*N))
         # reg = torch.sqrt(reg/(2*N))
@@ -355,9 +355,9 @@ class GaussianVPG(nn.Module):
         total_loss.backward()
         self.optimizer.step()
 
-    def update_mu_theta_for_default(self, memory, N):
+    def update_mu_theta_for_default(self, memory, N, H):
         policy_m_para_before = copy.deepcopy(self.policy_m.state_dict())
-        self.update_policy_m_with_regularizer(memory, N)
+        self.update_policy_m_with_regularizer(memory, N, H)
         # self.update_policy_m(memory)
         policy_m_para_after = copy.deepcopy(self.policy_m.state_dict())
         for key, meta_para in zip(policy_m_para_before, self.new_default_policy.parameters()):
