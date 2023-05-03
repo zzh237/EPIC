@@ -308,7 +308,7 @@ class GaussianVPG(nn.Module):
         policy_gradient.backward()
         self.optimizer_m.step()
 
-    def update_policy_m_with_regularizer(self, memory, N):
+    def update_policy_m_with_regularizer(self, memory, N, H):
         # caculate policy gradient
         discounted_reward = []
         Gt = 0
@@ -342,7 +342,12 @@ class GaussianVPG(nn.Module):
                                        mu2=prior_layer.b_mu, sigma2=prior_layer.b_log_var))
         KL = torch.stack(KL).sum()
 
-        reg = torch.sqrt((KL + torch.log(2 * np.sqrt(torch.tensor(N)) / 0.01)) / (2*N))
+        c = 1.5
+        delta = 0.01
+        epsilon = np.log(2)/(2*np.log(c)) * (1+np.log(KL/np.log(2/delta)))
+        reg = (1+c)/2*np.sqrt(2) * np.sqrt((KL + np.log(2/delta) + epsilon) * N* H**2)
+
+        # reg = torch.sqrt((KL + torch.log(2 * np.sqrt(torch.tensor(N)) / 0.01)) / (2*N))
         # reg = torch.sqrt(reg/(2*N))
         # calculate total loss and back propagate
         total_loss = policy_gradient + reg / N
