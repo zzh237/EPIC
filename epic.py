@@ -13,9 +13,10 @@ from algos.agents.new_gaussian_vpg import GaussianVPG
 from algos.agents.gaussian_ppo import GaussianPPO
 from envs.new_cartpole import NewCartPoleEnv
 from envs.new_lunar_lander import NewLunarLander
-from envs.swimmer_rand_vel import SwimmerEnvRandVel
-from envs.half_cheetah_rand_dir import HalfCheetahEnvRandDir
-from envs.half_cheetah_rand_vel import HalfCheetahEnvRandVel
+# from envs.swimmer_rand_vel import SwimmerEnvRandVel
+# from envs.half_cheetah_rand_dir import HalfCheetahEnvRandDir
+# from envs.half_cheetah_rand_vel import HalfCheetahEnvRandVel
+from envs.new_half_cheetah import new_HalfCheetahEnv
 from envs.ant_rand_dir import AntEnvRandDir
 from envs.ant_rand_goal import AntEnvRandGoal
 from envs.ant_rand_vel import AntEnvRandVel
@@ -34,7 +35,8 @@ parser.add_argument('--device', type=str, default="cpu")
 parser.add_argument('--run', type=int, default=0)
 # env settings
 # Swimmer for majuco environment
-parser.add_argument('--env', type=str, default="CartPole-v0", help=['Swimmer', 'LunarLander-v2', 'CartPole-v0'])
+parser.add_argument('--env', type=str, default="half_cheetah",
+                    help=['Swimmer', 'LunarLander-v2', 'CartPole-v0', 'half_cheetah'])
 parser.add_argument('--samples', type=int, default=2000) # need to tune
 parser.add_argument('--episodes', type=int, default=10)
 parser.add_argument('--steps', type=int, default=50)
@@ -145,7 +147,13 @@ def make_mujoco_env(env="Swimmer"):
 #     check_env(env, warn=True)
     return env
 
-envs = {'Swimmer':make_mujoco_env, 'LunarLander-v2': make_lunar_env, 'CartPole-v0':make_cart_env}
+def make_half_cheetah(env='half_cheetah'):
+    assert env == 'half_cheetah', "env_name should be half_cheetah."
+    env = new_HalfCheetahEnv()
+    return env
+
+envs = {'Swimmer':make_mujoco_env, 'LunarLander-v2': make_lunar_env, 'CartPole-v0':make_cart_env,
+        'half_cheetah': make_half_cheetah}
 
 if __name__ == '__main__':
     ############## Hyperparameters ##############
