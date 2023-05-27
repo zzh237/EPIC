@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import argparse
 import gym
+
 import os 
 import mujoco_py
 import random
@@ -13,13 +14,11 @@ from algos.agents.new_gaussian_vpg import GaussianVPG
 from algos.agents.gaussian_ppo import GaussianPPO
 from envs.new_cartpole import NewCartPoleEnv
 from envs.new_lunar_lander import NewLunarLander
-# from envs.swimmer_rand_vel import SwimmerEnvRandVel
-# from envs.half_cheetah_rand_dir import HalfCheetahEnvRandDir
-# from envs.half_cheetah_rand_vel import HalfCheetahEnvRandVel
+from envs.new_swimmer import new_Swimmer
+from envs.new_ant import new_AntEnv
+
 from envs.new_half_cheetah import new_HalfCheetahEnv
-from envs.ant_rand_dir import AntEnvRandDir
-from envs.ant_rand_goal import AntEnvRandGoal
-from envs.ant_rand_vel import AntEnvRandVel
+from envs.new_walker_2d import new_Walker2dEnv
 # from stable_baselines.common.env_checker import check_env
 
 import logging
@@ -36,10 +35,11 @@ parser.add_argument('--run', type=int, default=0)
 # env settings
 # Swimmer for majuco environment
 parser.add_argument('--env', type=str, default="half_cheetah",
-                    help=['Swimmer', 'LunarLander-v2', 'CartPole-v0', 'half_cheetah'])
+                    help=['Swimmer', 'LunarLander-v2', 'CartPole-v0', 'half_cheetah', 'Ant',
+                          'walker_2d'])
 parser.add_argument('--samples', type=int, default=2000) # need to tune
 parser.add_argument('--episodes', type=int, default=10)
-parser.add_argument('--steps', type=int, default=50)
+parser.add_argument('--steps', type=int, default=100)
 parser.add_argument('--goal', type=float, default=0.5) 
 parser.add_argument('--seed', default=1, type=int)
 parser.add_argument('--mass', type=float, default=1.0) 
@@ -128,32 +128,47 @@ def make_car_env(env="MountainCarContinuous-v0"):
     env = gym.make("MountainCarContinuous-v0")
     return env
 
-def make_mujoco_env(env="Swimmer"):
-    if env == "Swimmer":
-        # goal = np.random.uniform(0.1, 0.2)
-        # env = SwimmerEnvRandVel(goal=goal)
-        from gym.envs.mujoco.swimmer import SwimmerEnv
-        env = SwimmerEnv()
-    elif env == "Halfcdir":
-        env = HalfCheetahEnvRandDir()
-    elif env == "Halfcvel":
-        env = HalfCheetahEnvRandVel()
-    elif env == "Antdir":
-        env = AntEnvRandDir()
-    elif env == "Antgol":
-        env = AntEnvRandGoal()
-    elif env == "Antvel":
-        env = AntEnvRandVel()
-#     check_env(env, warn=True)
-    return env
+# def make_mujoco_env(env="Swimmer"):
+#     if env == "Swimmer":
+#         # goal = np.random.uniform(0.1, 0.2)
+#         # env = SwimmerEnvRandVel(goal=goal)
+#         from gym.envs.mujoco.swimmer import SwimmerEnv
+#         env = SwimmerEnv()
+#     elif env == "Halfcdir":
+#         env = HalfCheetahEnvRandDir()
+#     elif env == "Halfcvel":
+#         env = HalfCheetahEnvRandVel()
+#     elif env == "Antdir":
+#         env = AntEnvRandDir()
+#     elif env == "Antgol":
+#         env = AntEnvRandGoal()
+#     elif env == "Antvel":
+#         env = AntEnvRandVel()
+# #     check_env(env, warn=True)
+#     return env
 
 def make_half_cheetah(env='half_cheetah'):
     assert env == 'half_cheetah', "env_name should be half_cheetah."
     env = new_HalfCheetahEnv()
     return env
 
-envs = {'Swimmer':make_mujoco_env, 'LunarLander-v2': make_lunar_env, 'CartPole-v0':make_cart_env,
-        'half_cheetah': make_half_cheetah}
+def make_swimmer(env='Swimmer'):
+    goal = np.random.uniform(low=-0.5, high=0.5)
+    env = new_Swimmer(goal=goal)
+    return env
+
+def make_ant(env='Ant'):
+    assert env=='Ant'
+    env = new_AntEnv()
+    return env
+
+def make_walker(env='walker_2d'):
+    assert env=='walker_2d'
+    env = new_Walker2dEnv()
+    return env
+
+envs = {'Swimmer':make_swimmer, 'LunarLander-v2': make_lunar_env, 'CartPole-v0':make_cart_env,
+        'half_cheetah': make_half_cheetah, 'Ant': make_ant, 'walker_2d': make_walker}
 
 if __name__ == '__main__':
     ############## Hyperparameters ##############

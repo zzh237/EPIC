@@ -5,8 +5,9 @@ from gym.envs.mujoco import mujoco_env
 
 class new_HalfCheetahEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def __init__(self):
-        self.goal_velocity = np.random.choice(np.array([0.5, 1.0, 1.5, 2.0, 2.5]), p=[0.15, 0.18, 0.34, 0.18, 0.15])
-        self.goal_velocity = self.goal_velocity + 0.05*np.random.randn()
+        # self.goal_velocity = np.random.choice(np.array([0.5, 1.0, 1.5, 2.0, 2.5]), p=[0.15, 0.18, 0.34, 0.18, 0.15])
+        # self.goal_velocity = self.goal_velocity + 0.05*np.random.randn()
+        self.goal_velocity = np.random.uniform(low=-2.0, high=2.0)
         mujoco_env.MujocoEnv.__init__(self, "half_cheetah.xml", 5)
         utils.EzPickle.__init__(self)
 
@@ -21,7 +22,8 @@ class new_HalfCheetahEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         ob = self._get_obs()
         reward_ctrl = -0.1 * np.square(action).sum()
         vel_x = (xposafter - xposbefore) / self.dt
-        reward_run = - 1.0 * np.abs(vel_x - self._goal_vel)  # *modification*
+        print(vel_x)
+        reward_run = np.exp(-5*np.abs(vel_x-self.goal_velocity))  # *modification*
         reward = reward_ctrl + reward_run
         done = False
         return ob, reward, done, dict(reward_run=reward_run, reward_ctrl=reward_ctrl)

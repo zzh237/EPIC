@@ -85,7 +85,7 @@ class plot_all:
             return out  
         # for tau in [0.8]:
         def draw_meta(xs):
-            res, std = read_rewards_multi(dname+"/results/EPIC_{}_vpg_s{}_n{}_every{}_size32_c0.5_tau0.5".format(env, s,n,every)+ env_out+"fixedprior", s, n, runs)
+            res, std = read_rewards_multi(dname+"/results/EPIC_{}_vpg_s{}_n{}_every{}_size32_c0.5_tau0.5".format(env, s,n,every)+ env_out, s, n, runs)
             mu1 = np.array(smooth(res, 0.99))
             sigma1=  0.1 * np.array(smooth(std, 0.99))
             color = 'b',
@@ -133,11 +133,13 @@ class plot_all:
 
 if __name__ == "__main__":
 
-    envs = {'CartPole-v0':{'goal':[0.5],'steps':[100], 'mass':[1.0]},\
+    envs = {'half_cheetah':{'goal':[0.5],'steps':[100], 'mass':[1.0]},\
         'lunar':None,\
-            'swimmer':None} 
-    params = {'algos':['epic'], \
-            'everys': [10,25,50,100,200],\
+            'swimmer':None}
+    # envs = {'half_cheetah':{'steps': [100],
+    #                    }}
+    params = {'algos':['epic', 'maml'], \
+            'everys': [5, 10, 25, 50],\
                 'ss':[2000], \
                     'ns':[10], \
                         'runs':1}
