@@ -15,8 +15,12 @@ from algos.agents.gaussian_vpg import GaussianVPG
 from algos.agents.gaussian_model import PolicyHub
 from envs.new_cartpole import NewCartPoleEnv
 from envs.new_lunar_lander import NewLunarLander
-from envs.swimmer_rand_vel import SwimmerEnvRandVel
-from envs.half_cheetah_rand_dir import HalfCheetahEnvRandDir
+from envs.new_half_cheetah import new_HalfCheetahEnv
+from envs.new_swimmer import new_Swimmer
+#from envs.swimmer_rand_vel import SwimmerEnvRandVel
+#from envs.half_cheetah_rand_dir import HalfCheetahEnvRandDir
+from envs.new_half_cheetah import new_HalfCheetahEnv
+from envs.new_ant import new_AntEnv
 # from stable_baselines.common.env_checker import check_env
 
 import logging
@@ -35,7 +39,7 @@ parser.add_argument('--env', type=str, default="CartPole-v0")
 parser.add_argument('--samples', type=int, default=2000) # need to tune
 parser.add_argument('--episodes', type=int, default=10)
 parser.add_argument('--steps', type=int, default=50)
-parser.add_argument('--goal', type=float, default=0.5)
+parser.add_argument('--goal', type=float, default=0.0)
 parser.add_argument('--seed', default=1, type=int)
 parser.add_argument('--mass', type=float, default=1.0) 
 
@@ -82,26 +86,61 @@ def get_log(file_name):
 
 
 def make_cart_env(seed, env="CartPole-v0"):
-    # need to tune
-    if args.mass>1:
-      args.mass=random.choices(np.arange(args.mass+1),weights=[0.15,0.18,0.34,0.18,0.15],k=1)[0]
-    mass = 0.1 * np.random.randn() + args.mass 
-    # print("a new env of mass:", mass)
-    env = NewCartPoleEnv(masscart=mass)
-    # goal = args.goal * np.random.randn() + 0.0
-    # print("a new env of goal:", goal)
-    # env = NewCartPoleEnv(goal=goal)
-    # check_env(env, warn=True)
+    assert env=="CartPole-v0", "env_name should be CartPole-v0."
+    if args.mass==5:
+      masscart=np.random.choice(np.array([1.0, 2.0, 3.0, 4.0, 5.0]), p=[0.15,0.18,0.34,0.18,0.15])
+      masspole=np.random.choice(np.array([0.1, 0.2, 0.3, 0.4, 0.5]), p=[0.34,0.18, 0.18, 0.15, 0.15])
+      length=np.random.choice(np.array([0.3, 0.4, 0.5, 0.6, 0.7]), p=[0.15,0.18,0.34,0.18,0.15])
+      masscart = 0.1 * np.random.randn() + masscart
+      masspole = 0.01 * np.random.rand() + masspole
+      length = 0.01*np.random.rand() + length
+      env = NewCartPoleEnv(masscart=masscart,
+                         masspole=masspole,
+                         length=length)
+    elif args.mass == 10:
+      masscart = np.random.uniform(1, 5)
+      masspole = np.random.uniform(0.1, 0.5)
+      length = np.random.uniform(0.3, 0.7)
+      env = NewCartPoleEnv(masscart=masscart,
+                         masspole=masspole,
+                         length=length)
+    elif args.goal == 5:
+      goalcart=np.random.choice(np.array([-0.99, -0.5, 0, 0.5, 0.99]), p=[0.15,0.18,0.34,0.18,0.15])
+      goalcart = 0.1 * np.random.randn() + goalcart
+      env = NewCartPoleEnv(goal=goalcart)
+    elif args.goal == 10:
+      goalcart=np.random.uniform(-1,1)
+      env = NewCartPoleEnv(goal=goalcart)
+    else:
+      env = NewCartPoleEnv()
     return env
 
 def make_lunar_env(seed, env="LunarLander-v2"):
-    # need to tune
-    # mass = 0.1 * np.random.randn() + 1.0
-    # print("a new env of mass:", mass)
-    # env = NewCartPoleEnv(masscart=mass)
-    goal = np.random.uniform(-1, 1)
-    # print("a new env of goal:", goal)
-    env = NewLunarLander(goal=goal)
+    # goal = np.random.uniform(-1, 1)
+    assert env=="LunarLander-v2"
+    if args.mass == 5:
+      main_engine_power = np.random.choice(np.array([11.0, 12.0, 13.0, 14.0, 15.0]),
+                                         p=[0.15,0.18,0.34,0.18,0.15])
+      side_engine_power = np.random.choice(np.array([0.45, 0.55, 0.65, 0.75, 0.85]),
+                                         p=[0.15,0.18,0.34,0.18,0.15])
+      main_engine_power = main_engine_power + 0.1*np.random.randn()
+      side_engine_power = side_engine_power + 0.01*np.random.randn()
+      env = NewLunarLander(main_engine_power=main_engine_power,
+                         side_engine_power=side_engine_power)
+    elif args.mass == 10:
+      main_engine_power = np.random.uniform(3, 20)
+      side_engine_power = np.random.uniform(0.15, 0.95)
+      env = NewLunarLander(main_engine_power=main_engine_power,
+                         side_engine_power=side_engine_power)
+    elif args.goal == 5:
+      goal=np.random.choice(np.array([-0.99, -0.5, 0, 0.5, 0.99]), p=[0.15,0.18,0.34,0.18,0.15])
+      goal = 0.1 * np.random.randn() + goal
+      env = NewLunarLander(goal=goal)
+    elif args.goal == 10:
+      goal=np.random.uniform(-1,1)
+      env = NewLunarLander(goal=goal)
+    else:
+      env = NewLunarLander()
     # check_env(env, warn=True)
     return env
 
@@ -112,7 +151,10 @@ def make_car_env(seed, env="MountainCarContinuous-v0"):
 
 def make_mujoco_env(seed, env="Swimmer"):
     if env == "Swimmer":
-        env = SwimmerEnvRandVel()
+        #from gym.envs.mujoco.swimmer import SwimmerEnv
+        env = new_Swimmer()
+    elif env == "HalfCheetah":
+        env = new_HalfCheetahEnv()
     elif env == "Halfcdir":
         env = HalfCheetahEnvRandDir()
     elif env == "Halfcvel":
@@ -123,6 +165,8 @@ def make_mujoco_env(seed, env="Swimmer"):
         env = AntEnvRandGoal()
     elif env == "Antvel":
         env = AntEnvRandVel()
+    elif env == "Ant":
+        env = new_AntEnv()
 #     check_env(env, warn=True)
     return env
 
@@ -132,12 +176,16 @@ def make_env(env, seed):
     elif env == "LunarLander-v2":
         env = make_lunar_env(seed)
     elif env == 'Swimmer':
-        env = make_mujoco_env(seed, env_name)
+        env = make_mujoco_env(seed, env)
+    elif env == 'HalfCheetah':
+        env = make_mujoco_env(seed, env)
+    elif env == 'Ant':
+        env = make_mujoco_env(seed, env)
     return env
 
 
 envs = {'Swimmer':make_mujoco_env, 'LunarLander-v2': make_lunar_env, \
-    'CartPole-v0':make_cart_env}
+    'CartPole-v0':make_cart_env, 'Ant':make_mujoco_env}
 
 if __name__ == '__main__':
     ############## Hyperparameters ##############
@@ -169,22 +217,32 @@ if __name__ == '__main__':
 
     torch.cuda.empty_cache()
     ########## file related
+    if args.mass == 1.0 and args.goal == 5.0:
+      resdir = os.path.join(args.resdir, 'multimodalgoal',"")
+    elif args.mass == 1.0 and args.goal == 10.0:
+      resdir = os.path.join(args.resdir, 'uniformgoal',"")
+    elif args.mass == 5.0:
+      resdir = os.path.join(args.resdir, 'multimodal',"")
+    elif args.mass == 10.0:
+      resdir = os.path.join(args.resdir, 'uniform',"")
+    else:
+      resdir = os.path.join(args.resdir, 'simple',"")
     filename = env_name + "_" + learner + "_s" + str(samples) + "_n" + str(max_episodes) \
         + "_every" + str(meta_update_every) \
         + "_size" + str(hidden_sizes[0]) \
             + "_goal" + str(args.goal)\
             + "_steps" + str(max_steps) \
-            + "_mass" + str(args.mass) + "fixedprior" 
+            + "_mass" + str(args.mass)
 
     if args.run >= 0:
         filename += "_run" + str(args.run)
 
-    if not os.path.exists(args.resdir):
-        os.makedirs(args.resdir) 
-    rew_file = open(args.resdir + "maml_" + filename + ".txt", "w")
+    
+    if not os.path.exists(resdir):
+        os.makedirs(resdir) 
+    rew_file = open(resdir + "maml_" + filename + ".txt", "w")
     #meta_rew_file = open(args.resdir + "maml_" + "meta_" + filename + ".txt", "w")
 
-    # env = gym.make(env_name)
     env = make_env(env_name, args.seed)
 
     if learner == "vpg":
@@ -270,6 +328,6 @@ if __name__ == '__main__':
         env.close()
 
     rew_file.close()
-    meta_rew_file.close()
+    #meta_rew_file.close()
 
 

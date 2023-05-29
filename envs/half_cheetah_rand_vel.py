@@ -3,10 +3,11 @@ from gym import utils
 from gym.envs.mujoco import mujoco_env
 
 
-class HalfCheetahEnvRandVel(mujoco_env.MujocoEnv, utils.EzPickle):
+class HalfCheetahEnvRandDir(mujoco_env.MujocoEnv, utils.EzPickle):
 
     def __init__(self):
         self._goal_vel = self.sample_goals()  # *modification*
+        self._goal_direction = -1.0 if self._goal_vel < 1.0 else 1.0  # *modification*
         mujoco_env.MujocoEnv.__init__(self, 'half_cheetah.xml', 5)
         utils.EzPickle.__init__(self)
 
@@ -22,7 +23,7 @@ class HalfCheetahEnvRandVel(mujoco_env.MujocoEnv, utils.EzPickle):
         reward_ctrl = - 0.1 * np.square(action).sum()
         # reward_run = (xposafter - xposbefore)/self.dt
         vel_x = (xposafter - xposbefore) / self.dt  # *modification*
-        reward_run = - 1.0 * np.abs(vel_x - self._goal_vel)  # *modification*
+        reward_run = self._goal_direction * vel_x  # *modification*
         reward = reward_ctrl + reward_run
         done = False
         return ob, reward, done, dict(reward_run=reward_run, reward_ctrl=reward_ctrl)
@@ -42,6 +43,7 @@ class HalfCheetahEnvRandVel(mujoco_env.MujocoEnv, utils.EzPickle):
     def reset(self):
         # *modification*
         self._goal_vel = self.sample_goals()
+        self._goal_direction = -1.0 if self._goal_vel < 1.0 else 1.0
         self.sim.reset()
         ob = self.reset_model()
         return ob
