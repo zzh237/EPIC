@@ -11,8 +11,7 @@ import os
 from algos.memory import Memory
 from algos.agents.vpg import VPG
 from algos.agents.ppo import PPO
-from algos.agents.gaussian_vpg import GaussianVPG
-from algos.agents.gaussian_model import PolicyHub
+
 from envs.new_cartpole import NewCartPoleEnv
 from envs.new_lunar_lander import NewLunarLander
 from envs.new_half_cheetah import new_HalfCheetahEnv
@@ -35,10 +34,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--device', type=str, default="cpu")
 parser.add_argument('--run', type=int, default=-1)
 # env settings Swimmer for majuto
-parser.add_argument('--env', type=str, default="CartPole-v0")
+parser.add_argument('--env', type=str, default="Swimmer")
 parser.add_argument('--samples', type=int, default=2000) # need to tune
 parser.add_argument('--episodes', type=int, default=10)
-parser.add_argument('--steps', type=int, default=50)
+parser.add_argument('--steps', type=int, default=100)
 parser.add_argument('--goal', type=float, default=0.0)
 parser.add_argument('--seed', default=1, type=int)
 parser.add_argument('--mass', type=float, default=1.0) 
@@ -149,43 +148,62 @@ def make_car_env(seed, env="MountainCarContinuous-v0"):
     env = gym.make("MountainCarContinuous-v0")
     return env
 
-def make_mujoco_env(seed, env="Swimmer"):
-    if env == "Swimmer":
-        #from gym.envs.mujoco.swimmer import SwimmerEnv
-        env = new_Swimmer()
-    elif env == "HalfCheetah":
-        env = new_HalfCheetahEnv()
-    elif env == "Halfcdir":
-        env = HalfCheetahEnvRandDir()
-    elif env == "Halfcvel":
-        env = HalfCheetahEnvRandVel()
-    elif env == "Antdir":
-        env = AntEnvRandDir()
-    elif env == "Antgol":
-        env = AntEnvRandGoal()
-    elif env == "Antvel":
-        env = AntEnvRandVel()
-    elif env == "Ant":
-        env = new_AntEnv()
-#     check_env(env, warn=True)
+# def make_mujoco_env(seed, env="Swimmer"):
+#     if env == "Swimmer":
+#         #from gym.envs.mujoco.swimmer import SwimmerEnv
+#         env = new_Swimmer()
+#     elif env == "HalfCheetah":
+#         env = new_HalfCheetahEnv()
+#     elif env == "Halfcdir":
+#         env = HalfCheetahEnvRandDir()
+#     elif env == "Halfcvel":
+#         env = HalfCheetahEnvRandVel()
+#     elif env == "Antdir":
+#         env = AntEnvRandDir()
+#     elif env == "Antgol":
+#         env = AntEnvRandGoal()
+#     elif env == "Antvel":
+#         env = AntEnvRandVel()
+#     elif env == "Ant":
+#         env = new_AntEnv()
+# #     check_env(env, warn=True)
+#     return env
+
+
+# def make_env(env, seed):
+#     if env == "CartPole-v0":
+#       env = make_cart_env(seed)
+#     elif env == "LunarLander-v2":
+#       env = make_lunar_env(seed)
+#     elif env == 'Swimmer':
+#       env = make_mujoco_env(seed, env)
+#     elif env == 'HalfCheetah':
+#       env = make_mujoco_env(seed, env)
+#     elif env == 'Ant':
+#       env = make_mujoco_env(seed, env)
+#     return env
+
+def make_half_cheetah(env='half_cheetah'):
+    assert env == 'half_cheetah', "env_name should be half_cheetah."
+    env = new_HalfCheetahEnv()
     return env
 
-def make_env(env, seed):
-    if env == "CartPole-v0":
-        env = make_cart_env(seed)
-    elif env == "LunarLander-v2":
-        env = make_lunar_env(seed)
-    elif env == 'Swimmer':
-        env = make_mujoco_env(seed, env)
-    elif env == 'HalfCheetah':
-        env = make_mujoco_env(seed, env)
-    elif env == 'Ant':
-        env = make_mujoco_env(seed, env)
+def make_swimmer(env='Swimmer'):
+    goal = np.random.uniform(low=-0.5, high=0.5)
+    env = new_Swimmer(goal=goal)
     return env
 
+def make_ant(env='Ant'):
+    assert env=='Ant'
+    env = new_AntEnv()
+    return env
 
-envs = {'Swimmer':make_mujoco_env, 'LunarLander-v2': make_lunar_env, \
-    'CartPole-v0':make_cart_env, 'Ant':make_mujoco_env}
+#envs = {'Swimmer':make_mujoco_env, 'LunarLander-v2': make_lunar_env, \
+#    'CartPole-v0':make_cart_env, 'Ant':make_mujoco_env}
+
+envs = {'Swimmer':make_swimmer, 'LunarLander-v2': make_lunar_env, 'CartPole-v0':make_cart_env,
+        'half_cheetah': make_half_cheetah, 'Ant':make_ant}
+
 
 if __name__ == '__main__':
     ############## Hyperparameters ##############
@@ -243,8 +261,9 @@ if __name__ == '__main__':
     rew_file = open(resdir + "maml_" + filename + ".txt", "w")
     #meta_rew_file = open(args.resdir + "maml_" + "meta_" + filename + ".txt", "w")
 
-    env = make_env(env_name, args.seed)
-
+    #env = make_env(env_name, args.seed)
+    envfunc = envs[env_name]
+    env = envfunc(env_name)
     if learner == "vpg":
         actor_policy = VPG(env.observation_space, env.action_space, hidden_sizes=hidden_sizes,
                            activation=activation, gamma=gamma, device=device, alpha=alpha,
@@ -258,7 +277,9 @@ if __name__ == '__main__':
     for sample in range(samples):
         meta_memory = Memory()
         print("sample " + str(sample))
-        env = make_env(env_name, sample)
+        # env = make_env(env_name, sample)
+        env = envfunc(env_name)
+
         memory = Memory()
 
         start_episode = 0
@@ -328,6 +349,7 @@ if __name__ == '__main__':
         env.close()
 
     rew_file.close()
-    #meta_rew_file.close()
+    # meta_rew_file.close()
+
 
 

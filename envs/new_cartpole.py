@@ -3,7 +3,7 @@ import gym
 from gym import spaces, logger
 from gym.utils import seeding
 import numpy as np
-# from gym.envs.classic_control import cartpole
+# from gym.envs.classic_control import mountain_car, continuous_mountain_car
 
 
 class NewCartPoleEnv(gym.Env):

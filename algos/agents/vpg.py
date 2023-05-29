@@ -45,7 +45,7 @@ class VPG(nn.Module):
             self.policy_m = ContActor(state_dim, self.action_dim, hidden_sizes, activation, action_std, self.device).to(self.device)
             self.policy_m.load_state_dict(copy.deepcopy(self.policy.state_dict()))
             self.new_policy.load_state_dict(copy.deepcopy(self.policy.state_dict()))
-            
+
             if with_model:
                 self.model = Dynamics(state_dim, self.action_dim, hidden_sizes, activation, self.device).to(self.device)
 

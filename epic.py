@@ -18,7 +18,7 @@ from envs.new_swimmer import new_Swimmer
 from envs.new_ant import new_AntEnv
 
 from envs.new_half_cheetah import new_HalfCheetahEnv
-# from envs.new_walker_2d import new_Walker2dEnv
+from envs.new_walker_2d import new_Walker2dEnv
 # from stable_baselines.common.env_checker import check_env
 
 import logging
@@ -35,6 +35,7 @@ parser.add_argument('--run', type=int, default=0)
 # env settings
 # Swimmer for majuco environment
 parser.add_argument('--env', type=str, default="Ant",
+parser.add_argument('--env', type=str, default="half_cheetah",
                     help=['Swimmer', 'LunarLander-v2', 'CartPole-v0', 'half_cheetah', 'Ant',
                           'walker_2d'])
 parser.add_argument('--samples', type=int, default=2000) # need to tune

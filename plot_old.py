@@ -141,7 +141,7 @@ class plot_all:
         
 
 if __name__ == "__main__":
-
+# 'half_cheetah':{'goal':[0.5],'steps':[100], 'mass':[1.0]}
     envs = {'CartPole-v0':{'goal':[0.5],'steps':[300], 'mass':[5.0]},\
         'lunar':None,\
             'swimmer':None} 
