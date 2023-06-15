@@ -2,13 +2,13 @@
 RUNS=1
 for n in 25
 do
-for step in 300
+for step in 100
 do
-for mass in 1
+for mass in 5
 do
 for ((i=0;i<${RUNS};i++));
 do
-    python epic.py --run ${i} --env "Ant" --meta_update_every $n --steps $step --mass $mass --goal 10.0 --resdir "results/ant2/"
+    python epic.py --run ${i} --env "CartPole-v0" --meta_update_every $n --steps $step --mass $mass --goal 10.0 --resdir "results/montecarlo/"
 done
 done 
 done
