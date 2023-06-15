@@ -10,7 +10,7 @@ import numpy as np
 from gym.spaces import Box, Discrete
 import setup
 from algos.memory import Memory, ReplayMemory
-from algos.agents.new_gaussian_vpg import GaussianVPG
+from algos.agents.gaussian_vpg_mc import GaussianVPGMC
 from algos.agents.gaussian_ppo import GaussianPPO
 from envs.new_cartpole import NewCartPoleEnv
 from envs.new_lunar_lander import NewLunarLander
@@ -22,6 +22,7 @@ from envs.new_half_cheetah import new_HalfCheetahEnv
 # from stable_baselines.common.env_checker import check_env
 
 import logging
+import copy
 from datetime import datetime
 ## this is version 2.0
 
@@ -34,7 +35,7 @@ parser.add_argument('--device', type=str, default="cpu")
 parser.add_argument('--run', type=int, default=0)
 # env settings
 # Swimmer for majuco environment
-parser.add_argument('--env', type=str, default="half_cheetah",
+parser.add_argument('--env', type=str, default="CartPole-v0",
                     help=['Swimmer', 'LunarLander-v2', 'CartPole-v0', 'half_cheetah', 'Ant',
                           ])
 parser.add_argument('--samples', type=int, default=2000) # need to tune
@@ -44,6 +45,7 @@ parser.add_argument('--goal', type=float, default=0.5)
 parser.add_argument('--seed', default=1, type=int)
 parser.add_argument('--mass', type=float, default=1.0) 
 parser.add_argument('--action_std', type=float, default=0.5)
+parser.add_argument('--m', type=int, default=10)
 # meta settings
 parser.add_argument('--meta', dest='meta', action='store_true')
 parser.add_argument('--no-meta', dest='meta', action='store_false')
@@ -244,7 +246,9 @@ if __name__ == '__main__':
             + "_c" + str(coeff) + "_tau" + str(tau) \
                 + "_goal" + str(args.goal)\
                     + "_steps" + str(max_steps)\
-                        + "_mass" + str(args.mass)
+                        + "_mass" + str(args.mass) \
+                          + "_mc" + str(args.m)
+                        
  
     if not use_meta:
         filename += "_nometa"
@@ -260,65 +264,67 @@ if __name__ == '__main__':
     # env = gym.make(env_name)
     envfunc = envs[env_name]
     env = envfunc(env_name)
-
+    m = args.m
     if learner == "vpg":
         print("-----initialize meta policy-------")
-        actor_policy = GaussianVPG(env.observation_space, env.action_space,
-                                  hidden_sizes=hidden_sizes, activation=activation, alpha=alpha,
-                                  beta=beta, action_std=action_std, gamma=gamma, device=device,
-                                  lam=lam, lam_decay=lam_decay)
+        actor_policy = GaussianVPGMC(env.observation_space, env.action_space,
+                                hidden_sizes=hidden_sizes, activation=activation, alpha=alpha,
+                                beta=beta, action_std=action_std, gamma=gamma, device=device,
+                                lam=lam, lam_decay=lam_decay, m = m)
     if learner == "ppo":
         print("-----initialize meta policy-------")
         # here we could also use PPO, need to check difference between them
         actor_policy = GaussianPPO(env.observation_space, env.action_space, meta_update_every,
                 hidden_sizes=hidden_sizes, activation=activation, gamma=gamma, device=device, 
-                learning_rate=lr, coeff=coeff, tau=tau)
-
+                learning_rate=lr, coeff=coeff, tau=tau, m = m)
+        
         
 
     for sample in range(samples):
-        meta_memory = Memory()
-        memory = Memory()
+        
+        # memory = Memory()
         print("#### Learning environment sample {}".format(sample))
         ########## creating environment
         # env = gym.make(env_name)
         env = envfunc(env_name)
         # env.seed(sample)
-
         ########## sample a meta learner
         actor_policy.initialize_policy_m() # initial policy theta
         # print("weight of layer 0", sample_policy.action_layer[0].weight) 
 
         #use single task policy to collect some trajectories
-        start_episode = 0
-        for episode in range(start_episode, max_episodes):
-            state = env.reset()
-            rewards = []
-            for steps in range(max_steps):
-                state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state)
-                if isinstance(env.action_space, Discrete):
-                    action = action_tensor.item()
-                else:
-                    action = action_tensor.cpu().data.numpy().flatten()
-                new_state, reward, done, _ = env.step(action)
-                rewards.append(reward)
-                memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
-                state = new_state
-                if done or steps == max_steps-1:
-                    meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
-                        sample, episode, np.round(np.sum(rewards), decimals = 3)))
-                    break
-        #update single task policy using the trajectory
-        actor_policy.update_policy_m(memory)
-        memory.clear_memory()
+        # start_episode = 0
+        # for episode in range(start_episode, max_episodes):
+        #     state = env.reset()
+        #     rewards = []
+        #     for steps in range(max_steps):
+        #         state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state)
+        #         if isinstance(env.action_space, Discrete):
+        #             action = action_tensor.item()
+        #         else:
+        #             action = action_tensor.cpu().data.numpy().flatten()
+        #         new_state, reward, done, _ = env.step(action)
+        #         rewards.append(reward)
+        #         memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
+        #         state = new_state
+        #         if done or steps == max_steps-1:
+        #             meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
+        #                 sample, episode, np.round(np.sum(rewards), decimals = 3)))
+        #             break
+        # #update single task policy using the trajectory
+        # actor_policy.update_policy_m(memory)
+        # memory.clear_memory()
         #use updated single task policy to collect some trajectories
-        for episode in range(start_episode, meta_episodes):
+        meta_memories = {}
+        mc_rewards = 0
+        for j in range(m):
+            meta_memory = Memory()
             state = env.reset()
             rewards = []
             for steps in range(max_steps):
                 if render:
                     env.render()
-                state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state)
+                state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state, j)
 
                 if isinstance(env.action_space, Discrete):
                     action = action_tensor.item()
@@ -331,12 +337,18 @@ if __name__ == '__main__':
                 state = new_state
 
                 if done or steps == max_steps - 1:
+                    
                     # meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
                     #     sample, episode, np.round(np.sum(rewards), decimals=3)))
                     break
+            meta_memories[j] = meta_memory
+            mc_rewards +=np.sum(rewards)
+            # meta_memory.clear_memory()
 
-        actor_policy.update_mu_theta_for_default(meta_memory, meta_update_every, H=1*(1-gamma**max_steps)/(1-gamma))
-        meta_memory.clear_memory()
+        meta_rew_file.write("sample: {}, mc_sample: {}, total reward: {}\n".format(
+                        sample, m, np.round(1/m*mc_rewards, decimals=3)))
+        actor_policy.update_mu_theta_for_default(meta_memories, meta_update_every, H=1*(1-gamma**max_steps)/(1-gamma))
+        
 
         if (sample+1) % meta_update_every == 0:
             actor_policy.update_default_and_prior_policy()

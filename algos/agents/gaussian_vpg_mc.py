@@ -7,10 +7,8 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.autograd import Variable
 from gym.spaces import Box, Discrete
-from .model import GaussianActor, GaussianContActor
 from torch.distributions import Categorical, MultivariateNormal
 import copy
-from algos.agents.model import EltwiseLayer
 import math
 
 
@@ -221,20 +219,23 @@ class GaussianContActor(nn.Module):
 # -------------------------------------------------------------------------------------------
 
 
-class GaussianVPG(nn.Module):
+class GaussianVPGMC(nn.Module):
     def __init__(self, state_space, action_space, hidden_sizes=(64, 64), activation=nn.Tanh,
-                 alpha=3e-4, beta=3e-4, gamma=0.9, device="cpu", action_std=0.5, lam=0.9, lam_decay=0.999):
-        super(GaussianVPG, self).__init__()
+                 alpha=3e-4, beta=3e-4, gamma=0.9, device="cpu", action_std=0.5, \
+                    lam=0.9, lam_decay=0.999, m = 10):
+        super(GaussianVPGMC, self).__init__()
         state_dim = state_space.shape[0]
 
         self.gamma = gamma
         self.device = device
         self.lam = lam
         self.lam_decay = lam_decay
+        self.m = m
         # self.with_model = with_model
         if isinstance(action_space, Discrete):
             self.discrete_action = True
             self.action_dim = action_space.n
+
             # new policy is for meta learning, every few iters, we update policy to new_policy
             self.new_default_policy = GaussianActor(state_dim, self.action_dim, hidden_sizes, activation).to(
                 self.device)
@@ -242,10 +243,10 @@ class GaussianVPG(nn.Module):
                 self.device)
             self.prior_policy = GaussianActor(state_dim, self.action_dim, hidden_sizes, activation).to(
                 self.device)
-            self.policy_m = GaussianActor(state_dim, self.action_dim, hidden_sizes, activation).to(
-                self.device)
-
-            self.policy_m.load_state_dict(copy.deepcopy(self.default_policy.state_dict()))
+            self.policy_m = {j: GaussianActor(state_dim, self.action_dim, hidden_sizes, activation).to(
+                self.device) for j in range(m)}
+            for j in range(m):
+                self.policy_m[j].load_state_dict(copy.deepcopy(self.default_policy.state_dict()))
             self.new_default_policy.load_state_dict(copy.deepcopy(self.default_policy.state_dict()))
             self.prior_policy.load_state_dict(copy.deepcopy(self.default_policy.state_dict()))
 
@@ -276,14 +277,15 @@ class GaussianVPG(nn.Module):
         self.activation = activation
         self.alpha = alpha
         self.beta = beta
-        self.optimizer_m = optim.Adam(self.policy_m.parameters(), lr=alpha)
-        self.optimizer = optim.Adam(self.policy_m.parameters(), lr=beta)
+        self.optimizer_m = {j:optim.Adam(self.policy_m[0].parameters(), lr=alpha) for j in range(m)}
+        self.optimizer = {j:optim.Adam(self.policy_m[0].parameters(), lr=beta) for j in range(m)}
 
-    def act_policy_m(self, state):
-        return self.policy_m.act(state)
+    def act_policy_m(self, state, j):
+        return self.policy_m[j].act(state)
 
     def initialize_policy_m(self):
-        self.policy_m.load_state_dict(copy.deepcopy(self.default_policy.state_dict()))
+        for j in range(self.m):
+            self.policy_m[j].load_state_dict(copy.deepcopy(self.prior_policy.state_dict()))
 
     def update_policy_m(self, memory):
         # caculate policy gradient
@@ -310,7 +312,8 @@ class GaussianVPG(nn.Module):
         policy_gradient.backward()
         self.optimizer_m.step()
 
-    def update_policy_m_with_regularizer(self, memory, N):
+    def update_policy_m_with_regularizer(self, memories, N, H, j):
+        memory = memories[j]
         # caculate policy gradient
         discounted_reward = []
         Gt = 0
@@ -334,42 +337,66 @@ class GaussianVPG(nn.Module):
 
         # calculate regularizer
         KL = []
-        for policy_layer, prior_layer in zip(self.policy_m.action_layer, self.prior_policy.action_layer):
+        for policy_layer, prior_layer in zip(self.policy_m[j].action_layer, \
+                                             self.prior_policy.action_layer):
             assert type(policy_layer) == type(prior_layer), "default_layer and prior_layer should match each other"
             if isinstance(policy_layer, StochasticLinear):
-                KL.append(calculate_KL(mu1=policy_layer.w_mu, sigma1=policy_layer.w_log_var,
-                                        mu2=prior_layer.w_mu, sigma2=prior_layer.w_log_var))
+                KL.append(calculate_KL(mu1=policy_layer.w_mu, \
+                                       sigma1=policy_layer.w_log_var,
+                                        mu2=prior_layer.w_mu, \
+                                            sigma2=prior_layer.w_log_var))
 
-                KL.append(calculate_KL(mu1=policy_layer.b_mu, sigma1=policy_layer.b_log_var,
-                                       mu2=prior_layer.b_mu, sigma2=prior_layer.b_log_var))
+                KL.append(calculate_KL(mu1=policy_layer.b_mu, \
+                                       sigma1=policy_layer.b_log_var,
+                                       mu2=prior_layer.b_mu, \
+                                        sigma2=prior_layer.b_log_var))
         KL = torch.stack(KL).sum()
 
-        reg = torch.sqrt((KL + torch.log(2 * np.sqrt(torch.tensor(N)) / 0.01)) / (N))
+        c = torch.tensor(1.5)
+        delta = torch.tensor(0.01)
+        epsilon = torch.log(torch.tensor(2.0))/(2*torch.log(c)) * \
+            (1+torch.log(KL/np.log(2/delta)))
+        reg = (1+c)/2*torch.sqrt(torch.tensor(2.0)) * \
+            torch.sqrt((KL + np.log(2/delta) + epsilon) * N * H**2)
+
+        # reg = torch.sqrt((KL + torch.log(2 * np.sqrt(torch.tensor(N)) / 0.01)) / (2*N))
         # reg = torch.sqrt(reg/(2*N))
         # calculate total loss and back propagate
-        total_loss = policy_gradient + reg / N
-        self.optimizer.zero_grad()
+        total_loss = policy_gradient + reg 
+        self.optimizer[j].zero_grad()
         total_loss.backward()
-        self.optimizer.step()
+        self.optimizer[j].step()
 
-    def update_mu_theta_for_default(self, memory, N):
-        policy_m_para_before = copy.deepcopy(self.policy_m.state_dict())
-        self.update_policy_m_with_regularizer(memory, N)
-        # self.update_policy_m(memory)
-        policy_m_para_after = copy.deepcopy(self.policy_m.state_dict())
-        for key, meta_para in zip(policy_m_para_before, self.new_default_policy.parameters()):
-            meta_para.data.copy_(meta_para.data +
-                                 (policy_m_para_after[key] - policy_m_para_before[key]))
+    def update_mu_theta_for_default(self, memories, N, H):
+        v = {}
+        for j in range(self.m):
+            policy_m_para_before = copy.deepcopy(self.policy_m[j].state_dict())
+            self.update_policy_m_with_regularizer(memories, N, H, j)
+            # self.update_policy_m(memory)
+            policy_m_para_after = copy.deepcopy(self.policy_m[j].state_dict())
+            for key in policy_m_para_before:
+                if j == 0:
+                    v[key] = policy_m_para_after[key] - policy_m_para_before[key]
+                else:
+                    v[key]+=policy_m_para_after[key] - policy_m_para_before[key]
+            
+        for key, meta_para in zip(v, self.new_default_policy.parameters()):
+            meta_para.data.copy_(meta_para.data + 1/self.m*v[key])
+       
 
     def update_default_and_prior_policy(self):
         # update prior distribution
         # for prior_param, new_default_param in zip(self.prior_policy.parameters(), self.new_default_policy.parameters()):
         #     prior_param.data.copy_((1 - self.lam) * new_default_param.data + self.lam * prior_param.data)
         # update default distribution
-        self.default_policy.load_state_dict(copy.deepcopy(self.new_default_policy.state_dict()))
+        # self.default_policy.load_state_dict(copy.deepcopy(\
+        #     self.new_default_policy.state_dict()))
         # #update prior distribution
         # self.prior_policy.load_state_dict(copy.deepcopy(self.new_default_policy.state_dict()))
-        for prior_param, new_default_param in zip(self.prior_policy.parameters(), self.new_default_policy.parameters()):
-            prior_param.data.copy_((1-self.lam)*new_default_param.data + self.lam*prior_param.data)
+        for prior_param, new_default_param in \
+            zip(self.prior_policy.parameters(), \
+                self.new_default_policy.parameters()):
+            prior_param.data.copy_((1-self.lam)*new_default_param.data \
+                                   + self.lam*prior_param.data)
 
         self.lam *= self.lam_decay
