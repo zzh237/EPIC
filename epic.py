@@ -281,8 +281,6 @@ if __name__ == '__main__':
         
 
     for sample in range(samples):
-        
-        # memory = Memory()
         print("#### Learning environment sample {}".format(sample))
         ########## creating environment
         # env = gym.make(env_name)
@@ -291,32 +289,34 @@ if __name__ == '__main__':
         ########## sample a meta learner
         actor_policy.initialize_policy_m() # initial policy theta
         # print("weight of layer 0", sample_policy.action_layer[0].weight) 
-
+        memories = {}
+        mc_rewards = 0
         #use single task policy to collect some trajectories
-        # start_episode = 0
-        # for episode in range(start_episode, max_episodes):
-        #     state = env.reset()
-        #     rewards = []
-        #     for steps in range(max_steps):
-        #         state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state)
-        #         if isinstance(env.action_space, Discrete):
-        #             action = action_tensor.item()
-        #         else:
-        #             action = action_tensor.cpu().data.numpy().flatten()
-        #         new_state, reward, done, _ = env.step(action)
-        #         rewards.append(reward)
-        #         memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
-        #         state = new_state
-        #         if done or steps == max_steps-1:
-        #             meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
-        #                 sample, episode, np.round(np.sum(rewards), decimals = 3)))
-        #             break
-        # #update single task policy using the trajectory
-        # actor_policy.update_policy_m(memory)
-        # memory.clear_memory()
+        memory = Memory() 
+        for j in range(m):
+          state = env.reset()
+          rewards = []
+          for steps in range(max_steps):
+              state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state, j)
+              if isinstance(env.action_space, Discrete):
+                  action = action_tensor.item()
+              else:
+                  action = action_tensor.cpu().data.numpy().flatten()
+              new_state, reward, done, _ = env.step(action)
+              rewards.append(reward)
+              memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
+              state = new_state
+              if done or steps == max_steps-1:
+                  break
+          #update single task policy using the trajectory
+          actor_policy.update_policy_m(memory, j)
+          memory.clear_memory()
+          mc_rewards +=np.sum(rewards)
+        meta_rew_file.write("sample: {}, mc_sample: {}, total reward: {}\n".format(
+                      sample, m, np.round(1/m*mc_rewards, decimals=3)))
         #use updated single task policy to collect some trajectories
         meta_memories = {}
-        mc_rewards = 0
+        
         for j in range(m):
             meta_memory = Memory()
             state = env.reset()
@@ -342,11 +342,11 @@ if __name__ == '__main__':
                     #     sample, episode, np.round(np.sum(rewards), decimals=3)))
                     break
             meta_memories[j] = meta_memory
-            mc_rewards +=np.sum(rewards)
+            # mc_rewards +=np.sum(rewards)
             # meta_memory.clear_memory()
 
-        meta_rew_file.write("sample: {}, mc_sample: {}, total reward: {}\n".format(
-                        sample, m, np.round(1/m*mc_rewards, decimals=3)))
+        # meta_rew_file.write("sample: {}, mc_sample: {}, total reward: {}\n".format(
+        #                 sample, m, np.round(1/m*mc_rewards, decimals=3)))
         actor_policy.update_mu_theta_for_default(meta_memories, meta_update_every, H=1*(1-gamma**max_steps)/(1-gamma))
         
 
