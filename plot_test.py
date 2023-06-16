@@ -8,6 +8,7 @@ dname = os.path.dirname(abspath)
 os.chdir(dname)
 import numpy as np
 import re 
+import random 
 import matplotlib.pyplot as plt
 
 
@@ -86,18 +87,18 @@ def np_smooth(targets, weight=0.99):  # Weight between 0 and 1
 
 if __name__ =="__main__":
     fig, ax = plt.subplots(figsize=(1.57 * 2, 1.18 * 2), dpi=600)
-    for e in [1, 10]:
-        epic_mean, epic_std = read_rewards_multi(filename='./results/test/multimodal/EPIC_CartPole-v0_vpg_s2000_n{}_every25_size32_c0.5_tau0.5_goal10.0_steps300_mass5.0'.format(e),
-                                                samples=2000,
-                                                episodes=e,
-                                                runs=1)
+    # for e in [1, 10]:
+    #     epic_mean, epic_std = read_rewards_multi(filename='./results/test/multimodal/EPIC_CartPole-v0_vpg_s2000_n{}_every25_size32_c0.5_tau0.5_goal10.0_steps300_mass5.0'.format(e),
+    #                                             samples=2000,
+    #                                             episodes=e,
+    #                                             runs=1)
     
     
-        x_vals = list(range(len(epic_mean)))
-        ax.plot(x_vals, epic_mean, label = e)
-        ax.plot(x_vals, epic_mean+epic_std,  alpha=0.1)
-        ax.plot(x_vals, epic_mean-epic_std,  alpha=0.1)
-        ax.fill_between(x_vals, y1=epic_mean-epic_std, y2=epic_mean+epic_std, alpha=0.1)
+    #     x_vals = list(range(len(epic_mean)))
+    #     ax.plot(x_vals, epic_mean, label = e)
+    #     ax.plot(x_vals, epic_mean+epic_std,  alpha=0.1)
+    #     ax.plot(x_vals, epic_mean-epic_std,  alpha=0.1)
+    #     ax.fill_between(x_vals, y1=epic_mean-epic_std, y2=epic_mean+epic_std, alpha=0.1)
 
     for e in [10]:
         epic_mean, epic_std = read_rewards_multi(filename='./results/test/nosingle/multimodal/EPIC_CartPole-v0_vpg_s2000_n{}_every25_size32_c0.5_tau0.5_goal10.0_steps300_mass5.0'.format(e),
@@ -112,8 +113,15 @@ if __name__ =="__main__":
         ax.plot(x_vals, epic_mean-epic_std,  alpha=0.1)
         ax.fill_between(x_vals, y1=epic_mean-epic_std, y2=epic_mean+epic_std, alpha=0.1)
 
+    colors = {}
+    ms = [1]
+    for i in ms:
+        r = random.uniform(0, 1)
+        g = random.uniform(0, 1)
+        b = random.uniform(0, 1)
+        colors[i] = (r,g,b)
     
-    for m in [2,1]:
+    for m in ms:
         fname = './results/montecarlo/new/multimodal/EPIC_CartPole-v0_vpg_s2000_n10_every25_size32_c0.5_tau0.5_goal10.0_steps100_mass5.0_mc{}'.format(m)
         epic_mean_std = read_rewards_multi_mc(filename=fname,
                                              samples=2000,
@@ -121,11 +129,11 @@ if __name__ =="__main__":
     
     
         x_vals = list(range(epic_mean_std.shape[0]))
-        ax.plot(x_vals, epic_mean_std[:,0], label = "mc{}".format(m))
-        ax.plot(x_vals, epic_mean_std[:,0]+epic_mean_std[:,1], alpha=0.1)
-        ax.plot(x_vals, epic_mean_std[:,0]-epic_mean_std[:,1], alpha=0.1)
+        ax.plot(x_vals, epic_mean_std[:,0], color = colors[m], label = "mc{}".format(m))
+        ax.plot(x_vals, epic_mean_std[:,0]+epic_mean_std[:,1],color = colors[m], alpha=0.5)
+        ax.plot(x_vals, epic_mean_std[:,0]-epic_mean_std[:,1], color = colors[m],alpha=0.5)
         ax.fill_between(x_vals, y1=epic_mean_std[:,0]-epic_mean_std[:,1], \
-                        y2=epic_mean_std[:,0]+epic_mean_std[:,1], alpha=0.1)
+                        y2=epic_mean_std[:,0]+epic_mean_std[:,1], color = colors[m],alpha=0.5)
 
     
     ax.set_xticks([0, 500, 1000, 1500, 2000])
