@@ -7,10 +7,8 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.autograd import Variable
 from gym.spaces import Box, Discrete
-from .model import GaussianActor, GaussianContActor
 from torch.distributions import Categorical, MultivariateNormal
 import copy
-from algos.agents.model import EltwiseLayer
 import math
 
 
@@ -310,7 +308,7 @@ class GaussianVPG(nn.Module):
         policy_gradient.backward()
         self.optimizer_m.step()
 
-    def update_policy_m_with_regularizer(self, memory, N):
+    def update_policy_m_with_regularizer(self, memory, N, H):
         # caculate policy gradient
         discounted_reward = []
         Gt = 0
@@ -344,17 +342,22 @@ class GaussianVPG(nn.Module):
                                        mu2=prior_layer.b_mu, sigma2=prior_layer.b_log_var))
         KL = torch.stack(KL).sum()
 
-        reg = torch.sqrt((KL + torch.log(2 * np.sqrt(torch.tensor(N)) / 0.01)) / (N))
+        c = torch.tensor(1.5)
+        delta = torch.tensor(0.01)
+        epsilon = torch.log(torch.tensor(2))/(2*torch.log(c)) * (1+torch.log(KL/np.log(2/delta)))
+        reg = (1+c)/2*torch.sqrt(torch.tensor(2)) * torch.sqrt((KL + np.log(2/delta) + epsilon) * N * H**2)
+
+        # reg = torch.sqrt((KL + torch.log(2 * np.sqrt(torch.tensor(N)) / 0.01)) / (2*N))
         # reg = torch.sqrt(reg/(2*N))
         # calculate total loss and back propagate
-        total_loss = policy_gradient + reg / N
+        total_loss = policy_gradient + reg 
         self.optimizer.zero_grad()
         total_loss.backward()
         self.optimizer.step()
 
-    def update_mu_theta_for_default(self, memory, N):
+    def update_mu_theta_for_default(self, memory, N, H):
         policy_m_para_before = copy.deepcopy(self.policy_m.state_dict())
-        self.update_policy_m_with_regularizer(memory, N)
+        self.update_policy_m_with_regularizer(memory, N, H)
         # self.update_policy_m(memory)
         policy_m_para_after = copy.deepcopy(self.policy_m.state_dict())
         for key, meta_para in zip(policy_m_para_before, self.new_default_policy.parameters()):
