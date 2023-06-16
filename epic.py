@@ -37,13 +37,8 @@ parser.add_argument('--run', type=int, default=0)
 parser.add_argument('--env', type=str, default="CartPole-v0",
                     help=['Swimmer', 'LunarLander-v2', 'CartPole-v0', 'half_cheetah', 'Ant',
                           ])
-<<<<<<< HEAD
-parser.add_argument('--samples', type=int, default=1500) # need to tune
-parser.add_argument('--episodes', type=int, default=10)
-=======
 parser.add_argument('--samples', type=int, default=2000) # need to tune
-parser.add_argument('--episodes', type=int, default=1)
->>>>>>> c04b7fc10373e9779d06d3b050c2ddbca38b8b6d
+parser.add_argument('--episodes', type=int, default=10)
 parser.add_argument('--steps', type=int, default=100)
 parser.add_argument('--goal', type=float, default=0.5) 
 parser.add_argument('--seed', default=1, type=int)
