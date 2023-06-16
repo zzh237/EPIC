@@ -2,7 +2,7 @@
 RUNS=1
 for n in 25
 do
-for step in 100
+for step in 300
 do
 for m in 500
 do
