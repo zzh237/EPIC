@@ -114,7 +114,7 @@ if __name__ =="__main__":
         ax.fill_between(x_vals, y1=epic_mean-epic_std, y2=epic_mean+epic_std, alpha=0.1)
 
     colors = {}
-    ms = [1]
+    ms = [1,2,5,10,15,20]
     for i in ms:
         r = random.uniform(0, 1)
         g = random.uniform(0, 1)
@@ -136,9 +136,32 @@ if __name__ =="__main__":
                         y2=epic_mean_std[:,0]+epic_mean_std[:,1], color = colors[m],alpha=0.5)
 
     
+    
+    colors = {}
+    ms = [1,2]
+    for i in ms:
+        r = random.uniform(0, 1)
+        g = random.uniform(0, 1)
+        b = random.uniform(0, 1)
+        colors[i] = (r,g,b)
+    
+    for m in ms:
+        fname = './results/montecarlo/new1/multimodal/EPIC_CartPole-v0_vpg_s2000_n10_every25_size32_c0.5_tau0.5_goal10.0_steps300_mass5.0_mc{}'.format(m)
+        epic_mean_std = read_rewards_multi_mc(filename=fname,
+                                             samples=2000,
+                                             runs=1)
+    
+    
+        x_vals = list(range(epic_mean_std.shape[0]))
+        ax.plot(x_vals, epic_mean_std[:,0], color = colors[m], label = "mc_300{}".format(m))
+        ax.plot(x_vals, epic_mean_std[:,0]+epic_mean_std[:,1],color = colors[m], alpha=0.5)
+        ax.plot(x_vals, epic_mean_std[:,0]-epic_mean_std[:,1], color = colors[m],alpha=0.5)
+        ax.fill_between(x_vals, y1=epic_mean_std[:,0]-epic_mean_std[:,1], \
+                        y2=epic_mean_std[:,0]+epic_mean_std[:,1], color = colors[m],alpha=0.5)
+    
     ax.set_xticks([0, 500, 1000, 1500, 2000])
-    ax.legend(loc='best') 
+    ax.legend(loc='upper left', labelspacing=0.5,fontsize=5) 
     # plt.yticks([-15, -10, -5, 0])
     # plt.tick_params(labelbottom=False, labelleft=False)
     # plt.show()
-    plt.savefig('./results/montecarlo/multimodal/step300_epic25_episodes_nosingle_mc_compare')
+    plt.savefig('./results/montecarlo/new/multimodal/step300_epic25_episodes_nosingle_mc_compare')
