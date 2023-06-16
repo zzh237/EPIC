@@ -24,6 +24,8 @@ def smooth(scalars, weight=0.99):  # Weight between 0 and 1
 def read_rewards(filename, samples=10, episodes=2000):
     rewards = []
     with open(filename, "r") as f:
+        last_line = f.readlines()[-1]
+        x = last_line.split()
         for i in range(samples):
             rew_sum = 0
             for j in range(episodes):
@@ -46,13 +48,14 @@ def read_rewards_multi(filename, samples, episodes, runs):
 
 
 if __name__ =="__main__":
+
     epic_mean, epic_std = read_rewards_multi(filename='./results/multimodal/EPIC_CartPole-v0_vpg_s2000_n10_every5_size32_c0.5_tau0.5_goal0.5_steps300_mass5.0',
                                              samples=2000,
                                              episodes=10,
                                              runs=1)
     # epic_mean = np.array(smooth(epic_mean, 0.99))
     # epic_std = 0.1 * np.array(smooth(epic_std, 0.99))
-    
+
     maml_mean, maml_std = read_rewards_multi(filename='./results_maml/multimodal/maml_CartPole-v0_vpg_s2000_n10_every50_size32_goal0.5_steps300_mass5.0',
                                              samples=2000,
                                              episodes=10,
