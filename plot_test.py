@@ -32,7 +32,7 @@ def read_rewards(filename, samples=2000, episodes=10):
         for i in range(samples):
             rew_sum = 0
             for j in range(episodes):
-                line = lines[i]
+                line = lines[i*episodes+j]
                 rew = float(line.split()[-1])
                 rew_sum += rew
             rewards.append(rew_sum / episodes)
