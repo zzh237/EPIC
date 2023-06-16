@@ -239,7 +239,7 @@ if __name__ == '__main__':
       resdir = os.path.join(args.resdir, 'simple',"")
  
     
-    filename = env_name + "_" + learner + "_s" + str(samples) + "_n" + str(max_episodes) \
+    filename = env_name + "_" + learner + "_s" + str(samples) + "_n" + str(meta_episodes) \
         + "_every" + str(meta_update_every) + "_size" + str(hidden_sizes[0]) \
             + "_c" + str(coeff) + "_tau" + str(tau) \
                 + "_goal" + str(args.goal)\
