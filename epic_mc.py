@@ -289,7 +289,7 @@ if __name__ == '__main__':
         ########## sample a meta learner
         actor_policy.initialize_policy_m() # initial policy theta
         # print("weight of layer 0", sample_policy.action_layer[0].weight) 
-        mc_rewards = 0
+        mc_rewards = np.array([])
         start_episode = 0
         # #use single task policy to collect some trajectories
         # memory = Memory() 
@@ -319,6 +319,7 @@ if __name__ == '__main__':
         
         for j in range(m):
             meta_memory = Memory()
+            epi_reward = 0
             for episode in range(start_episode, meta_episodes):
               state = env.reset()
               rewards = []
@@ -338,16 +339,18 @@ if __name__ == '__main__':
                   state = new_state
 
                   if done or steps == max_steps - 1:
+                      epi_reward +=np.sum(rewards)
                       
                       # meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
                       #     sample, episode, np.round(np.sum(rewards), decimals=3)))
                       break
+            epi_reward = epi_reward/meta_episodes    
             meta_memories[j] = meta_memory
-            mc_rewards +=np.sum(rewards)
+            mc_rewards = np.append(mc_rewards, epi_reward) 
             # meta_memory.clear_memory()
 
-        meta_rew_file.write("sample: {}, mc_sample: {}, total reward: {}\n".format(
-                        sample, m, np.round(1/m/meta_episodes*mc_rewards, decimals=3)))
+        meta_rew_file.write("sample: {}, mc_sample: {}, mean reward: {}, std reward: {}\n".format(
+                        sample, m, np.round(np.mean(mc_rewards), decimals=3), np.round(np.std(mc_rewards), decimals=3)))
         actor_policy.update_mu_theta_for_default(meta_memories, meta_update_every, H=1*(1-gamma**max_steps)/(1-gamma))
         
 
