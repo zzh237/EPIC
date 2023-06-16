@@ -4,7 +4,7 @@ for n in 25
 do
 for step in 300
 do
-for m in 500
+for m in 10
 do
 for ((i=0;i<${RUNS};i++));
 do
