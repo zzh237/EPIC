@@ -38,7 +38,7 @@ parser.add_argument('--env', type=str, default="CartPole-v0",
                     help=['Swimmer', 'LunarLander-v2', 'CartPole-v0', 'half_cheetah', 'Ant',
                           ])
 parser.add_argument('--samples', type=int, default=2000) # need to tune
-parser.add_argument('--episodes', type=int, default=10)
+parser.add_argument('--episodes', type=int, default=1)
 parser.add_argument('--steps', type=int, default=100)
 parser.add_argument('--goal', type=float, default=0.5) 
 parser.add_argument('--seed', default=1, type=int)
