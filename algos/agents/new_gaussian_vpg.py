@@ -350,15 +350,15 @@ class GaussianVPG(nn.Module):
         # reg = torch.sqrt((KL + torch.log(2 * np.sqrt(torch.tensor(N)) / 0.01)) / (2*N))
         # reg = torch.sqrt(reg/(2*N))
         # calculate total loss and back propagate
-        total_loss = policy_gradient + reg 
+        total_loss = policy_gradient + 0*reg 
         self.optimizer.zero_grad()
         total_loss.backward()
         self.optimizer.step()
 
     def update_mu_theta_for_default(self, memory, N, H):
         policy_m_para_before = copy.deepcopy(self.policy_m.state_dict())
-        # self.update_policy_m_with_regularizer(memory, N, H)
-        self.update_policy_m(memory)
+        self.update_policy_m_with_regularizer(memory, N, H)
+        # self.update_policy_m(memory)
         policy_m_para_after = copy.deepcopy(self.policy_m.state_dict())
         for key, meta_para in zip(policy_m_para_before, self.new_default_policy.parameters()):
             meta_para.data.copy_(meta_para.data +
