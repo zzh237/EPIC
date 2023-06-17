@@ -42,7 +42,7 @@ parser.add_argument('--episodes', type=int, default=10)
 parser.add_argument('--steps', type=int, default=100)
 parser.add_argument('--goal', type=float, default=10.0) 
 parser.add_argument('--seed', default=1, type=int)
-parser.add_argument('--mass', type=float, default=5) 
+parser.add_argument('--mass', type=float, default=5.0) 
 parser.add_argument('--action_std', type=float, default=0.5)
 # meta settings
 parser.add_argument('--meta', dest='meta', action='store_true')
@@ -58,7 +58,7 @@ parser.add_argument('--lr', type=float, default=1e-4)
 parser.add_argument('--alpha', type=float, default=1e-4)
 parser.add_argument('--beta', type=float, default=1e-4)
 parser.add_argument('--update_every', type=int, default=300)
-parser.add_argument('--meta_update_every', type=int, default=50)  # need to tune
+parser.add_argument('--meta_update_every', type=int, default=25)  # need to tune
 parser.add_argument('--hiddens', nargs='+', type=int)
 parser.add_argument('--lam', type=float, default=0.9)
 parser.add_argument('--lam_decay', type=float, default=0.95)
@@ -249,13 +249,27 @@ if __name__ == '__main__':
     if not use_meta:
         filename += "_nometa"
 
-    if args.run >=0:
-        filename += "_run" + str(args.run)
+        
     print(resdir)
     if not os.path.exists(resdir):
-        
         os.makedirs(resdir)
-    meta_rew_file = open(resdir + "EPIC_" + filename + ".txt", "w")
+    
+    if args.run >=0:
+        filename = filename + "_run"
+    
+    tryfilename = resdir + "EPIC_" + filename + str(args.run) + ".txt" 
+    run = args.run 
+    exist = os.path.isfile(tryfilename)
+
+    while exist:
+       if os.path.isfile(tryfilename):
+          run+=1
+          tryfilename = resdir + "EPIC_" + filename + str(run) + ".txt"
+       else:
+          exist == False 
+          break 
+          
+    meta_rew_file = open(tryfilename, "w")
 
     # env = gym.make(env_name)
     envfunc = envs[env_name]
@@ -291,26 +305,26 @@ if __name__ == '__main__':
 
         #use single task policy to collect some trajectories
         start_episode = 0
-        # for episode in range(start_episode, max_episodes):
-        #     state = env.reset()
-        #     rewards = []
-        #     for steps in range(max_steps):
-        #         state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state)
-        #         if isinstance(env.action_space, Discrete):
-        #             action = action_tensor.item()
-        #         else:
-        #             action = action_tensor.cpu().data.numpy().flatten()
-        #         new_state, reward, done, _ = env.step(action)
-        #         rewards.append(reward)
-        #         memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
-        #         state = new_state
-        #         if done or steps == max_steps-1:
-        #             meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
-        #                 sample, episode, np.round(np.sum(rewards), decimals = 3)))
-        #             break
-        # #update single task policy using the trajectory
-        # actor_policy.update_policy_m(memory)
-        # memory.clear_memory()
+        for episode in range(start_episode, max_episodes):
+            state = env.reset()
+            rewards = []
+            for steps in range(max_steps):
+                state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state)
+                if isinstance(env.action_space, Discrete):
+                    action = action_tensor.item()
+                else:
+                    action = action_tensor.cpu().data.numpy().flatten()
+                new_state, reward, done, _ = env.step(action)
+                rewards.append(reward)
+                memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
+                state = new_state
+                if done or steps == max_steps-1:
+                    # meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
+                    #     sample, episode, np.round(np.sum(rewards), decimals = 3)))
+                    break
+        #update single task policy using the trajectory
+        actor_policy.update_policy_m(memory)
+        memory.clear_memory()
         #use updated single task policy to collect some trajectories
         for episode in range(start_episode, meta_episodes):
             state = env.reset()

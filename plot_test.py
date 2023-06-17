@@ -148,19 +148,19 @@ if __name__ =="__main__":
     
     
         x_vals = list(range(len(epic_mean)))
-        ax.plot(x_vals, epic_mean, label = e, color='orange')
+        ax.plot(x_vals, epic_mean, label = "kl, no single", color='orange')
         ax.plot(x_vals, epic_mean+epic_std,  alpha=0.1)
         ax.plot(x_vals, epic_mean-epic_std,  alpha=0.1)
         ax.fill_between(x_vals, y1=epic_mean-epic_std, y2=epic_mean+epic_std, alpha=0.1)
     
-    epic_mean, epic_std = read_rewards_multi(filename='./results/multimodal/EPIC_CartPole-v0_vpg_s2000_n10_every25_size32_c0.5_tau0.5_goal0.5_steps{}_mass5.0'.format(steps),
+    epic_mean, epic_std = read_rewards_multi(filename='./results/test/single/multimodal/EPIC_CartPole-v0_vpg_s2000_n10_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass5.0'.format(steps),
                                                 samples=2000,
                                                 episodes = 10,
                                                 runs=1)
     
     
     x_vals = list(range(len(epic_mean)))
-    ax.plot(x_vals, epic_mean, label = 'add single')
+    ax.plot(x_vals, epic_mean, label = 'single and kl')
     ax.plot(x_vals, epic_mean+epic_std,  alpha=0.1)
     ax.plot(x_vals, epic_mean-epic_std,  alpha=0.1)
     ax.fill_between(x_vals, y1=epic_mean-epic_std, y2=epic_mean+epic_std, alpha=0.1)
@@ -184,7 +184,7 @@ if __name__ =="__main__":
     
     
     x_vals = list(range(len(epic_mean)))
-    ax.plot(x_vals, epic_mean, label = 'single nokl')
+    ax.plot(x_vals, epic_mean, label = 'single, nokl')
     ax.plot(x_vals, epic_mean+epic_std,  alpha=0.1)
     ax.plot(x_vals, epic_mean-epic_std,  alpha=0.1)
     ax.fill_between(x_vals, y1=epic_mean-epic_std, y2=epic_mean+epic_std, alpha=0.1)

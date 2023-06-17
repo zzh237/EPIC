@@ -1,0 +1,4 @@
+new: 100 steps average gradient
+New 1: 300 steps sum gradient
+New 1_100 ：100 steps sum gradient
+New 2: 300 steps average gradient
