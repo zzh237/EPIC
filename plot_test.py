@@ -10,6 +10,7 @@ import numpy as np
 import re 
 import random 
 import matplotlib.pyplot as plt
+import sys 
 
 
 def smooth(scalars, weight=0.99):  # Weight between 0 and 1
@@ -92,9 +93,9 @@ def run_mc_plot():
         g = random.uniform(0, 1)
         b = random.uniform(0, 1)
         colors[i] = (r,g,b)
-    steps = 100
-    subfolder = 'new1_100'
-    gradient = 'sum'
+    steps = 300
+    subfolder = 'new2'
+    gradient = ''
     
     for name, ms_sep in zip(['1','2'],[ms[2:5],ms[5:8]]):
         fig, ax = plt.subplots(figsize=(1.57 * 2, 1.18 * 2), dpi=600)
@@ -133,6 +134,9 @@ def run_mc_plot():
 
 
 if __name__ =="__main__":
+    # run_mc_plot()
+    # sys.exit(0)
+
     subfolder = "test/nosingle"
     steps = 100
     fig, ax = plt.subplots(figsize=(1.57 * 2, 1.18 * 2), dpi=600)
