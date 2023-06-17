@@ -357,8 +357,8 @@ class GaussianVPG(nn.Module):
 
     def update_mu_theta_for_default(self, memory, N, H):
         policy_m_para_before = copy.deepcopy(self.policy_m.state_dict())
-        self.update_policy_m_with_regularizer(memory, N, H)
-        # self.update_policy_m(memory)
+        # self.update_policy_m_with_regularizer(memory, N, H)
+        self.update_policy_m(memory)
         policy_m_para_after = copy.deepcopy(self.policy_m.state_dict())
         for key, meta_para in zip(policy_m_para_before, self.new_default_policy.parameters()):
             meta_para.data.copy_(meta_para.data +
