@@ -305,8 +305,8 @@ if __name__ == '__main__':
                 memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
                 state = new_state
                 if done or steps == max_steps-1:
-                    # meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
-                    #     sample, episode, np.round(np.sum(rewards), decimals = 3)))
+                    meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
+                        sample, episode, np.round(np.sum(rewards), decimals = 3)))
                     break
         #update single task policy using the trajectory
         actor_policy.update_policy_m(memory)
