@@ -43,6 +43,12 @@ def read_rewards(filename, samples=2000, episodes=10):
 
 def read_rewards_multi(filename, samples, episodes, runs):
     rewards = []
+    # if isinstance(runs, list):
+    #     start = runs[0]
+    #     end = runs[1]
+    #     iters = range(start, end)
+    # else:
+    #     iters = 
     for run in range(runs):
         reward = read_rewards(filename+"_run{}.txt".format(run), samples,episodes)
         rewards.append(smooth(reward))
@@ -100,7 +106,7 @@ def run_mc_plot():
     for name, ms_sep in zip(['1','2'],[ms[2:5],ms[5:8]]):
         fig, ax = plt.subplots(figsize=(1.57 * 2, 1.18 * 2), dpi=600)
         for e in [10]:
-            epic_mean, epic_std = read_rewards_multi(filename='./results/test/nosingle/multimodal/EPIC_CartPole-v0_vpg_s2000_n{}_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass5.0'.format(e,steps),
+            epic_mean, epic_std = read_rewards_multi(filename='./results/test/nosingle_kl/multimodal/EPIC_CartPole-v0_vpg_s2000_n{}_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass5.0'.format(e,steps),
                                                     samples=2000,
                                                     episodes=e,
                                                     runs=1)
@@ -137,7 +143,7 @@ if __name__ =="__main__":
     # run_mc_plot()
     # sys.exit(0)
 
-    subfolder = "test/nosingle"
+    subfolder = "test/nosingle_kl"
     steps = 100
     fig, ax = plt.subplots(figsize=(1.57 * 2, 1.18 * 2), dpi=600)
     for e in [10]:
@@ -194,4 +200,5 @@ if __name__ =="__main__":
     # plt.yticks([-15, -10, -5, 0])
     # plt.tick_params(labelbottom=False, labelleft=False)
     # plt.show()
+    subfolder = 'test/nosingle_kl'
     plt.savefig('./results/{}/multimodal/step{}_epic25_episodes_nosingle_single_mc_compare'.format(subfolder, steps))
