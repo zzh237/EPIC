@@ -137,7 +137,7 @@ if __name__ =="__main__":
     steps = 100
     fig, ax = plt.subplots(figsize=(1.57 * 2, 1.18 * 2), dpi=600)
     for e in [10]:
-        epic_mean, epic_std = read_rewards_multi(filename='./results/test/nosingle/multimodal/EPIC_CartPole-v0_vpg_s2000_n{}_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass5.0'.format(e, steps),
+        epic_mean, epic_std = read_rewards_multi(filename='./results/{}/multimodal/EPIC_CartPole-v0_vpg_s2000_n{}_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass5.0'.format(subfolder,e, steps),
                                                 samples=2000,
                                                 episodes=e,
                                                 runs=1)
@@ -161,7 +161,7 @@ if __name__ =="__main__":
     ax.plot(x_vals, epic_mean-epic_std,  alpha=0.1)
     ax.fill_between(x_vals, y1=epic_mean-epic_std, y2=epic_mean+epic_std, alpha=0.1)
     
-
+    
     maml_mean, maml_std = read_rewards_multi(filename='./results_maml/multimodal/maml_CartPole-v0_vpg_s2000_n10_every50_size32_goal0.5_steps{}_mass5.0'.format(steps),
                                              samples=2000,
                                              episodes=10,
@@ -172,29 +172,19 @@ if __name__ =="__main__":
     plt.plot(x_vals, maml_mean-maml_std, color="#2980B9", alpha=0.1)
     plt.fill_between(x_vals, y1=maml_mean-maml_std, y2=maml_mean+maml_std, alpha=0.1, color="#2980B9")
     
-    colors = {}
-    ms = [1,2,5,10,15,20,50,100]
-    for i in ms:
-        r = random.uniform(0, 1)
-        g = random.uniform(0, 1)
-        b = random.uniform(0, 1)
-        colors[i] = (r,g,b)
-    steps = 100
-    subfolder = 'montecarlo/new'
-    gradient = 'sum'
-
-    for m in [5,10,15,20,50]:
-        fname = './results/{}/multimodal/EPIC_CartPole-v0_vpg_s2000_n10_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass5.0_mc{}'.format(subfolder,steps, m)
-        epic_mean_std = read_rewards_multi_mc(filename=fname,
-                                            samples=2000,
-                                            runs=1)
-        x_vals = list(range(epic_mean_std.shape[0]))
-        ax.plot(x_vals, epic_mean_std[:,0], color = colors[m], label = r"Monte Carolo, $M=${}".format(m))
-        ax.plot(x_vals, epic_mean_std[:,0]+epic_mean_std[:,1],color = colors[m], alpha=0.5)
-        ax.plot(x_vals, epic_mean_std[:,0]-epic_mean_std[:,1], color = colors[m],alpha=0.5)
-        ax.fill_between(x_vals, y1=epic_mean_std[:,0]-epic_mean_std[:,1], \
-                        y2=epic_mean_std[:,0]+epic_mean_std[:,1], color = colors[m],alpha=0.5)
+    subfolder = "test/single_nokl"
+    epic_mean, epic_std = read_rewards_multi(filename='./results/{}/multimodal/EPIC_CartPole-v0_vpg_s2000_n10_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass5.0'.format(subfolder,steps),
+                                                samples=2000,
+                                                episodes = 10,
+                                                runs=1)
     
+    
+    x_vals = list(range(len(epic_mean)))
+    ax.plot(x_vals, epic_mean, label = 'single nokl')
+    ax.plot(x_vals, epic_mean+epic_std,  alpha=0.1)
+    ax.plot(x_vals, epic_mean-epic_std,  alpha=0.1)
+    ax.fill_between(x_vals, y1=epic_mean-epic_std, y2=epic_mean+epic_std, alpha=0.1)
+
     ax.set_xticks([0, 500, 1000, 1500, 2000])
     ax.legend(loc='upper left', labelspacing=0.5,fontsize=5) 
     # plt.yticks([-15, -10, -5, 0])
