@@ -312,34 +312,34 @@ if __name__ == '__main__':
         actor_policy.update_policy_m(memory)
         memory.clear_memory()
         #use updated single task policy to collect some trajectories
-        for episode in range(start_episode, meta_episodes):
-            state = env.reset()
-            rewards = []
-            for steps in range(max_steps):
-                if render:
-                    env.render()
-                state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state)
+        # for episode in range(start_episode, meta_episodes):
+        #     state = env.reset()
+        #     rewards = []
+        #     for steps in range(max_steps):
+        #         if render:
+        #             env.render()
+        #         state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state)
 
-                if isinstance(env.action_space, Discrete):
-                    action = action_tensor.item()
-                else:
-                    action = action_tensor.cpu().data.numpy().flatten()
-                new_state, reward, done, _ = env.step(action)
+        #         if isinstance(env.action_space, Discrete):
+        #             action = action_tensor.item()
+        #         else:
+        #             action = action_tensor.cpu().data.numpy().flatten()
+        #         new_state, reward, done, _ = env.step(action)
 
-                rewards.append(reward)
-                meta_memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
-                state = new_state
+        #         rewards.append(reward)
+        #         meta_memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
+        #         state = new_state
 
-                if done or steps == max_steps - 1:
-                    meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
-                        sample, episode, np.round(np.sum(rewards), decimals=3)))
-                    break
+        #         if done or steps == max_steps - 1:
+        #             meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
+        #                 sample, episode, np.round(np.sum(rewards), decimals=3)))
+        #             break
 
-        actor_policy.update_mu_theta_for_default(meta_memory, meta_update_every, H=1*(1-gamma**max_steps)/(1-gamma))
-        meta_memory.clear_memory()
+        # actor_policy.update_mu_theta_for_default(meta_memory, meta_update_every, H=1*(1-gamma**max_steps)/(1-gamma))
+        # meta_memory.clear_memory()
 
-        if (sample+1) % meta_update_every == 0:
-            actor_policy.update_default_and_prior_policy()
+        # if (sample+1) % meta_update_every == 0:
+        #     actor_policy.update_default_and_prior_policy()
 
         env.close()
 
