@@ -42,9 +42,6 @@ def read_rewards_multi(filename, samples, episodes, runs):
     rewards = np.array(rewards)
     return np.mean(rewards, axis=0), np.std(rewards, axis=0)
 
-
-
-
 if __name__ =="__main__":
     fig, ax = plt.subplots(figsize=(1.57 * 2, 1.18 * 2), dpi=600)
     # fig = plt.figure(figsize=(1.57 * 2, 1.18 * 2), dpi=600)

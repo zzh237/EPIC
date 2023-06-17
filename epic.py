@@ -40,9 +40,9 @@ parser.add_argument('--env', type=str, default="CartPole-v0",
 parser.add_argument('--samples', type=int, default=2000) # need to tune
 parser.add_argument('--episodes', type=int, default=1)
 parser.add_argument('--steps', type=int, default=100)
-parser.add_argument('--goal', type=float, default=0.5) 
+parser.add_argument('--goal', type=float, default=10.0) 
 parser.add_argument('--seed', default=1, type=int)
-parser.add_argument('--mass', type=float, default=1.0) 
+parser.add_argument('--mass', type=float, default=5) 
 parser.add_argument('--action_std', type=float, default=0.5)
 # meta settings
 parser.add_argument('--meta', dest='meta', action='store_true')
@@ -66,7 +66,7 @@ parser.add_argument('--lam_decay', type=float, default=0.95)
 
 # file settings
 parser.add_argument('--logdir', type=str, default="logs/")
-parser.add_argument('--resdir', type=str, default="results/")
+parser.add_argument('--resdir', type=str, default="results/test/single/")
 parser.add_argument('--moddir', type=str, default="models/")
 parser.add_argument('--loadfile', type=str, default="")
 
@@ -291,26 +291,26 @@ if __name__ == '__main__':
 
         #use single task policy to collect some trajectories
         start_episode = 0
-        # for episode in range(start_episode, max_episodes):
-        #     state = env.reset()
-        #     rewards = []
-        #     for steps in range(max_steps):
-        #         state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state)
-        #         if isinstance(env.action_space, Discrete):
-        #             action = action_tensor.item()
-        #         else:
-        #             action = action_tensor.cpu().data.numpy().flatten()
-        #         new_state, reward, done, _ = env.step(action)
-        #         rewards.append(reward)
-        #         memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
-        #         state = new_state
-        #         if done or steps == max_steps-1:
-        #             meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
-        #                 sample, episode, np.round(np.sum(rewards), decimals = 3)))
-        #             break
-        # #update single task policy using the trajectory
-        # actor_policy.update_policy_m(memory)
-        # memory.clear_memory()
+        for episode in range(start_episode, max_episodes):
+            state = env.reset()
+            rewards = []
+            for steps in range(max_steps):
+                state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state)
+                if isinstance(env.action_space, Discrete):
+                    action = action_tensor.item()
+                else:
+                    action = action_tensor.cpu().data.numpy().flatten()
+                new_state, reward, done, _ = env.step(action)
+                rewards.append(reward)
+                memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
+                state = new_state
+                if done or steps == max_steps-1:
+                    # meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
+                    #     sample, episode, np.round(np.sum(rewards), decimals = 3)))
+                    break
+        #update single task policy using the trajectory
+        actor_policy.update_policy_m(memory)
+        memory.clear_memory()
         #use updated single task policy to collect some trajectories
         for episode in range(start_episode, meta_episodes):
             state = env.reset()
