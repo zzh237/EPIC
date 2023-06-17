@@ -350,7 +350,7 @@ class GaussianVPG(nn.Module):
         # reg = torch.sqrt((KL + torch.log(2 * np.sqrt(torch.tensor(N)) / 0.01)) / (2*N))
         # reg = torch.sqrt(reg/(2*N))
         # calculate total loss and back propagate
-        total_loss = policy_gradient + 0*reg 
+        total_loss = policy_gradient + reg 
         self.optimizer.zero_grad()
         total_loss.backward()
         self.optimizer.step()
