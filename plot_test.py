@@ -43,15 +43,14 @@ def read_rewards(filename, samples=2000, episodes=10):
 
 def read_rewards_multi(filename, samples, episodes, runs):
     rewards = []
-    # if isinstance(runs, list):
-    #     start = runs[0]
-    #     end = runs[1]
-    #     iters = range(start, end)
-    # else:
-    #     iters = 
-    for run in range(runs):
-        reward = read_rewards(filename+"_run{}.txt".format(run), samples,episodes)
+    if isinstance(runs, int):
+        for run in range(runs):
+            reward = read_rewards(filename+"_run{}.txt".format(run), samples,episodes)
+            rewards.append(smooth(reward))
+    else:
+        reward = read_rewards(filename+"_run{}.txt".format(runs), samples,episodes)
         rewards.append(smooth(reward))
+    
     rewards = np.array(rewards)
     return np.mean(rewards, axis=0), np.std(rewards, axis=0)
 
@@ -99,9 +98,9 @@ def run_mc_plot():
         g = random.uniform(0, 1)
         b = random.uniform(0, 1)
         colors[i] = (r,g,b)
-    steps = 300
-    subfolder = 'new2'
-    gradient = ''
+    steps = 100
+    subfolder = 'new1_100'
+    gradient = 'sum'
     
     for name, ms_sep in zip(['1','2'],[ms[2:5],ms[5:8]]):
         fig, ax = plt.subplots(figsize=(1.57 * 2, 1.18 * 2), dpi=600)
@@ -144,7 +143,7 @@ if __name__ =="__main__":
     # sys.exit(0)
 
     subfolder = "test/nosingle_kl"
-    steps = 100
+    steps = 300
     fig, ax = plt.subplots(figsize=(1.57 * 2, 1.18 * 2), dpi=600)
     for e in [10]:
         epic_mean, epic_std = read_rewards_multi(filename='./results/{}/multimodal/EPIC_CartPole-v0_vpg_s2000_n{}_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass5.0'.format(subfolder,e, steps),
@@ -159,10 +158,23 @@ if __name__ =="__main__":
         ax.plot(x_vals, epic_mean-epic_std,  alpha=0.1)
         ax.fill_between(x_vals, y1=epic_mean-epic_std, y2=epic_mean+epic_std, alpha=0.1)
     
+    subfolder = "test/nosingle_kl/prior"
+    epic_mean, epic_std = read_rewards_multi(filename='./results/{}/multimodal/EPIC_CartPole-v0_vpg_s2000_n{}_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass5.0'.format(subfolder,e, steps),
+                                                samples=2000,
+                                                episodes=e,
+                                                runs=1)
+    
+    
+    x_vals = list(range(len(epic_mean)))
+    ax.plot(x_vals, epic_mean, label = "kl, no single, using prior", color='green')
+    ax.plot(x_vals, epic_mean+epic_std,  alpha=0.1)
+    ax.plot(x_vals, epic_mean-epic_std,  alpha=0.1)
+    ax.fill_between(x_vals, y1=epic_mean-epic_std, y2=epic_mean+epic_std, alpha=0.1)
+    
     epic_mean, epic_std = read_rewards_multi(filename='./results/test/single/multimodal/EPIC_CartPole-v0_vpg_s2000_n10_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass5.0'.format(steps),
                                                 samples=2000,
                                                 episodes = 10,
-                                                runs=1)
+                                                runs='1')
     
     
     x_vals = list(range(len(epic_mean)))
@@ -176,7 +188,7 @@ if __name__ =="__main__":
                                              samples=2000,
                                              episodes=10,
                                              runs=1)
-    
+    x_vals = list(range(len(maml_mean)))
     plt.plot(x_vals, maml_mean, color="#2980B9", label='maml')
     plt.plot(x_vals, maml_mean+maml_std, color="#2980B9", alpha=0.1)
     plt.plot(x_vals, maml_mean-maml_std, color="#2980B9", alpha=0.1)
@@ -186,7 +198,7 @@ if __name__ =="__main__":
     epic_mean, epic_std = read_rewards_multi(filename='./results/{}/multimodal/EPIC_CartPole-v0_vpg_s2000_n10_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass5.0'.format(subfolder,steps),
                                                 samples=2000,
                                                 episodes = 10,
-                                                runs=1)
+                                                runs='0')
     
     
     x_vals = list(range(len(epic_mean)))
@@ -200,5 +212,5 @@ if __name__ =="__main__":
     # plt.yticks([-15, -10, -5, 0])
     # plt.tick_params(labelbottom=False, labelleft=False)
     # plt.show()
-    subfolder = 'test/nosingle_kl'
+    subfolder = 'test/nosingle_kl/prior'
     plt.savefig('./results/{}/multimodal/step{}_epic25_episodes_nosingle_single_mc_compare'.format(subfolder, steps))
