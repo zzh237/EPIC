@@ -99,8 +99,8 @@ def run_mc_plot():
         b = random.uniform(0, 1)
         colors[i] = (r,g,b)
     steps = 100
-    subfolder = 'new1_100'
-    gradient = 'sum'
+    subfolder = 'new'
+    gradient = ''
     
     for name, ms_sep in zip(['1','2'],[ms[2:5],ms[5:8]]):
         fig, ax = plt.subplots(figsize=(1.57 * 2, 1.18 * 2), dpi=600)
@@ -157,6 +157,20 @@ if __name__ =="__main__":
         ax.plot(x_vals, epic_mean+epic_std,  alpha=0.1)
         ax.plot(x_vals, epic_mean-epic_std,  alpha=0.1)
         ax.fill_between(x_vals, y1=epic_mean-epic_std, y2=epic_mean+epic_std, alpha=0.1)
+    
+    
+    epic_mean, epic_std = read_rewards_multi(filename='./results/{}/multimodal/EPIC_CartPole-v0_vpg_s2000_n{}_every1_size32_c0.5_tau0.5_goal10.0_steps{}_mass5.0'.format(subfolder,e, steps),
+                                                samples=2000,
+                                                episodes=e,
+                                                runs=1)
+    
+    
+    x_vals = list(range(len(epic_mean)))
+    ax.plot(x_vals, epic_mean, label = "kl, no single, N=1", color='pink')
+    ax.plot(x_vals, epic_mean+epic_std,  alpha=0.1)
+    ax.plot(x_vals, epic_mean-epic_std,  alpha=0.1)
+    ax.fill_between(x_vals, y1=epic_mean-epic_std, y2=epic_mean+epic_std, alpha=0.1)
+    
     
     subfolder = "test/nosingle_kl/prior"
     epic_mean, epic_std = read_rewards_multi(filename='./results/{}/multimodal/EPIC_CartPole-v0_vpg_s2000_n{}_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass5.0'.format(subfolder,e, steps),

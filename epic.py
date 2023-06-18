@@ -305,26 +305,26 @@ if __name__ == '__main__':
 
         #use single task policy to collect some trajectories
         start_episode = 0
-        for episode in range(start_episode, max_episodes):
-            state = env.reset()
-            rewards = []
-            for steps in range(max_steps):
-                state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state)
-                if isinstance(env.action_space, Discrete):
-                    action = action_tensor.item()
-                else:
-                    action = action_tensor.cpu().data.numpy().flatten()
-                new_state, reward, done, _ = env.step(action)
-                rewards.append(reward)
-                memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
-                state = new_state
-                if done or steps == max_steps-1:
-                    # meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
-                    #     sample, episode, np.round(np.sum(rewards), decimals = 3)))
-                    break
-        #update single task policy using the trajectory
-        actor_policy.update_policy_m(memory)
-        memory.clear_memory()
+        # for episode in range(start_episode, max_episodes):
+        #     state = env.reset()
+        #     rewards = []
+        #     for steps in range(max_steps):
+        #         state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state)
+        #         if isinstance(env.action_space, Discrete):
+        #             action = action_tensor.item()
+        #         else:
+        #             action = action_tensor.cpu().data.numpy().flatten()
+        #         new_state, reward, done, _ = env.step(action)
+        #         rewards.append(reward)
+        #         memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
+        #         state = new_state
+        #         if done or steps == max_steps-1:
+        #             # meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
+        #             #     sample, episode, np.round(np.sum(rewards), decimals = 3)))
+        #             break
+        # #update single task policy using the trajectory
+        # actor_policy.update_policy_m(memory)
+        # memory.clear_memory()
         #use updated single task policy to collect some trajectories
         for episode in range(start_episode, meta_episodes):
             state = env.reset()
