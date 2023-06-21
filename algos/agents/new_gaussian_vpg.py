@@ -281,7 +281,7 @@ class GaussianVPG(nn.Module):
         return self.policy_m.act(state)
 
     def initialize_policy_m(self):
-        self.policy_m.load_state_dict(copy.deepcopy(self.prior_policy.state_dict()))
+        self.policy_m.load_state_dict(copy.deepcopy(self.default_policy.state_dict()))
 
     def update_policy_m(self, memory):
         # caculate policy gradient
