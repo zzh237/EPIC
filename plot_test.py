@@ -169,20 +169,22 @@ def run_mc_compare_maml_plot():
         b = rgb_3[j]
         colors[i] = (r,g,b)
     steps = 100
-    subfolder = 'new1_100'
+    subfolder = 'step100_2'
     name = 'maml'
-    gradient = 'sum'
-    # mc_max = 15
+    gradient = '2ave'
+    mc_max = 10
     mc_compare = {}
-    for m in ms[2:]:
-        fname = './results/montecarlo/{}/multimodal/EPIC_CartPole-v0_vpg_s2000_n10_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass5.0_mc{}'.format(subfolder,steps, m)
-        epic_mean_std = read_rewards_multi_mc(filename=fname,
-                                                samples=2000,
-                                                runs=1)
-        x_vals = list(range(epic_mean_std.shape[0]))
-        epic_mean = np.mean(epic_mean_std[:,0])
-        mc_compare[m] = epic_mean
-    mc_max = max(zip(mc_compare.values(), mc_compare.keys()))[1]
+    run_mc_key = False
+    if run_mc_key:
+        for m in ms[2:]:
+            fname = './results/montecarlo/{}/multimodal/EPIC_CartPole-v0_vpg_s2000_n10_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass5.0_mc{}'.format(subfolder,steps, m)
+            epic_mean_std = read_rewards_multi_mc(filename=fname,
+                                                    samples=2000,
+                                                    runs=1)
+            x_vals = list(range(epic_mean_std.shape[0]))
+            epic_mean = np.mean(epic_mean_std[:,0])
+            mc_compare[m] = epic_mean
+        mc_max = max(zip(mc_compare.values(), mc_compare.keys()))[1]
     
 
     for name, ms_sep in zip(['1','2'],[ms[2:5],ms[5:8]]):

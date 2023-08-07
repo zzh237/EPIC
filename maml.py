@@ -14,13 +14,10 @@ from algos.agents.ppo import PPO
 
 from envs.new_cartpole import NewCartPoleEnv
 from envs.new_lunar_lander import NewLunarLander
-from envs.new_half_cheetah import new_HalfCheetahEnv
-from envs.new_swimmer import new_Swimmer
-#from envs.swimmer_rand_vel import SwimmerEnvRandVel
-#from envs.half_cheetah_rand_dir import HalfCheetahEnvRandDir
-from envs.new_half_cheetah import new_HalfCheetahEnv
-from envs.new_ant import new_AntEnv
-# from stable_baselines.common.env_checker import check_env
+from envs.new_ant import AntDirection, AntForwardBackward
+from envs.new_halfcheetah import HalfCheetahForwardBackward
+from envs.new_humanoid import HumanoidDirection, HumanoidForwardBackward
+
 
 import logging
 from datetime import datetime
@@ -148,62 +145,39 @@ def make_car_env(seed, env="MountainCarContinuous-v0"):
     env = gym.make("MountainCarContinuous-v0")
     return env
 
-# def make_mujoco_env(seed, env="Swimmer"):
-#     if env == "Swimmer":
-#         #from gym.envs.mujoco.swimmer import SwimmerEnv
-#         env = new_Swimmer()
-#     elif env == "HalfCheetah":
-#         env = new_HalfCheetahEnv()
-#     elif env == "Halfcdir":
-#         env = HalfCheetahEnvRandDir()
-#     elif env == "Halfcvel":
-#         env = HalfCheetahEnvRandVel()
-#     elif env == "Antdir":
-#         env = AntEnvRandDir()
-#     elif env == "Antgol":
-#         env = AntEnvRandGoal()
-#     elif env == "Antvel":
-#         env = AntEnvRandVel()
-#     elif env == "Ant":
-#         env = new_AntEnv()
-# #     check_env(env, warn=True)
-#     return env
-
-
-# def make_env(env, seed):
-#     if env == "CartPole-v0":
-#       env = make_cart_env(seed)
-#     elif env == "LunarLander-v2":
-#       env = make_lunar_env(seed)
-#     elif env == 'Swimmer':
-#       env = make_mujoco_env(seed, env)
-#     elif env == 'HalfCheetah':
-#       env = make_mujoco_env(seed, env)
-#     elif env == 'Ant':
-#       env = make_mujoco_env(seed, env)
-#     return env
-
 def make_half_cheetah(env='half_cheetah'):
     assert env == 'half_cheetah', "env_name should be half_cheetah."
-    env = new_HalfCheetahEnv()
+    env = HalfCheetahForwardBackward()
     return env
 
-def make_swimmer(env='Swimmer'):
-    goal = np.random.uniform(low=-0.5, high=0.5)
-    env = new_Swimmer(goal=goal)
+def make_antdirection(env):
+    # assert env=='Ant'
+    env = AntDirection()
     return env
 
-def make_ant(env='Ant'):
-    assert env=='Ant'
-    env = new_AntEnv()
+def make_antforwardbackward(env):
+    # assert env=='Ant'
+    env = AntForwardBackward()
     return env
 
-#envs = {'Swimmer':make_mujoco_env, 'LunarLander-v2': make_lunar_env, \
-#    'CartPole-v0':make_cart_env, 'Ant':make_mujoco_env}
+def make_humanoiddirection(env):
+    env = HumanoidDirection()
+    return env
 
-envs = {'Swimmer':make_swimmer, 'LunarLander-v2': make_lunar_env, 'CartPole-v0':make_cart_env,
-        'half_cheetah': make_half_cheetah, 'Ant':make_ant}
+def make_humanoidforwardbackward(env):
+    env = HumanoidForwardBackward()
+    return env
 
+
+
+envs = {'LunarLander-v2': make_lunar_env,
+        'CartPole-v0':make_cart_env,
+        'AntDirection': make_antdirection,
+        'AntForwardBackward': make_antforwardbackward,
+        'HalfcheetahForwardBackward': make_half_cheetah,
+        'HumanoidDirection': make_humanoiddirection,
+        'HumanoidForwardBackward': make_humanoidforwardbackward,
+        }
 
 if __name__ == '__main__':
     ############## Hyperparameters ##############

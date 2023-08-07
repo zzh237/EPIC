@@ -263,10 +263,11 @@ class GaussianVPGMC(nn.Module):
             self.prior_policy = GaussianContActor(state_dim, self.action_dim, hidden_sizes, activation,
                                                   action_std, device).to(self.device)
 
-            self.policy_m = GaussianContActor(state_dim, self.action_dim, hidden_sizes, activation,
-                                              action_std, device).to(self.device)
+            self.policy_m = {j: GaussianContActor(state_dim, self.action_dim, hidden_sizes, activation,
+                                                  action_std, device).to(self.device) for j in range(m)}
 
-            self.policy_m.load_state_dict(copy.deepcopy(self.default_policy.state_dict()))
+            for j in range(m):
+                self.policy_m[j].load_state_dict(copy.deepcopy(self.default_policy.state_dict()))
             self.prior_policy.load_state_dict(copy.deepcopy(self.default_policy.state_dict()))
             self.new_default_policy.load_state_dict(copy.deepcopy(self.default_policy.state_dict()))
 

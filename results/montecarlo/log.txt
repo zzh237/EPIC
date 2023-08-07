@@ -4,3 +4,7 @@ New 1_100 ：100 steps sum gradient
 New 2: 300 steps average gradient
 New3: 100 steps average gradient aug 6 2023 redo
 New4: 300 steps average gradient aug 6 2023 redo
+step100: 100 steps average gradient uniform
+step100_2: 100 steps 2*average gradient aug 6 2023 redo
+step300_2: 300 steps 2*average gradient aug 6 2023 redo
+step100_3: 100 steps 1.5*average gradient aug 6 2023 redo
