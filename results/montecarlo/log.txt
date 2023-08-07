@@ -2,3 +2,5 @@ new: 100 steps average gradient
 New 1: 300 steps sum gradient
 New 1_100 ：100 steps sum gradient
 New 2: 300 steps average gradient
+New3: 100 steps average gradient aug 6 2023 redo
+New4: 300 steps average gradient aug 6 2023 redo
