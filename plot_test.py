@@ -168,11 +168,11 @@ def run_mc_compare_maml_plot():
         b = random.uniform(0, 1)
         b = rgb_3[j]
         colors[i] = (r,g,b)
-    steps = 300
-    subfolder = 'new2'
+    steps = 100
+    subfolder = 'new1_100'
     name = 'maml'
-    gradient = 'avg'
-    
+    gradient = 'sum'
+    # mc_max = 15
     mc_compare = {}
     for m in ms[2:]:
         fname = './results/montecarlo/{}/multimodal/EPIC_CartPole-v0_vpg_s2000_n10_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass5.0_mc{}'.format(subfolder,steps, m)
@@ -183,6 +183,7 @@ def run_mc_compare_maml_plot():
         epic_mean = np.mean(epic_mean_std[:,0])
         mc_compare[m] = epic_mean
     mc_max = max(zip(mc_compare.values(), mc_compare.keys()))[1]
+    
 
     for name, ms_sep in zip(['1','2'],[ms[2:5],ms[5:8]]):
         fig, ax = plt.subplots(figsize=(1.57 * 2, 1.18 * 2), dpi=600)
@@ -352,8 +353,8 @@ def run_ablation():
 
 if __name__ =="__main__":
     # run_mc_plot()
-    # run_mc_compare_maml_plot()
-    run_ablation()
+    run_mc_compare_maml_plot()
+    # run_ablation()
     sys.exit(0)
     
     
