@@ -169,15 +169,22 @@ def run_mc_compare_maml_plot():
         b = rgb_3[j]
         colors[i] = (r,g,b)
     steps = 100
-    subfolder = 'step100_2'
+    subfolder = 'step100_5'
     name = 'maml'
-    gradient = '2ave'
+    gradient = '1_35ave'
     mc_max = 10
     mc_compare = {}
     run_mc_key = False
+    dynamics='multimodal'
+    # dynamics='uniform'
+    mass = 5.0
+    goal = 0.5
+    if dynamics == 'uniform':
+        mass = 10.0
+        goal=0.0
     if run_mc_key:
         for m in ms[2:]:
-            fname = './results/montecarlo/{}/multimodal/EPIC_CartPole-v0_vpg_s2000_n10_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass5.0_mc{}'.format(subfolder,steps, m)
+            fname = './results/montecarlo/{}/{}/EPIC_CartPole-v0_vpg_s2000_n10_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass{}_mc{}'.format(subfolder,dynamics,steps,mass, m)
             epic_mean_std = read_rewards_multi_mc(filename=fname,
                                                     samples=2000,
                                                     runs=1)
@@ -203,8 +210,13 @@ def run_mc_compare_maml_plot():
             ax.plot(x_vals, epic_mean-epic_std,  alpha=0.1)
             ax.fill_between(x_vals, y1=epic_mean-epic_std, y2=epic_mean+epic_std, alpha=0.1)
         
-        # add the MAMLs 
-        maml_mean, maml_std = read_rewards_multi(filename='./results_maml/multimodal/maml_CartPole-v0_vpg_s2000_n10_every50_size32_goal0.5_steps{}_mass5.0'.format(steps),
+        # add the MAMLs
+        N = 50 
+        if dynamics == 'uniform':
+            mass = 10.0
+            goal=0.0
+            N = 5
+        maml_mean, maml_std = read_rewards_multi(filename='./results_maml/{}/maml_CartPole-v0_vpg_s2000_n10_every{}_size32_goal{}_steps{}_mass{}'.format(dynamics,N,goal,steps,mass),
                                              samples=2000,
                                              episodes=10,
                                              runs=4)
@@ -218,7 +230,7 @@ def run_mc_compare_maml_plot():
 
         for m in ms_sep:
             if m == mc_max:
-                fname = './results/montecarlo/{}/multimodal/EPIC_CartPole-v0_vpg_s2000_n10_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass5.0_mc{}'.format(subfolder,steps, m)
+                fname = './results/montecarlo/{}/{}/EPIC_CartPole-v0_vpg_s2000_n10_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass{}_mc{}'.format(subfolder,dynamics,steps, mass,m)
                 epic_mean_std = read_rewards_multi_mc(filename=fname,
                                                     samples=2000,
                                                     runs=1)
@@ -234,7 +246,7 @@ def run_mc_compare_maml_plot():
         # plt.yticks([-15, -10, -5, 0])
         # plt.tick_params(labelbottom=False, labelleft=False)
         # plt.show()
-        plt.savefig('./results/montecarlo/{}/multimodal/step{}_epic25_episodes_nosingle_mc_maml_compare_{}_{}'.format(subfolder, steps, name, gradient))
+        plt.savefig('./results/montecarlo/{}/{}/step{}_epic25_episodes_nosingle_mc_maml_compare_{}_{}'.format(subfolder, dynamics,steps, name, gradient))
 
 
 def run_ablation():
