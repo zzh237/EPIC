@@ -382,7 +382,7 @@ class GaussianVPGMC(nn.Module):
                     v[key]+=policy_m_para_after[key] - policy_m_para_before[key]
             
         for key, meta_para in zip(v, self.new_default_policy.parameters()):
-            meta_para.data.copy_(meta_para.data + 1.5*v[key]/self.m)
+            meta_para.data.copy_(meta_para.data + 1.35*v[key]/self.m)
        
 
     def update_default_and_prior_policy(self):
