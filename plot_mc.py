@@ -50,7 +50,7 @@ if __name__ =="__main__":
     colors[10] = '#D35400'
     colors[20] = "#2980B9"
     for m in [10, 20, 50, 100]:
-        fname = './results/montecarlo/multimodal/EPIC_CartPole-v0_vpg_s2000_n10_every25_size32_c0.5_tau0.5_goal10.0_steps100_mass5.0_mc{}'.format(m)
+        fname = './results/montecarlo/new/multimodal/EPIC_CartPole-v0_vpg_s2000_n10_every25_size32_c0.5_tau0.5_goal10.0_steps100_mass5.0_mc{}'.format(m)
         epic_mean, epic_std = read_rewards_multi(filename=fname,
                                              samples=2000,
                                              episodes=1,
