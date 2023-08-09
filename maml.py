@@ -146,7 +146,7 @@ def make_car_env(seed, env="MountainCarContinuous-v0"):
     return env
 
 def make_half_cheetah(env='half_cheetah'):
-    assert env == 'half_cheetah', "env_name should be half_cheetah."
+    # assert env == 'half_cheetah', "env_name should be half_cheetah."
     env = HalfCheetahForwardBackward()
     return env
 
@@ -204,7 +204,7 @@ if __name__ == '__main__':
     if args.hiddens:
         hidden_sizes = tuple(args.hiddens) # need to tune
     else:
-        hidden_sizes = (32, 32)
+        hidden_sizes = (256, 256)
     activation = nn.Tanh  # need to tune
 
     torch.cuda.empty_cache()
