@@ -10,7 +10,7 @@ class new_Swimmer(mujoco_env.MujocoEnv, utils.EzPickle):
     def __init__(self, goal):
         self.angle = np.random.uniform(low=0, high=np.pi)
         self.direction = np.array([np.cos(self.angle), np.sin(self.angle)])
-        mujoco_env.MujocoEnv.__init__(self, 'swimmer.xml', 5)
+        mujoco_env.MujocoEnv.__init__(self, 'swimmer.xml', 4)
         utils.EzPickle.__init__(self)
 
 

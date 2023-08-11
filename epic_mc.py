@@ -151,7 +151,7 @@ def make_car_env(env="MountainCarContinuous-v0"):
     return env
 
 def make_swimmer_env(env):
-    goal = np.random.uniform(0.1, 0.2)
+    goal = np.random.uniform(low=-0.5, high=0.5)
     env = new_Swimmer(goal)
     return env
 
