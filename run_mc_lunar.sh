@@ -7,7 +7,7 @@
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/u/home/z/zzh237/.mujoco/mujoco210/bin
 
 device="cpu"
-if [$device != "cpu"]; then
+if [ $device != "cpu" ]; then
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia
 fi
 
