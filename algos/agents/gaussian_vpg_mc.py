@@ -187,6 +187,7 @@ class GaussianContActor(nn.Module):
         self.device = device
 
     def act(self, state):
+        print(state)
         if type(state) == np.ndarray:
             state = torch.from_numpy(state).float().to(self.device)
         state = torch.from_numpy(state).float().to(self.device)
