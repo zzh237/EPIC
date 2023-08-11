@@ -18,7 +18,7 @@ for m in 1
 do
 for ((i=0;i<${RUNS};i++));
 do
-    python epic_mc.py --run ${i} --env "HumanoidDirection" --device "${devide}" --meta_update_every $n --steps $step --m $m --resdir "results/montecarlo/step${step}_8/"
+    python epic_mc.py --run ${i} --env "HumanoidDirection" --device "${device}" --meta_update_every $n --steps $step --m $m --resdir "results/montecarlo/step${step}_8/"
 done
 done 
 done

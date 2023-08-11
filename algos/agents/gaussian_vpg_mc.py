@@ -228,7 +228,6 @@ class GaussianVPGMC(nn.Module):
                     lam=0.9, lam_decay=0.999, m = 10):
         super(GaussianVPGMC, self).__init__()
         state_dim = state_space.shape[0]
-        print("device is {}".format(device))
         self.gamma = gamma
         self.device = device
         self.lam = lam
