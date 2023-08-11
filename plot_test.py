@@ -168,24 +168,35 @@ def run_mc_compare_maml_plot():
         b = random.uniform(0, 1)
         b = rgb_3[j]
         colors[i] = (r,g,b)
-    steps = 1000
-    subfolder = 'step1000'
+    steps = 300
+    subfolder = 'step300_6'
+    epicdynamics='multimodal'
+    epicdynamics='uniform'
+    # epicdynamics='simple'
+    epicpath= './results/montecarlo/{}/{}/'.format(subfolder, epicdynamics)
+
+
     name = 'maml'
     gradient = 'ave'
-    mc_max = 10
+    mc_max = 15
     mc_compare = {}
     run_mc_key = False
-    epicdynamics='simple'
+    
     mamldynamics='uniformgoal'
+    mamldynamics = 'uniform'
     mamlsubfolder = 'ant2'
+    mamlsubfolder = ''
     env = 'CartPole-v0'
-    env = 'AntDirection'
+    # env = 'AntDirection'
     mass = 1.0
     goal = 10.0
+    if env=='CartPole-v0':
+        goal=10.0
+        mass = 5.0
     addreference = False
     if epicdynamics == 'uniform':
         mass = 10.0
-        goal=0.0
+        goal=10.0
     if run_mc_key:
         for m in ms[2:]:
             fname = './results/montecarlo/{}/{}/EPIC_CartPole-v0_vpg_s2000_n10_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass{}_mc{}'.format(subfolder,dynamics,steps,mass, m)
@@ -218,13 +229,13 @@ def run_mc_compare_maml_plot():
         # add the MAMLs
         N = 25 
         if mamldynamics == 'uniform':
-            mass = 10.0
-            goal=0.0
-            N = 5
-        maml_mean, maml_std = read_rewards_multi(filename='./results_maml/{}/{}/maml_{}_vpg_s2000_n10_every{}_size256_goal{}_steps{}_mass{}'.format(mamlsubfolder,mamldynamics,env,N,goal,steps,mass),
+            mamlmass = 10.0
+            mamlgoal=0.0
+            mamlN = 5
+        maml_mean, maml_std = read_rewards_multi(filename='./results_maml/{}/{}/maml_{}_vpg_s2000_n10_every{}_size32_goal{}_steps{}_mass{}'.format(mamlsubfolder,mamldynamics,env,mamlN,mamlgoal,steps,mamlmass),
                                              samples=2000,
                                              episodes=10,
-                                             runs=1)
+                                             runs=4)
         x_vals = list(range(len(maml_mean)))
         lb = 'maml'
         ax.plot(x_vals, maml_mean, color = '#2980B9', label=lb)
@@ -235,7 +246,7 @@ def run_mc_compare_maml_plot():
 
         for m in ms_sep:
             if m == mc_max:
-                fname = './results/montecarlo/{}/{}/EPIC_{}_vpg_s2000_n10_every5_size256_c0.5_tau0.5_goal0.5_steps{}_mass{}_mc{}'.format(subfolder,epicdynamics,env,steps, mass,m)
+                fname = './results/montecarlo/{}/{}/EPIC_{}_vpg_s2000_n10_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass{}_mc{}'.format(subfolder,epicdynamics,env,steps, mass,m)
                 epic_mean_std = read_rewards_multi_mc(filename=fname,
                                                     samples=2000,
                                                     runs=1)
@@ -372,7 +383,7 @@ def run_ablation():
 
 if __name__ =="__main__":
     # run_mc_plot()
-    run_mc_compare_maml_plot()
+    # run_mc_compare_maml_plot()
     # run_ablation()
     sys.exit(0)
     
