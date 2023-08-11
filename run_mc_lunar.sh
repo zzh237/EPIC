@@ -5,11 +5,16 @@
 #$ -m bea
 
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/u/home/z/zzh237/.mujoco/mujoco210/bin
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia
+
+device="cpu"
+if ["$device" = "cuda"]; then
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia
+fi
+
 source ~/.bashrc
 
 RUNS=1
-device="cpu"
+
 for n in 25 
 do
 for step in 300
