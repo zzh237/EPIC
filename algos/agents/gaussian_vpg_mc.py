@@ -126,7 +126,7 @@ class StochasticLinear(nn.Module):
 
 
 class GaussianActor(nn.Module):
-    def __init__(self, state_dim, action_dim, hidden_sizes, activation):
+    def __init__(self, state_dim, action_dim, hidden_sizes, activation,device):
         super(GaussianActor, self).__init__()
         if type(hidden_sizes) == int:
             hid = [hidden_sizes]
@@ -140,10 +140,11 @@ class GaussianActor(nn.Module):
             act = activation() if j < len(sizes) - 2 else output_activation
             layers += [StochasticLinear(sizes[j], sizes[j + 1]), act]
 
-        self.action_layer = nn.Sequential(*layers)
+        self.action_layer = nn.Sequential(*layers).to(device)
+        self.device = device
 
     def act(self, state):
-        state = torch.from_numpy(state).float()
+        state = torch.from_numpy(state).float().to(self.device)
         action_probs = self.action_layer(state)
         dist = Categorical(action_probs)
         action = dist.sample()
@@ -186,6 +187,8 @@ class GaussianContActor(nn.Module):
         self.device = device
 
     def act(self, state):
+        if type(state) is tuple:
+            state = state[0]
         if type(state) == np.ndarray:
             state = torch.from_numpy(state).float().to(self.device)
         action_mean = self.action_layer(state)
@@ -225,7 +228,6 @@ class GaussianVPGMC(nn.Module):
                     lam=0.9, lam_decay=0.999, m = 10):
         super(GaussianVPGMC, self).__init__()
         state_dim = state_space.shape[0]
-
         self.gamma = gamma
         self.device = device
         self.lam = lam
@@ -237,13 +239,13 @@ class GaussianVPGMC(nn.Module):
             self.action_dim = action_space.n
 
             # new policy is for meta learning, every few iters, we update policy to new_policy
-            self.new_default_policy = GaussianActor(state_dim, self.action_dim, hidden_sizes, activation).to(
+            self.new_default_policy = GaussianActor(state_dim, self.action_dim, hidden_sizes, activation,device).to(
                 self.device)
-            self.default_policy = GaussianActor(state_dim, self.action_dim, hidden_sizes, activation).to(
+            self.default_policy = GaussianActor(state_dim, self.action_dim, hidden_sizes, activation,device).to(
                 self.device)
-            self.prior_policy = GaussianActor(state_dim, self.action_dim, hidden_sizes, activation).to(
+            self.prior_policy = GaussianActor(state_dim, self.action_dim, hidden_sizes, activation,device).to(
                 self.device)
-            self.policy_m = {j: GaussianActor(state_dim, self.action_dim, hidden_sizes, activation).to(
+            self.policy_m = {j: GaussianActor(state_dim, self.action_dim, hidden_sizes, activation,device).to(
                 self.device) for j in range(m)}
             for j in range(m):
                 self.policy_m[j].load_state_dict(copy.deepcopy(self.default_policy.state_dict()))

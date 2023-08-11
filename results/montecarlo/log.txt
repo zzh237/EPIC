@@ -11,5 +11,6 @@ step100_2: 100 steps 2*average gradient aug 6 2023 redo m = 10
 step300_2: 300 steps 2*average gradient aug 6 2023 redo
 step100_3: 100 steps 1.5*average gradient aug 6 2023 redo
 step100_4: 100 steps 1.5*average gradient uniform
-step100_5: 100 steps 1.35*average gradient 
+step100_5: 100 steps 1.35*average gradient multimodal 
 step100_6: 300 steps 1.4*average gradient uniform 
+step100_7: 100 steps 1.6*average gradient multimodal 
