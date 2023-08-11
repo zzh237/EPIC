@@ -151,7 +151,8 @@ def make_car_env(env="MountainCarContinuous-v0"):
     return env
 
 def make_swimmer_env(env):
-    env = new_Swimmer()
+    goal = np.random.uniform(0.1, 0.2)
+    env = new_Swimmer(goal)
     return env
 
 # def make_mujoco_env(env="Swimmer"):
