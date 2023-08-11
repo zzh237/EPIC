@@ -18,7 +18,7 @@ from envs.new_lunar_lander import NewLunarLander
 from envs.new_ant import AntDirection, AntForwardBackward
 from envs.new_halfcheetah import HalfCheetahForwardBackward
 from envs.new_humanoid import HumanoidDirection, HumanoidForwardBackward
-from gym.envs.mujoco.swimmer import SwimmerEnv
+from envs.new_swimmer import new_Swimmer
 
 
 import logging
@@ -151,7 +151,7 @@ def make_car_env(env="MountainCarContinuous-v0"):
     return env
 
 def make_swimmer_env(env):
-    env = SwimmerEnv()
+    env = new_Swimmer()
     return env
 
 # def make_mujoco_env(env="Swimmer"):
