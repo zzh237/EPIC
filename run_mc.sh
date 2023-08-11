@@ -1,6 +1,6 @@
 #! /bin/bash  
 RUNS=1
-for n in 5 10 25 50
+for n in 10 25 50
 do
 for step in 1000
 do
@@ -8,7 +8,7 @@ for m in 10
 do
 for ((i=0;i<${RUNS};i++));
 do
-    python epic_mc.py --run ${i} --env "AntDirection" --device "cuda:1" --meta_update_every $n --steps $step --m $m --resdir "results/montecarlo/step${step}/"
+    python epic_mc.py --run ${i} --env "AntDirection" --samples 1000 --device "cuda:1" --meta_update_every $n --steps $step --m $m --resdir "results/montecarlo/step${step}/"
 done
 done 
 done
