@@ -189,6 +189,7 @@ class GaussianContActor(nn.Module):
     def act(self, state):
         if type(state) == np.ndarray:
             state = torch.from_numpy(state).float().to(self.device)
+        state = torch.from_numpy(state).float().to(self.device)
         action_mean = self.action_layer(state)
         cov_mat = torch.diag(self.action_var).to(self.device)
         dist = MultivariateNormal(action_mean, cov_mat)
