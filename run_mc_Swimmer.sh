@@ -9,7 +9,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia
 source ~/.bashrc
 
 RUNS=1
-device="cuda:1"
+device="cuda:0"
 for n in 25 
 do
 for step in 100
