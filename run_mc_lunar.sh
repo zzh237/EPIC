@@ -1,4 +1,8 @@
 #! /bin/bash
+# Email address to notify
+#$ -M $USER@mail
+# Notify when
+#$ -m bea
 
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/u/home/z/zzh237/.mujoco/mujoco210/bin
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia
