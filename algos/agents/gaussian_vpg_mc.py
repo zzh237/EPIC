@@ -143,7 +143,7 @@ class GaussianActor(nn.Module):
         self.action_layer = nn.Sequential(*layers)
 
     def act(self, state):
-        state = torch.from_numpy(state).float()
+        state = torch.from_numpy(state).float().to(self.device)
         action_probs = self.action_layer(state)
         dist = Categorical(action_probs)
         action = dist.sample()
