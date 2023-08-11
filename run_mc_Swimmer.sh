@@ -1,5 +1,6 @@
 #! /bin/bash  
 RUNS=1
+device="cuda"
 for n in 25 
 do
 for step in 100
