@@ -14,12 +14,11 @@ from algos.agents.gaussian_vpg_mc import GaussianVPGMC
 from algos.agents.gaussian_ppo import GaussianPPO
 
 from envs.new_cartpole import NewCartPoleEnv
-# from envs.new_swimmer import new_Swimmer
+from envs.new_swimmer import new_Swimmer
 from envs.new_lunar_lander import NewLunarLander
 from envs.new_ant import AntDirection, AntForwardBackward
 from envs.new_halfcheetah import HalfCheetahForwardBackward
 from envs.new_humanoid import HumanoidDirection, HumanoidForwardBackward
-from gym.envs.mujoco.swimmer import SwimmerEnv
 
 
 import logging
@@ -152,9 +151,9 @@ def make_car_env(env="MountainCarContinuous-v0"):
     return env
 
 def make_swimmer_env(env):
-    # goal = np.random.uniform(low=-0.5, high=0.5)
-    # env = new_Swimmer(goal)
-    env = SwimmerEnv()
+    goal = np.random.uniform(low=-0.5, high=0.5)
+    env = new_Swimmer(goal)
+    # env = SwimmerEnv()
     return env
 
 # def make_mujoco_env(env="Swimmer"):
@@ -354,11 +353,7 @@ if __name__ == '__main__':
                       action = action_tensor.item()
                   else:
                       action = action_tensor.cpu().data.numpy().flatten()
-                  if env_name == 'Swimmer':
-                      new_state, reward, done, _,_ = env.step(action)     
-                  else:
-                    new_state, reward, done, _ = env.step(action)
-
+                  new_state, reward, done, _ = env.step(action)
                   rewards.append(reward)
                   meta_memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
                   state = new_state
