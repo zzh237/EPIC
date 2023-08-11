@@ -354,6 +354,7 @@ if __name__ == '__main__':
                       action = action_tensor.item()
                   else:
                       action = action_tensor.cpu().data.numpy().flatten()
+                  print(env.step(action))
                   new_state, reward, done, _ = env.step(action)
 
                   rewards.append(reward)
