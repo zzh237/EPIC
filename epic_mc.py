@@ -354,8 +354,10 @@ if __name__ == '__main__':
                       action = action_tensor.item()
                   else:
                       action = action_tensor.cpu().data.numpy().flatten()
-                  print(env.step(action))
-                  new_state, reward, done, _ = env.step(action)
+                  if env_name == 'Swimmer':
+                      new_state, reward, done, _,_ = env.step(action)     
+                  else:
+                    new_state, reward, done, _ = env.step(action)
 
                   rewards.append(reward)
                   meta_memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)

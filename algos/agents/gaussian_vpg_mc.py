@@ -189,7 +189,6 @@ class GaussianContActor(nn.Module):
     def act(self, state):
         if type(state) is tuple:
             state = state[0]
-            print(state)
         if type(state) == np.ndarray:
             state = torch.from_numpy(state).float().to(self.device)
         action_mean = self.action_layer(state)
