@@ -1,4 +1,9 @@
-#! /bin/bash  
+#! /bin/bash
+
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/u/home/z/zzh237/.mujoco/mujoco210/bin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia
+source ~/.bashrc
+
 RUNS=1
 device="cuda"
 for n in 25 
