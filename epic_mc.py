@@ -14,11 +14,12 @@ from algos.agents.gaussian_vpg_mc import GaussianVPGMC
 from algos.agents.gaussian_ppo import GaussianPPO
 
 from envs.new_cartpole import NewCartPoleEnv
+# from envs.new_swimmer import new_Swimmer
 from envs.new_lunar_lander import NewLunarLander
 from envs.new_ant import AntDirection, AntForwardBackward
 from envs.new_halfcheetah import HalfCheetahForwardBackward
 from envs.new_humanoid import HumanoidDirection, HumanoidForwardBackward
-from envs.new_swimmer import new_Swimmer
+from gym.envs.mujoco.swimmer import SwimmerEnv
 
 
 import logging
@@ -151,8 +152,9 @@ def make_car_env(env="MountainCarContinuous-v0"):
     return env
 
 def make_swimmer_env(env):
-    goal = np.random.uniform(low=-0.5, high=0.5)
-    env = new_Swimmer(goal)
+    # goal = np.random.uniform(low=-0.5, high=0.5)
+    # env = new_Swimmer(goal)
+    env = SwimmerEnv()
     return env
 
 # def make_mujoco_env(env="Swimmer"):
