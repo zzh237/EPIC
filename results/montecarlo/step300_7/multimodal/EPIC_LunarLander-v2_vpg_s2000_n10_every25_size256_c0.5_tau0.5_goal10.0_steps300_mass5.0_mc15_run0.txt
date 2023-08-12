@@ -1,0 +1,5 @@
+sample: 0, mc_sample: 15, mean reward: 58.192, std reward: 17.444
+sample: 1, mc_sample: 15, mean reward: 54.147, std reward: 16.82
+sample: 2, mc_sample: 15, mean reward: 58.904, std reward: 7.456
+sample: 3, mc_sample: 15, mean reward: 52.358, std reward: 11.872
+sample: 4, mc_sample: 15, mean reward: 54.41, std reward: 11.354
