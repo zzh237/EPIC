@@ -12,9 +12,9 @@ RUNS=1
 device="cuda"
 for n in 5  
 do
-for step in 1000
+for step in 2000
 do
-for m in 5 
+for m in 10 
 do
 for ((i=0;i<${RUNS};i++));
 do

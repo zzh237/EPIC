@@ -152,9 +152,8 @@ def run_mc_plot():
         plt.savefig('./results/montecarlo/{}/multimodal/step{}_epic25_episodes_nosingle_mc_compare_{}_{}'.format(subfolder, steps, name, gradient))
 
 def plot_N_compare():
-    
     d = {}
-    for file in os.listdir("./results/montecarlo/step1000_8/simple"):
+    for file in os.listdir("./results/montecarlo/step1000/simple"):
         if file.endswith(".txt"):
             f1 = Path(file).stem
             f2 = f1.split('_')
@@ -174,11 +173,13 @@ def plot_N_compare():
             if 'path' not in d:
                 d['path'] = []
                    
-            d['path'].append(os.path.join("./results/montecarlo/step1000_8/simple", file))
+            d['path'].append(os.path.join("./results/montecarlo/step1000/simple", file))
 
     df = pd.DataFrame.from_dict(d)
+    df_ = df.loc[(df['mc'] == 10)&(df['env'] == 'AntDirection')\
+                 &(df['N'] != 50)&(df['samples'] == 1000)]
+    ns = df_['N'].unique()
     colors = {}
-    ns = df['N'].unique()
     rgb_1 = np.linspace(0,1,len(ns))
     # rgb_1 = list(itertools.permutations(rgb_1))[15]
     # rgb_1 = [0,3.9,0.1,0.2,0.2,0.7]
@@ -201,25 +202,31 @@ def plot_N_compare():
     fig, ax = plt.subplots(figsize=(1.57 * 2, 1.18 * 2), dpi=600)
     for n in ns: 
 
-        df1 = df.loc[(df['N'] == n) & (df['mc'] == 1)]
+        df1 = df_.loc[(df_['N'] == n)]
         ps = df1['path'].tolist()
         ss = df1['samples'].tolist()
         es = df1['episode'].tolist()
+        # ms = df1['mc'].tolist()    
         rewards = []
         for p, s, e in zip(ps, ss, es):
-            # rw = rewards.append(smooth(read_rewards(p, samples=s, episodes=e)))
             reward = read_rewards_mc(p, s)
             reward = np_smooth(reward)
-            rewards.append(reward[:,0])   
-        rewards = np.array(rewards)
-        res = np.mean(rewards, axis=0) 
-        std = np.std(rewards, axis=0)
-        # mu1 = np.array(smooth(res, 0.99))
-        mu1 = res 
-        xs = list(np.arange(len(mu1)))
-        sigma1=  0.1*np.array(smooth(std, 0.99))
-        ax.plot(xs, mu1, color=colors[n], label=n)
-        ax.fill_between(xs, mu1 + sigma1, mu1 - sigma1, color=colors[n], alpha=0.1)
+            rewards.append(reward[:,0])  
+        if len(ps) > 1: 
+            rewards = np.array(rewards)
+            res = np.mean(rewards, axis=0) 
+            std = np.std(rewards, axis=0)
+            xs = list(np.arange(len(res)))
+            ax.plot(xs, res, color=colors[n], label=n)
+            ax.fill_between(xs, res + std, res - std, color=colors[n], alpha=0.1)
+        else: 
+            x_vals = list(range(reward.shape[0]))
+            ax.plot(x_vals, reward[:,0], color = colors[n], label = n)
+            ax.plot(x_vals, reward[:,0]+reward[:,1],color = colors[n], alpha=0.1)
+            ax.plot(x_vals, reward[:,0]-reward[:,1], color = colors[n],alpha=0.1)
+            ax.fill_between(x_vals, y1=reward[:,0]-reward[:,1], \
+                            y2=reward[:,0]+reward[:,1], color = colors[n],alpha=0.1)
+            
 
     ax.set_xticks([0, 500, 1000, 1500, 2000])
     ax.legend(loc='upper left', labelspacing=0.5,fontsize=5) 
@@ -242,62 +249,217 @@ def plot_N_compare():
     
     plt.savefig(os.path.join(di, name))
 
-
-    plt.savefig('./results/montecarlo/{}/{}/step{}_{}_epic25_episodes_nosingle_mc_maml_compare_{}_{}'.format(subfolder, epicdynamics,steps,env, name, epicdynamics))
-    
-    fname = './results/montecarlo/{}/{}/EPIC_{}_vpg_s2000_n10_every25_size32_c0.5_tau0.5_goal10.0_steps{}_mass{}_mc{}'.format(subfolder,epicdynamics,env,steps, mass,m)
-    epic_mean_std = read_rewards_multi_mc(filename=fname,
-                                        samples=2000,
-                                        runs=1)
-    x_vals = list(range(epic_mean_std.shape[0]))
-    ax.plot(x_vals, epic_mean_std[:,0], color = colors[10], label = r"EPICG".format(m))
-    ax.plot(x_vals, epic_mean_std[:,0]+epic_mean_std[:,1],color = colors[10], alpha=0.1)
-    ax.plot(x_vals, epic_mean_std[:,0]-epic_mean_std[:,1], color = colors[10],alpha=0.1)
-    ax.fill_between(x_vals, y1=epic_mean_std[:,0]-epic_mean_std[:,1], \
-                    y2=epic_mean_std[:,0]+epic_mean_std[:,1], color = colors[10],alpha=0.1)
-    
-    
-    N = 25 
-    if mamldynamics == 'uniform':
-        mamlmass = 10.0
-        mamlgoal=0.0
-        mamlN = 5
-    # for p, s, e in zip(ps, ss, es):
-    #         # rw = rewards.append(smooth(read_rewards(p, samples=s, episodes=e)))
-    #         reward = read_rewards_mc(p, s)
-    #         reward = np_smooth(reward)
-    #         rewards.append(smooth(reward))   
-    #     rewards = np.array(rewards)
-    #     res = np.mean(rewards, axis=0) 
-    #     std = np.std(rewards, axis=0)
-    #     mu1 = np.array(smooth(res, 0.99))
-    #     xs = list(range(res))
-    #     sigma1=  0.1*np.array(smooth(std, 0.99))
-    #     ax.plot(xs, mu1, color="#ff7f0e", label=n)
-    #     ax.fill_between(xs, mu1 + sigma1, mu1 - sigma1, color="#ff7f0e", alpha=0.1)
-
-    
-    maml_mean, maml_std = read_rewards_multi(filename='./results_maml/{}/{}/maml_{}_vpg_s2000_n10_every{}_size32_goal{}_steps{}_mass{}'.format(mamlsubfolder,mamldynamics,env,mamlN,mamlgoal,steps,mamlmass),
-                                            samples=2000,
-                                            episodes=10,
-                                            runs=4)
-    x_vals = list(range(len(maml_mean)))
-    lb = 'maml'
-    ax.plot(x_vals, maml_mean, color = '#2980B9', label=lb)
-    ax.plot(x_vals, maml_mean+maml_std, color = '#2980B9', alpha=0.1)
-    ax.plot(x_vals, maml_mean-maml_std, color = '#2980B9', alpha=0.1)
-    ax.fill_between(x_vals, y1=maml_mean-maml_std, y2=maml_mean+maml_std, alpha=0.1, color="#2980B9")
-    
-
-   
+def plot_maml_N_compare():
+    d = {}
+    for file in os.listdir("./results_maml/ant2/uniformgoal"):
+        if file.endswith(".txt"):
+            f1 = Path(file).stem
+            f2 = f1.split('_')
+            if len(f2) == 11:
+                names = ['method', 'env', 'algo', 'samples', 'episode', 'N', \
+                         'size','goal','steps','mass','run']
             
+            for name, f in zip(names, f2):
+                if name not in d:
+                    d[name] = []
+                
+                x = re.findall("\d+\.*\d*|[A-Za-z]+", f)
+                if len(x) == 2:
+                    d[name].append(ast.literal_eval(x[1]))
+                else:
+                    d[name].append(x[0])
+            if 'path' not in d:
+                d['path'] = []
+                   
+            d['path'].append(os.path.join("./results_maml/ant2/uniformgoal", file))
+
+    df = pd.DataFrame.from_dict(d)
+    df_ = df.loc[(df['samples'] == 1000)]
+    ns = df_['N'].unique()
+    colors = {}
+    rgb_1 = np.linspace(0,1,len(ns))
+    # rgb_1 = list(itertools.permutations(rgb_1))[15]
+    # rgb_1 = [0,3.9,0.1,0.2,0.2,0.7]
+    rgb_2 = np.linspace(1,0,len(ns))
+    # rgb_2 = list(itertools.permutations(rgb_2))[10]
+    # rgb_2 = [0.7,0.4,0.6,0.2,0.5,0.7]
+    rgb_3 = np.linspace(0,1,len(ns))
+    # rgb_3 = list(itertools.permutations(rgb_3))[20]
+    # rgb_3 = [0.2,0.1,0.1,0.2,1,0.7]
+
+    for j,i in enumerate(ns):
+        r = random.uniform(0, 1)
+        # r = rgb_1[j]
+        g = random.uniform(0, 1)
+        # g = rgb_2[j]
+        b = random.uniform(0, 1)
+        # b = rgb_3[j]
+        colors[i] = (r,g,b)
+
+    fig, ax = plt.subplots(figsize=(1.57 * 2, 1.18 * 2), dpi=600)
+    for n in ns: 
+        df1 = df.loc[(df['N'] == n)&(df['samples'] == 1000)]
+        ps = df1['path'].tolist()
+        ss = df1['samples'].tolist()
+        es = df1['episode'].tolist()
+        rewards = []
+        for p, s, e in zip(ps, ss, es):
+            rw = read_rewards(p, samples=s, episodes=e)
+            if len(rw) == s-2:
+                rw = smooth(rw)
+                rewards.append(rw)
+        rewards = np.array(rewards)
+        res = np.mean(rewards, axis=0) 
+        std = np.std(rewards, axis=0)
+        xs = list(np.arange(len(res)))
+        ax.plot(xs, res, color=colors[n], label=n)
+        ax.fill_between(xs, res + std, res - std, color=colors[n], alpha=0.1)
 
     ax.set_xticks([0, 500, 1000, 1500, 2000])
     ax.legend(loc='upper left', labelspacing=0.5,fontsize=5) 
     # plt.yticks([-15, -10, -5, 0])
     # plt.tick_params(labelbottom=False, labelleft=False)
     # plt.show()
-    plt.savefig('./results/montecarlo/{}/{}/step{}_{}_epic25_episodes_nosingle_mc_maml_compare_{}_{}'.format(subfolder, epicdynamics,steps,env, name, epicdynamics))
+    df2 = df1.drop(['N', 'run', 'path'], axis=1)
+    di = os.path.split(p)[0]
+    l = df2.iloc[0].to_list()
+    c = df2.columns.values.tolist()
+    z = []
+    for i, j in zip(c,l):
+        if type(j)!= str:
+            z.append(i+str(int(j)))
+        else:
+            z.append(i+str(j))    
+
+    name = '_'.join(z)+'.pdf'
+    plt.savefig(os.path.join(di, name))
+
+
+
+def mc_maml_compare():
+    colors = {}
+    rgb_1 = [0,3.9,0.1,0.2,0.2,0.7]
+    rgb_2 = [0.7,0.4,0.6,0.2,0.5,0.7]
+    rgb_3 = [0.2,0.1,0.1,0.2,1,0.7]
+    for j,i in enumerate([5,10,25,50]):
+        r = rgb_1[j]
+        g = rgb_2[j]
+        b = rgb_3[j]
+        colors[i] = (r,g,b)
+    d = {}
+    for file in os.listdir("./results/montecarlo/step1000/simple"):
+        if file.endswith(".txt"):
+            f1 = Path(file).stem
+            f2 = f1.split('_')
+            if len(f2) == 14:
+                names = ['method', 'env', 'algo', 'samples', 'episode', 'N', \
+                         'size','c','tau','goal','steps','mass','mc','run']
+            
+            for name, f in zip(names, f2):
+                if name not in d:
+                    d[name] = []
+                
+                x = re.findall("\d+\.*\d*|[A-Za-z]+", f)
+                if len(x) == 2:
+                    d[name].append(ast.literal_eval(x[1]))
+                else:
+                    d[name].append(x[0])
+            if 'path' not in d:
+                d['path'] = []
+                   
+            d['path'].append(os.path.join("./results/montecarlo/step1000/simple", file))
+
+    df = pd.DataFrame.from_dict(d)
+    df_ = df.loc[(df['mc'] == 10)&(df['env'] == 'AntDirection')\
+                 &(df['N'] == 25)&(df['samples'] == 1000)]
+    fig, ax = plt.subplots(figsize=(1.57 * 2, 1.18 * 2), dpi=600)
+    n = 25
+    df1 = df_.loc[(df_['N'] == 25)]
+    ps = df1['path'].tolist()
+    ss = df1['samples'].tolist()
+    es = df1['episode'].tolist()
+    # ms = df1['mc'].tolist()    
+    rewards = []
+    for p, s, e in zip(ps, ss, es):
+        reward = read_rewards_mc(p, s)
+        reward = np_smooth(reward)
+        rewards.append(reward[:,0])  
+    if len(ps) > 1: 
+        rewards = np.array(rewards)
+        res = np.mean(rewards, axis=0) 
+        std = np.std(rewards, axis=0)
+        xs = list(np.arange(len(res)))
+        ax.plot(xs, res, color=colors[n], label='EPICG')
+        ax.fill_between(xs, res + std, res - std, color=colors[n], alpha=0.1)
+    else: 
+        x_vals = list(range(reward.shape[0]))
+        ax.plot(x_vals, reward[:,0], color = '#D35400', label = 'EPICG')
+        ax.plot(x_vals, reward[:,0]+reward[:,1],color = '#D35400', alpha=0.1)
+        ax.plot(x_vals, reward[:,0]-reward[:,1], color = '#D35400',alpha=0.1)
+        ax.fill_between(x_vals, y1=reward[:,0]-reward[:,1], \
+                        y2=reward[:,0]+reward[:,1], color = '#D35400',alpha=0.1)
+
+    df2 = df1.drop(['N', 'run', 'path'], axis=1)
+    di = os.path.split(p)[0]
+    l = df2.iloc[0].to_list()
+    c = df2.columns.values.tolist()
+    z = []
+    for i, j in zip(c,l):
+        if type(j)!= str:
+            z.append(i+str(int(j)))
+        else:
+            z.append(i+str(j))    
+
+    picname = '_'.join(z)+'maml_compare.pdf'
+    
+    d = {}
+    for file in os.listdir("./results_maml/ant2/uniformgoal"):
+        if file.endswith(".txt"):
+            f1 = Path(file).stem
+            f2 = f1.split('_')
+            if len(f2) == 11:
+                names = ['method', 'env', 'algo', 'samples', 'episode', 'N', \
+                         'size','goal','steps','mass','run']
+            
+            for name, f in zip(names, f2):
+                if name not in d:
+                    d[name] = []
+                
+                x = re.findall("\d+\.*\d*|[A-Za-z]+", f)
+                if len(x) == 2:
+                    d[name].append(ast.literal_eval(x[1]))
+                else:
+                    d[name].append(x[0])
+            if 'path' not in d:
+                d['path'] = []
+                   
+            d['path'].append(os.path.join("./results_maml/ant2/uniformgoal", file))
+
+    df = pd.DataFrame.from_dict(d)
+    df_ = df.loc[(df['samples'] == 1000)&(df['N'] == 5)]
+
+    df1 = df.loc[(df['N'] == 5)&(df['samples'] == 1000)]
+    ps = df1['path'].tolist()
+    ss = df1['samples'].tolist()
+    es = df1['episode'].tolist()
+    rewards = []
+    for p, s, e in zip(ps, ss, es):
+        rw = read_rewards(p, samples=s, episodes=e)
+        if len(rw) == s-2:
+            rw = smooth(rw)
+            rewards.append(rw)
+    rewards = np.array(rewards)
+    res = np.mean(rewards, axis=0) 
+    std = np.std(rewards, axis=0)
+    xs = list(np.arange(len(res)))
+    ax.plot(xs, res, color='#2980B9', label='MAML')
+    ax.plot(xs, res + std, color = '#2980B9', alpha=0.1)
+    ax.plot(xs, res - std, color = '#2980B9', alpha=0.1)
+    ax.fill_between(xs, res + std, res - std, color='#2980B9', alpha=0.1)
+
+    ax.set_xticks([0, 500, 1000, 1500, 2000])
+    ax.legend(loc='upper left', labelspacing=0.5,fontsize=5) 
+    plt.savefig(os.path.join(di, picname))
 
 
 
@@ -327,8 +489,6 @@ def run_mc_compare_maml_plot():
     epicdynamics='uniform'
     # epicdynamics='simple'
     epicpath= './results/montecarlo/{}/{}/'.format(subfolder, epicdynamics)
-
-
     name = 'maml'
     gradient = 'ave'
     mc_max = 15
@@ -535,7 +695,9 @@ def run_ablation():
 
 
 if __name__ =="__main__":
-    plot_N_compare()
+    # plot_maml_N_compare()
+    # plot_N_compare()
+    mc_maml_compare()
     # run_mc_plot()
     # run_mc_compare_maml_plot()
     # run_ablation()
