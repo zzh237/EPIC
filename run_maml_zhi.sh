@@ -11,9 +11,9 @@ fi
 source ~/.bashrc
 
 RUNS=3
-for env_name in  "AntForwardBackward"
+for env_name in  "HalfcheetahForwardBackward"
 do
-for n in 50 
+for n in 5 
 do 
 for step in 1000
 do

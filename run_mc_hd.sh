@@ -14,7 +14,7 @@ source ~/.bashrc
 RUNS=1
 for env_name in  "HalfcheetahForwardBackward"
 do
-for n in 5 10 25 50 
+for n in 5 10 25 50
 do
 for step in 1000
 do
@@ -22,7 +22,7 @@ for m in 1
 do
 for ((i=0;i<${RUNS};i++));
 do
-    python epic_mc.py --run ${i} --env "${env_name}" --device "${device}" --meta_update_every $n --steps $step --m $m --resdir "results/montecarlo/${env_name}/"
+    python epic_mc.py --run ${i} --env "${env_name}" --device "${device}" --meta_update_every $n --samples 1000 --steps $step --m $m --resdir "results/montecarlo/${env_name}/"
 done
 done 
 done

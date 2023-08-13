@@ -177,7 +177,7 @@ def plot_N_compare():
 
     df = pd.DataFrame.from_dict(d)
     df_ = df.loc[(df['mc'] == 10)&(df['env'] == 'AntDirection')\
-                 &(df['N'] != 50)&(df['samples'] == 1000)]
+                 &(df['N'] != 5)&(df['samples'] == 1000)]
     ns = df_['N'].unique()
     colors = {}
     rgb_1 = np.linspace(0,1,len(ns))
@@ -227,8 +227,10 @@ def plot_N_compare():
             ax.fill_between(x_vals, y1=reward[:,0]-reward[:,1], \
                             y2=reward[:,0]+reward[:,1], color = colors[n],alpha=0.1)
             
-
-    ax.set_xticks([0, 500, 1000, 1500, 2000])
+    if s == 2000:
+        ax.set_xticks([0, 500, 1000, 1500, 2000])
+    else:
+        ax.set_xticks([0, 500, 1000])
     ax.legend(loc='upper left', labelspacing=0.5,fontsize=5) 
     # plt.yticks([-15, -10, -5, 0])
     # plt.tick_params(labelbottom=False, labelleft=False)
@@ -251,7 +253,7 @@ def plot_N_compare():
 
 def plot_maml_N_compare():
     d = {}
-    for file in os.listdir("./results_maml/ant2/uniformgoal"):
+    for file in os.listdir("./results_maml/Swimmer"):
         if file.endswith(".txt"):
             f1 = Path(file).stem
             f2 = f1.split('_')
@@ -271,10 +273,10 @@ def plot_maml_N_compare():
             if 'path' not in d:
                 d['path'] = []
                    
-            d['path'].append(os.path.join("./results_maml/ant2/uniformgoal", file))
+            d['path'].append(os.path.join("./results_maml/Swimmer", file))
 
     df = pd.DataFrame.from_dict(d)
-    df_ = df.loc[(df['samples'] == 1000)]
+    df_ = df.loc[(df['steps'] == 100)&(df['env'] == 'Swimmer')]
     ns = df_['N'].unique()
     colors = {}
     rgb_1 = np.linspace(0,1,len(ns))
@@ -298,7 +300,8 @@ def plot_maml_N_compare():
 
     fig, ax = plt.subplots(figsize=(1.57 * 2, 1.18 * 2), dpi=600)
     for n in ns: 
-        df1 = df.loc[(df['N'] == n)&(df['samples'] == 1000)]
+        df1 = df.loc[(df['N'] == n)&(df['steps'] == 100)\
+                     &(df['env'] == 'Swimmer')&(df['run'] == 1)]
         ps = df1['path'].tolist()
         ss = df1['samples'].tolist()
         es = df1['episode'].tolist()
@@ -315,7 +318,10 @@ def plot_maml_N_compare():
         ax.plot(xs, res, color=colors[n], label=n)
         ax.fill_between(xs, res + std, res - std, color=colors[n], alpha=0.1)
 
-    ax.set_xticks([0, 500, 1000, 1500, 2000])
+    if s == 2000:
+        ax.set_xticks([0, 500, 1000, 1500, 2000])
+    else:
+        ax.set_xticks([0, 500, 1000])
     ax.legend(loc='upper left', labelspacing=0.5,fontsize=5) 
     # plt.yticks([-15, -10, -5, 0])
     # plt.tick_params(labelbottom=False, labelleft=False)
@@ -334,8 +340,6 @@ def plot_maml_N_compare():
     name = '_'.join(z)+'.pdf'
     plt.savefig(os.path.join(di, name))
 
-
-
 def mc_maml_compare():
     colors = {}
     rgb_1 = [0,3.9,0.1,0.2,0.2,0.7]
@@ -347,7 +351,7 @@ def mc_maml_compare():
         b = rgb_3[j]
         colors[i] = (r,g,b)
     d = {}
-    for file in os.listdir("./results/montecarlo/step1000/simple"):
+    for file in os.listdir("./results/montecarlo/step1000_8/simple"):
         if file.endswith(".txt"):
             f1 = Path(file).stem
             f2 = f1.split('_')
@@ -367,14 +371,14 @@ def mc_maml_compare():
             if 'path' not in d:
                 d['path'] = []
                    
-            d['path'].append(os.path.join("./results/montecarlo/step1000/simple", file))
+            d['path'].append(os.path.join("./results/montecarlo/step1000_8/simple", file))
 
     df = pd.DataFrame.from_dict(d)
-    df_ = df.loc[(df['mc'] == 10)&(df['env'] == 'AntDirection')\
-                 &(df['N'] == 25)&(df['samples'] == 1000)]
+    n = 10
+    df_ = df.loc[(df['mc'] == 5)&(df['env'] == 'HumanoidDirection')\
+                 &(df['N'] == 5)&(df['samples'] == 2000)]
     fig, ax = plt.subplots(figsize=(1.57 * 2, 1.18 * 2), dpi=600)
-    n = 25
-    df1 = df_.loc[(df_['N'] == 25)]
+    df1 = df_.loc[(df_['N'] == 5)]
     ps = df1['path'].tolist()
     ss = df1['samples'].tolist()
     es = df1['episode'].tolist()
@@ -389,8 +393,8 @@ def mc_maml_compare():
         res = np.mean(rewards, axis=0) 
         std = np.std(rewards, axis=0)
         xs = list(np.arange(len(res)))
-        ax.plot(xs, res, color=colors[n], label='EPICG')
-        ax.fill_between(xs, res + std, res - std, color=colors[n], alpha=0.1)
+        ax.plot(xs, res, color='#D35400', label='EPICG')
+        ax.fill_between(xs, res + std, res - std, color='#D35400', alpha=0.1)
     else: 
         x_vals = list(range(reward.shape[0]))
         ax.plot(x_vals, reward[:,0], color = '#D35400', label = 'EPICG')
@@ -413,7 +417,7 @@ def mc_maml_compare():
     picname = '_'.join(z)+'maml_compare.pdf'
     
     d = {}
-    for file in os.listdir("./results_maml/ant2/uniformgoal"):
+    for file in os.listdir("./results_maml/HumanoidDirection/simple"):
         if file.endswith(".txt"):
             f1 = Path(file).stem
             f2 = f1.split('_')
@@ -433,12 +437,13 @@ def mc_maml_compare():
             if 'path' not in d:
                 d['path'] = []
                    
-            d['path'].append(os.path.join("./results_maml/ant2/uniformgoal", file))
+            d['path'].append(os.path.join("./results_maml/HumanoidDirection/simple", file))
 
     df = pd.DataFrame.from_dict(d)
-    df_ = df.loc[(df['samples'] == 1000)&(df['N'] == 5)]
+    df_ = df.loc[(df['samples'] == 2000)&(df['N'] == 5)\
+                 &(df['env'] == 'HumanoidDirection')&(df['steps'] == 1000)]
 
-    df1 = df.loc[(df['N'] == 5)&(df['samples'] == 1000)]
+    df1 = df_.loc[(df_['run'] != 3)]
     ps = df1['path'].tolist()
     ss = df1['samples'].tolist()
     es = df1['episode'].tolist()
@@ -457,7 +462,10 @@ def mc_maml_compare():
     ax.plot(xs, res - std, color = '#2980B9', alpha=0.1)
     ax.fill_between(xs, res + std, res - std, color='#2980B9', alpha=0.1)
 
-    ax.set_xticks([0, 500, 1000, 1500, 2000])
+    if s == 2000:
+        ax.set_xticks([0, 500, 1000, 1500, 2000])
+    else:
+        ax.set_xticks([0, 500, 1000])
     ax.legend(loc='upper left', labelspacing=0.5,fontsize=5) 
     plt.savefig(os.path.join(di, picname))
 
