@@ -8,13 +8,13 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/u/home/z/zzh237/.mujoco/mujoco210/bin
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia
 source ~/.bashrc
 
-RUNS=2
+RUNS=1
 device="cuda"
-for n in 5 10 25 50 
+for n in 5  
 do
 for step in 1000
 do
-for m in 1 
+for m in 5 
 do
 for ((i=0;i<${RUNS};i++));
 do
