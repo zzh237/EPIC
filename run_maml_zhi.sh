@@ -11,7 +11,7 @@ fi
 source ~/.bashrc
 
 RUNS=3
-for env_name in  "AntForwardBackward"
+for env_name in  "HumanoidDirection" "HumanoidForwardBackward"
 do
 for n in 5 10 25 50
 do 
