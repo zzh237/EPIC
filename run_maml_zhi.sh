@@ -15,7 +15,7 @@ for env_name in  "AntForwardBackward"
 do
 for n in 5 10 25 50
 do 
-for step in 2000
+for step in 1000
 do
 for mass in 1.0
 do
