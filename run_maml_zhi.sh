@@ -13,7 +13,7 @@ source ~/.bashrc
 RUNS=3
 for env_name in  "AntForwardBackward"
 do
-for n in 10 
+for n in 25 
 do 
 for step in 1000
 do
