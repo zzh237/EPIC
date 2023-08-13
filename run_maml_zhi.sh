@@ -1,5 +1,16 @@
-#! /bin/bash  
-RUNS=2
+#! /bin/bash
+# Email address to notify
+#$ -M $USER@mail
+# Notify when
+#$ -m bea
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/u/home/z/zzh237/.mujoco/mujoco210/bin
+device="cuda"
+if [ $device != "cpu" ]; then
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia
+fi
+source ~/.bashrc
+
+RUNS=3
 for env_name in  "HumanoidDirection" "HumanoidForwardBackward"
 do
 for n in 5 10 25 50
@@ -10,7 +21,7 @@ for mass in 1.0
 do
 for ((i=0;i<${RUNS};i++));
 do
-    python maml.py --run ${i} --env $env_name --device "cuda:1" --meta_update_every $n --steps $step --mass $mass --goal 10.0 --resdir "results_maml/ant2/"
+    python maml.py --run ${i} --env $env_name --device "${device}" --meta_update_every $n --steps $step --mass $mass --resdir "results_maml/"
 done
 done
 done
