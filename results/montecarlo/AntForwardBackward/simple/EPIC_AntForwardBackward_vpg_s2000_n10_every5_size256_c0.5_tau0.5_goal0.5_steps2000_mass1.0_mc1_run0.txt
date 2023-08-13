@@ -1,0 +1,8 @@
+sample: 0, mc_sample: 1, mean reward: -19.632, std reward: 0.0
+sample: 1, mc_sample: 1, mean reward: -18.025, std reward: 0.0
+sample: 2, mc_sample: 1, mean reward: -25.224, std reward: 0.0
+sample: 3, mc_sample: 1, mean reward: -50.081, std reward: 0.0
+sample: 4, mc_sample: 1, mean reward: -25.126, std reward: 0.0
+sample: 5, mc_sample: 1, mean reward: -59.464, std reward: 0.0
+sample: 6, mc_sample: 1, mean reward: -53.41, std reward: 0.0
+sample: 7, mc_sample: 1, mean reward: -36.768, std reward: 0.0
