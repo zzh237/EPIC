@@ -12,7 +12,7 @@ fi
 source ~/.bashrc
 
 RUNS=1
-for env_name in  "AntForwardBackward"
+for env_name in  "HalfcheetahForwardBackward"
 do
 for n in 5 10 25 50 
 do
