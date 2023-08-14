@@ -4,7 +4,7 @@
 # Notify when
 #$ -m bea
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/u/home/z/zzh237/.mujoco/mujoco210/bin
-device="cpu"
+device="cuda"
 if [ $device != "cpu" ]; then
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia
 fi
@@ -13,7 +13,7 @@ source ~/.bashrc
 RUNS=1
 for env_name in  "HalfcheetahForwardBackward"
 do
-for n in 5 
+for n in 10 
 do 
 for step in 1000
 do
