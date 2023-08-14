@@ -13,7 +13,7 @@ source ~/.bashrc
 RUNS=1
 for env_name in  "HalfcheetahForwardBackward"
 do
-for n in 25 
+for n in 50 
 do 
 for step in 1000
 do
