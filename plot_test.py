@@ -153,7 +153,7 @@ def run_mc_plot():
 
 def plot_N_compare():
     d = {}
-    for file in os.listdir("./results/montecarlo/step1000/simple"):
+    for file in os.listdir("./results/montecarlo/AntForwardBackward/simple"):
         if file.endswith(".txt"):
             f1 = Path(file).stem
             f2 = f1.split('_')
@@ -173,11 +173,11 @@ def plot_N_compare():
             if 'path' not in d:
                 d['path'] = []
                    
-            d['path'].append(os.path.join("./results/montecarlo/step1000/simple", file))
+            d['path'].append(os.path.join("./results/montecarlo/AntForwardBackward/simple", file))
 
     df = pd.DataFrame.from_dict(d)
-    df_ = df.loc[(df['mc'] == 10)&(df['env'] == 'AntDirection')\
-                 &(df['N'] != 5)&(df['samples'] == 1000)]
+    df_ = df.loc[(df['mc'] == 1)&(df['env'] == 'AntForwardBackward')\
+                 &(df['N'] != 50)&(df['samples'] == 2000)&(df['steps'] == 1000)]
     ns = df_['N'].unique()
     colors = {}
     rgb_1 = np.linspace(0,1,len(ns))
@@ -351,7 +351,7 @@ def mc_maml_compare():
         b = rgb_3[j]
         colors[i] = (r,g,b)
     d = {}
-    for file in os.listdir("./results/montecarlo/step1000_8/simple"):
+    for file in os.listdir("./results/montecarlo/step1000/simple"):
         if file.endswith(".txt"):
             f1 = Path(file).stem
             f2 = f1.split('_')
@@ -371,14 +371,14 @@ def mc_maml_compare():
             if 'path' not in d:
                 d['path'] = []
                    
-            d['path'].append(os.path.join("./results/montecarlo/step1000_8/simple", file))
+            d['path'].append(os.path.join("./results/montecarlo/step1000/simple", file))
 
     df = pd.DataFrame.from_dict(d)
     n = 10
-    df_ = df.loc[(df['mc'] == 5)&(df['env'] == 'HumanoidDirection')\
-                 &(df['N'] == 5)&(df['samples'] == 2000)]
+    df_ = df.loc[(df['mc'] == 10)&(df['env'] == 'AntForwardBackward')\
+                 &(df['N'] == 10)&(df['samples'] == 1000)]
     fig, ax = plt.subplots(figsize=(1.57 * 2, 1.18 * 2), dpi=600)
-    df1 = df_.loc[(df_['N'] == 5)]
+    df1 = df_.loc[(df_['N'] == 10)]
     ps = df1['path'].tolist()
     ss = df1['samples'].tolist()
     es = df1['episode'].tolist()
@@ -417,7 +417,7 @@ def mc_maml_compare():
     picname = '_'.join(z)+'maml_compare.pdf'
     
     d = {}
-    for file in os.listdir("./results_maml/HumanoidDirection/simple"):
+    for file in os.listdir("./results_maml/AntForwardBackward/simple"):
         if file.endswith(".txt"):
             f1 = Path(file).stem
             f2 = f1.split('_')
@@ -437,13 +437,13 @@ def mc_maml_compare():
             if 'path' not in d:
                 d['path'] = []
                    
-            d['path'].append(os.path.join("./results_maml/HumanoidDirection/simple", file))
+            d['path'].append(os.path.join("./results_maml/AntForwardBackward/simple", file))
 
     df = pd.DataFrame.from_dict(d)
     df_ = df.loc[(df['samples'] == 2000)&(df['N'] == 5)\
-                 &(df['env'] == 'HumanoidDirection')&(df['steps'] == 1000)]
+                 &(df['env'] == 'AntForwardBackward')&(df['steps'] == 1000)]
 
-    df1 = df_.loc[(df_['run'] != 3)]
+    df1 = df_.loc[(df_['run'] != 1)]
     ps = df1['path'].tolist()
     ss = df1['samples'].tolist()
     es = df1['episode'].tolist()
@@ -704,8 +704,8 @@ def run_ablation():
 
 if __name__ =="__main__":
     # plot_maml_N_compare()
-    # plot_N_compare()
-    mc_maml_compare()
+    plot_N_compare()
+    # mc_maml_compare()
     # run_mc_plot()
     # run_mc_compare_maml_plot()
     # run_ablation()

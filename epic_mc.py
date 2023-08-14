@@ -302,7 +302,7 @@ if __name__ == '__main__':
         
 
     for sample in range(samples):
-        print("#### Learning environment sample {}".format(sample))
+        print("#### Learning environment {} sample {}".format(env_name, sample))
         ########## creating environment
         # env = gym.make(env_name)
         env = envfunc(env_name)

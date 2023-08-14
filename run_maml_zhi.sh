@@ -10,10 +10,10 @@ if [ $device != "cpu" ]; then
 fi
 source ~/.bashrc
 
-RUNS=2
+RUNS=1
 for env_name in  "HalfcheetahForwardBackward"
 do
-for n in 10 
+for n in 5 
 do 
 for step in 1000
 do
@@ -21,7 +21,7 @@ for mass in 1.0
 do
 for ((i=0;i<${RUNS};i++));
 do
-    python maml.py --run ${i} --env "${env_name}" --device "${device}" --meta_update_every $n --steps $step --mass $mass --resdir "results_maml/${env_name}/"
+    python maml.py --run ${i} --env "${env_name}" --device "${device}" --samples 1000 --meta_update_every $n --steps $step --mass $mass --resdir "results_maml/${env_name}/"
 done
 done
 done

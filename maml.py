@@ -250,7 +250,7 @@ if __name__ == '__main__':
 
     for sample in range(samples):
         meta_memory = Memory()
-        print("sample " + str(sample))
+        print("#### MAML environment {} sample {}".format(env_name, sample))
         # env = make_env(env_name, sample)
         env = envfunc(env_name)
 
