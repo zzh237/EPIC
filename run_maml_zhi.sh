@@ -21,7 +21,7 @@ for mass in 1.0
 do
 for ((i=0;i<${RUNS};i++));
 do
-    python maml.py --run ${i} --env "${env_name}" --device "${device}" --samples 1000 --meta_update_every $n --steps $step --mass $mass --resdir "results_maml/${env_name}/"
+    python maml.py --run ${i} --env "${env_name}" --device "${device}" --samples 1000 --meta_update_every $n --steps $step --mass $mass --resdir "results_maml/${env_name}/run1/"
 done
 done
 done
