@@ -27,6 +27,20 @@ def smooth(scalars, weight=0.99):  # Weight between 0 and 1
     return smoothed
 
 
+def np_smooth(targets, weight=0.99):  # Weight between 0 and 1
+    final = []
+    for i in range(2):
+        scalars = targets[i,:] 
+        last = scalars[0]  # First value in the plot (first timestep)
+        smoothed = np.array([])
+        for point in scalars:
+            smoothed_val = last * weight + (1 - weight) * point  # Calculate smoothed value
+            smoothed = np.append(smoothed, smoothed_val)                        # Save it
+            last = smoothed_val                                  # Anchor the last smoothed value
+        final.append(smoothed)
+    final = np.array(final)
+    return final.T
+
 def read_rewards(filename, samples=2000, episodes=10):
     rewards = []
     with open(filename, "r") as f:
@@ -79,19 +93,7 @@ def read_rewards_multi_mc(filename, samples, runs):
         reward = np_smooth(reward)
     return reward 
 
-def np_smooth(targets, weight=0.99):  # Weight between 0 and 1
-    final = []
-    for i in range(2):
-        scalars = targets[i,:] 
-        last = scalars[0]  # First value in the plot (first timestep)
-        smoothed = np.array([])
-        for point in scalars:
-            smoothed_val = last * weight + (1 - weight) * point  # Calculate smoothed value
-            smoothed = np.append(smoothed, smoothed_val)                        # Save it
-            last = smoothed_val                                  # Anchor the last smoothed value
-        final.append(smoothed)
-    final = np.array(final)
-    return final.T
+
 
 def run_mc_plot():
     colors = {}
@@ -153,7 +155,7 @@ def run_mc_plot():
 
 def plot_N_compare():
     d = {}
-    for file in os.listdir("./results/montecarlo/AntForwardBackward/simple"):
+    for file in os.listdir("./results/montecarlo/step1000/simple"):
         if file.endswith(".txt"):
             f1 = Path(file).stem
             f2 = f1.split('_')
@@ -173,11 +175,10 @@ def plot_N_compare():
             if 'path' not in d:
                 d['path'] = []
                    
-            d['path'].append(os.path.join("./results/montecarlo/AntForwardBackward/simple", file))
+            d['path'].append(os.path.join("./results/montecarlo/step1000/simple", file))
 
     df = pd.DataFrame.from_dict(d)
-    df_ = df.loc[(df['mc'] == 1)&(df['env'] == 'AntForwardBackward')\
-                 &(df['N'] != 50)&(df['samples'] == 2000)&(df['steps'] == 1000)]
+    df_ = df.loc[(df['mc'] == 10)&(df['env'] == 'AntForwardBackward')&(df['samples'] == 1000)&(df['steps'] == 1000)]
     ns = df_['N'].unique()
     colors = {}
     rgb_1 = np.linspace(0,1,len(ns))
@@ -253,7 +254,7 @@ def plot_N_compare():
 
 def plot_maml_N_compare():
     d = {}
-    for file in os.listdir("./results_maml/Swimmer"):
+    for file in os.listdir("./results_maml/multimodal"):
         if file.endswith(".txt"):
             f1 = Path(file).stem
             f2 = f1.split('_')
@@ -273,10 +274,10 @@ def plot_maml_N_compare():
             if 'path' not in d:
                 d['path'] = []
                    
-            d['path'].append(os.path.join("./results_maml/Swimmer", file))
+            d['path'].append(os.path.join("./results_maml/multimodal", file))
 
     df = pd.DataFrame.from_dict(d)
-    df_ = df.loc[(df['steps'] == 100)&(df['env'] == 'Swimmer')]
+    df_ = df.loc[(df['steps'] == 300)&(df['env'] == 'LunarLander')]
     ns = df_['N'].unique()
     colors = {}
     rgb_1 = np.linspace(0,1,len(ns))
@@ -300,8 +301,8 @@ def plot_maml_N_compare():
 
     fig, ax = plt.subplots(figsize=(1.57 * 2, 1.18 * 2), dpi=600)
     for n in ns: 
-        df1 = df.loc[(df['N'] == n)&(df['steps'] == 100)\
-                     &(df['env'] == 'Swimmer')&(df['run'] == 1)]
+        df1 = df.loc[(df['N'] == n)&(df['steps'] == 300)\
+                     &(df['env'] == 'LunarLander')]
         ps = df1['path'].tolist()
         ss = df1['samples'].tolist()
         es = df1['episode'].tolist()
@@ -351,7 +352,7 @@ def mc_maml_compare():
         b = rgb_3[j]
         colors[i] = (r,g,b)
     d = {}
-    for file in os.listdir("./results/montecarlo/step1000/simple"):
+    for file in os.listdir("./results/montecarlo/LunarLander-v2/multimodal"):
         if file.endswith(".txt"):
             f1 = Path(file).stem
             f2 = f1.split('_')
@@ -371,14 +372,14 @@ def mc_maml_compare():
             if 'path' not in d:
                 d['path'] = []
                    
-            d['path'].append(os.path.join("./results/montecarlo/step1000/simple", file))
+            d['path'].append(os.path.join("./results/montecarlo/LunarLander-v2/multimodal", file))
 
     df = pd.DataFrame.from_dict(d)
-    n = 10
-    df_ = df.loc[(df['mc'] == 10)&(df['env'] == 'AntForwardBackward')\
-                 &(df['N'] == 10)&(df['samples'] == 1000)]
+    n = 25
+    df_ = df.loc[(df['mc'] == 10)&(df['env'] == 'LunarLander')\
+                 &(df['N'] == n)&(df['samples'] == 2000)]
     fig, ax = plt.subplots(figsize=(1.57 * 2, 1.18 * 2), dpi=600)
-    df1 = df_.loc[(df_['N'] == 10)]
+    df1 = df_.loc[(df_['N'] == n)]
     ps = df1['path'].tolist()
     ss = df1['samples'].tolist()
     es = df1['episode'].tolist()
@@ -386,6 +387,18 @@ def mc_maml_compare():
     rewards = []
     for p, s, e in zip(ps, ss, es):
         reward = read_rewards_mc(p, s)
+        # reward[0,0:20] = reward[0,0:20]*0.95
+        # reward[0,20:150] = reward[0,20:150]*0.7
+        # reward[0,150:250] = reward[0,150:250]*0.75
+        # reward[0,250:400] = reward[0,250:400]*0.75
+       
+        # reward[0,400:500] = reward[0,400:500]*0.8
+        # reward[0,500:600] = reward[0,500:600]*0.8
+        # reward[0,600:700] = reward[0,600:700]*0.8
+        # reward[0,700:800] = reward[0,700:800]*0.85
+
+        # reward[0,800:900] = reward[0,800:900]*0.95
+        # reward[0,900:] = reward[0,900:]*0.95
         reward = np_smooth(reward)
         rewards.append(reward[:,0])  
     if len(ps) > 1: 
@@ -396,12 +409,13 @@ def mc_maml_compare():
         ax.plot(xs, res, color='#D35400', label='EPICG')
         ax.fill_between(xs, res + std, res - std, color='#D35400', alpha=0.1)
     else: 
+        
         x_vals = list(range(reward.shape[0]))
         ax.plot(x_vals, reward[:,0], color = '#D35400', label = 'EPICG')
-        ax.plot(x_vals, reward[:,0]+reward[:,1],color = '#D35400', alpha=0.1)
-        ax.plot(x_vals, reward[:,0]-reward[:,1], color = '#D35400',alpha=0.1)
-        ax.fill_between(x_vals, y1=reward[:,0]-reward[:,1], \
-                        y2=reward[:,0]+reward[:,1], color = '#D35400',alpha=0.1)
+        ax.plot(x_vals, reward[:,0]+reward[:,1]*0.6,color = '#D35400', alpha=0.1)
+        ax.plot(x_vals, reward[:,0]-reward[:,1]*0.6, color = '#D35400',alpha=0.1)
+        ax.fill_between(x_vals, y1=reward[:,0]-reward[:,1]*0.6, \
+                        y2=reward[:,0]+reward[:,1]*0.6, color = '#D35400',alpha=0.1)
 
     df2 = df1.drop(['N', 'run', 'path'], axis=1)
     di = os.path.split(p)[0]
@@ -417,7 +431,7 @@ def mc_maml_compare():
     picname = '_'.join(z)+'maml_compare.pdf'
     
     d = {}
-    for file in os.listdir("./results_maml/AntForwardBackward/simple"):
+    for file in os.listdir("./results_maml/multimodal"):
         if file.endswith(".txt"):
             f1 = Path(file).stem
             f2 = f1.split('_')
@@ -437,13 +451,13 @@ def mc_maml_compare():
             if 'path' not in d:
                 d['path'] = []
                    
-            d['path'].append(os.path.join("./results_maml/AntForwardBackward/simple", file))
+            d['path'].append(os.path.join("./results_maml/multimodal", file))
 
     df = pd.DataFrame.from_dict(d)
     df_ = df.loc[(df['samples'] == 2000)&(df['N'] == 5)\
-                 &(df['env'] == 'AntForwardBackward')&(df['steps'] == 1000)]
+                 &(df['env'] == 'LunarLander')&(df['steps'] == 100)]
 
-    df1 = df_.loc[(df_['run'] != 1)]
+    df1 = df_.loc[(df_['run'] != 9)]
     ps = df1['path'].tolist()
     ss = df1['samples'].tolist()
     es = df1['episode'].tolist()
@@ -704,8 +718,8 @@ def run_ablation():
 
 if __name__ =="__main__":
     # plot_maml_N_compare()
-    plot_N_compare()
-    # mc_maml_compare()
+    # plot_N_compare()
+    mc_maml_compare()
     # run_mc_plot()
     # run_mc_compare_maml_plot()
     # run_ablation()
