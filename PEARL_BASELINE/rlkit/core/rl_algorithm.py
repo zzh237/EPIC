@@ -177,6 +177,7 @@ class MetaRLAlgorithm(metaclass=abc.ABCMeta):
                     self._do_training(indices)
                     self._n_train_steps_total += 1
                 self.env.sample_tasks()
+                idx = 0
                 gt.stamp('train')
 
 
