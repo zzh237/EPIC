@@ -1,7 +1,7 @@
 import abc
 from collections import OrderedDict
 import time
-
+import os 
 import gtimer as gt
 import numpy as np
 
@@ -19,9 +19,12 @@ class MetaRLAlgorithm(metaclass=abc.ABCMeta):
             agent,
             train_tasks,
             eval_tasks,
+            env_name = 'Ant-Direction',
+            resdir='simple',
+            run = 0,
             M=10,
             meta_batch=64,
-            num_iterations=100,
+            num_iterations=1000,
             num_train_steps_per_itr=1000,
             num_initial_steps=100,
             num_tasks_sample=100,
@@ -62,6 +65,7 @@ class MetaRLAlgorithm(metaclass=abc.ABCMeta):
         self.train_tasks = train_tasks
         self.eval_tasks = eval_tasks
         self.meta_batch = meta_batch
+
         self.num_iterations = num_iterations
         self.num_train_steps_per_itr = num_train_steps_per_itr
         self.num_initial_steps = num_initial_steps
@@ -90,6 +94,9 @@ class MetaRLAlgorithm(metaclass=abc.ABCMeta):
         self.render_eval_paths = render_eval_paths
         self.dump_eval_paths = dump_eval_paths
         self.plotter = plotter
+
+
+        
 
         self.sampler = InPlacePathSampler(
             env=env,
@@ -126,6 +133,25 @@ class MetaRLAlgorithm(metaclass=abc.ABCMeta):
         self._old_table_keys = None
         self._current_path_builder = PathBuilder()
         self._exploration_paths = []
+
+
+
+        # reporting related
+        self.resdir = resdir
+        self.env_name = env_name 
+        self.run = run
+        cwd = os.getcwd()
+        resdir = os.path.join(cwd,self.env_name, self.resdir)
+        filename = env_name + "_" + 'SAC' + "_s" + str(self.num_iterations) + "_n" + str(self._M) \
+        + "_every" + str(len(self.train_tasks)) \
+            + "_steps" + str(self.max_path_length) \
+            # + "_mass" + str(args.mass)
+        if self.run >= 0:
+            filename += "_run" + str(self.run)
+        if not os.path.exists(resdir):
+            os.makedirs(resdir)
+            self.meta_rew_file = open(resdir + "pearl_" + filename + ".txt", "w")
+            print(self.meta_rew_file)
 
     def make_exploration_policy(self, policy):
          return policy
@@ -176,7 +202,9 @@ class MetaRLAlgorithm(metaclass=abc.ABCMeta):
                     indices = np.random.choice(self.train_tasks, self.meta_batch)
                     self._do_training(indices)
                     self._n_train_steps_total += 1
-                self.env.sample_tasks()
+                self.env.sample_tasks_itself()
+                self.replay_buffer.clear_buffer_all()
+                self.enc_replay_buffer.clear_buffer_all()
                 idx = 0
                 gt.stamp('train')
 
@@ -215,7 +243,12 @@ class MetaRLAlgorithm(metaclass=abc.ABCMeta):
             self._end_epoch()
 
         # for_zhangzhi this is to save data for plotting
-        np.save("train_rewards.npy", path_cum_rewards)
+        for i,rew in enumerate(path_cum_rewards):
+            self.meta_rew_file.write("sample: {}, total reward: {}\n".format(
+                            i, rew, decimals=3))
+        
+
+        # np.save("train_rewards.npy", path_cum_rewards)
 
     def pretrain(self):
         """

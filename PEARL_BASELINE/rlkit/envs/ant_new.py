@@ -41,8 +41,10 @@ class AntDirection(MuJocoPyEnv, utils.EzPickle):
         tasks = []
         for theta in thetas:
             tasks.append({'goal_direction': theta})
-
         return tasks
+
+    def sample_tasks_itself(self):
+        self.tasks = self.sample_tasks()
 
     def get_all_task_idx(self):
         return range(len(self.tasks))
