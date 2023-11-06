@@ -1,6 +1,6 @@
 {
     "env_name": "ant-new",
-    "n_train_tasks": 100,
+    "n_train_tasks": 5,
     "n_eval_tasks": 30,
     "env_params": {
         "n_tasks": 5
@@ -20,8 +20,9 @@
         "embedding_batch_size": 256,
         "embedding_mini_batch_size": 256,
         "kl_lambda": 1.0,
-        "resdir": "simple",
+        "resdir": "simple/",
         "env_name": "Ant-Direction",
-        "run":0
+        "run":0,
+        "num_iterations":10
     }
 }

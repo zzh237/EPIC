@@ -18,7 +18,6 @@ class PEARLSoftActorCritic(MetaRLAlgorithm):
             eval_tasks,
             latent_dim,
             nets,
-
             policy_lr=1e-3,
             qf_lr=1e-3,
             vf_lr=1e-3,

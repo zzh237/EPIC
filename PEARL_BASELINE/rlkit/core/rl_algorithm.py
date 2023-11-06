@@ -67,6 +67,7 @@ class MetaRLAlgorithm(metaclass=abc.ABCMeta):
         self.meta_batch = meta_batch
 
         self.num_iterations = num_iterations
+        print("################### {}".format(num_iterations))
         self.num_train_steps_per_itr = num_train_steps_per_itr
         self.num_initial_steps = num_initial_steps
         self.num_tasks_sample = num_tasks_sample
@@ -142,7 +143,7 @@ class MetaRLAlgorithm(metaclass=abc.ABCMeta):
         self.run = run
         cwd = os.getcwd()
         resdir = os.path.join(cwd,self.env_name, self.resdir)
-        filename = env_name + "_" + 'SAC' + "_s" + str(self.num_iterations) + "_n" + str(self._M) \
+        filename = self.env_name + "_" + 'SAC' + "_s" + str(self.num_iterations) + "_n" + str(self._M) \
         + "_every" + str(len(self.train_tasks)) \
             + "_steps" + str(self.max_path_length) \
             # + "_mass" + str(args.mass)
