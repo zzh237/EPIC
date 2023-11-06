@@ -206,6 +206,7 @@ class MetaRLAlgorithm(metaclass=abc.ABCMeta):
             if idx == len(self.train_tasks):
                 print("################### dx == len(self.train_tasks)###")
                 for train_step in range(self.num_train_steps_per_itr):
+                    print("################### {}###".format(self.num_train_steps_per_itr))
                     indices = np.random.choice(self.train_tasks, self.meta_batch)
                     self._do_training(indices)
                     print("################### do_training(indices)###")
