@@ -1,23 +1,14 @@
 import numpy as np
 from gym import utils
-# from gym.envs.mujoco import mujoco_env
-from gym.envs.mujoco import MuJocoPyEnv
-from gym.spaces import Box
+from gym.envs.mujoco import mujoco_env
 
-class AntDirection(MuJocoPyEnv, utils.EzPickle):
-    def __init__(self,**kwargs):
-        observation_space = Box(
-            low=-np.inf, high=np.inf, shape=(111,), dtype=np.float64
-        )
-        MuJocoPyEnv.__init__(
-            self, "ant.xml", 5, observation_space=observation_space, **kwargs
-        )
-        utils.EzPickle.__init__(self, **kwargs)
 
+class AntDirection(mujoco_env.MujocoEnv, utils.EzPickle):
+    def __init__(self):
         theta = np.random.uniform(0, 2*np.pi)
         self.goal_direction = np.array([np.sin(theta), np.cos(theta)])
-        # mujoco_env.MujocoEnv.__init__(self, "ant.xml", 5)
-        # utils.EzPickle.__init__(self)
+        mujoco_env.MujocoEnv.__init__(self, "ant.xml", 5)
+        utils.EzPickle.__init__(self)
 
     def step(self, a):
         xposbefore = self.get_body_com("torso")[:2]
@@ -70,19 +61,12 @@ class AntDirection(MuJocoPyEnv, utils.EzPickle):
 
 
 
-class AntForwardBackward(MuJocoPyEnv, utils.EzPickle):
-    def __init__(self,**kwargs):
-        observation_space = Box(
-            low=-np.inf, high=np.inf, shape=(111,), dtype=np.float64
-        )
-        MuJocoPyEnv.__init__(
-            self, "ant.xml", 5, observation_space=observation_space, **kwargs
-        )
-        utils.EzPickle.__init__(self, **kwargs)
+class AntForwardBackward(mujoco_env.MujocoEnv, utils.EzPickle):
+    def __init__(self):
         theta = np.random.choice([0, np.pi])
         self.goal_direction = np.array([np.sin(theta), np.cos(theta)])
-        # mujoco_env.MujocoEnv.__init__(self, "ant.xml", 5)
-        # utils.EzPickle.__init__(self)
+        mujoco_env.MujocoEnv.__init__(self, "ant.xml", 5)
+        utils.EzPickle.__init__(self)
 
     def step(self, a):
         xposbefore = self.get_body_com("torso")[:2]
