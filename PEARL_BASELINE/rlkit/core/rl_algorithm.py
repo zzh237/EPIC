@@ -204,7 +204,7 @@ class MetaRLAlgorithm(metaclass=abc.ABCMeta):
             idx += 1
 
             if idx == len(self.train_tasks):
-                print("################### dx == len(self.train_tasks)###")
+                print("################### {}###".format(len(self.train_tasks)))
                 for train_step in range(self.num_train_steps_per_itr):
                     print("################### {}###".format(self.num_train_steps_per_itr))
                     indices = np.random.choice(self.train_tasks, self.meta_batch)
@@ -215,6 +215,7 @@ class MetaRLAlgorithm(metaclass=abc.ABCMeta):
                 self.replay_buffer.clear_buffer_all()
                 self.enc_replay_buffer.clear_buffer_all()
                 idx = 0
+                print("################### idx = 0###")
                 gt.stamp('train')
 
 
