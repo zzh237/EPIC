@@ -154,7 +154,7 @@ class MetaRLAlgorithm(metaclass=abc.ABCMeta):
             os.makedirs(resdir)
         self.meta_rew_file = open(resdir + "pearl_" + filename + ".txt", "w")
         print(self.meta_rew_file)
-        sys.exit(0)
+        # sys.exit(0)
 
     def make_exploration_policy(self, policy):
          return policy
@@ -192,19 +192,23 @@ class MetaRLAlgorithm(metaclass=abc.ABCMeta):
         ):
             print("################### run iteration{}".format(it_))
             self._start_epoch(it_)
+            print("################### _start_epoch")
             self.training_mode(True)
 
             self.task_idx = idx
             self.env.reset_task(idx)
             path_cum_reward = self.collect_data(self.num_initial_steps, 1, self._M)# collect 10 episodes in our code
+            print("################### collect_data")
             path_cum_rewards.append(path_cum_reward)
             print(path_cum_reward)
             idx += 1
 
             if idx == len(self.train_tasks):
+                print("################### dx == len(self.train_tasks)###")
                 for train_step in range(self.num_train_steps_per_itr):
                     indices = np.random.choice(self.train_tasks, self.meta_batch)
                     self._do_training(indices)
+                    print("################### do_training(indices)###")
                     self._n_train_steps_total += 1
                 self.env.sample_tasks_itself()
                 self.replay_buffer.clear_buffer_all()
