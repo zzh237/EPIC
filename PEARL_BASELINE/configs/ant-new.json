@@ -13,7 +13,7 @@
         "num_steps_prior": 400,
         "num_steps_posterior": 0,
         "num_extra_rl_steps_posterior": 600,
-        "num_train_steps_per_itr": 20,
+        "num_train_steps_per_itr": 10,
         "num_evals": 1,
         "num_steps_per_eval": 600,
         "num_exp_traj_eval": 2,
@@ -23,6 +23,6 @@
         "resdir": "simple/",
         "env_name": "Ant-Direction",
         "run":0,
-        "num_iterations":10
+        "num_iterations":1000
     }
 }
