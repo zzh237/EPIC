@@ -46,6 +46,7 @@ parser.add_argument('--seed', default=1, type=int)
 parser.add_argument('--mass', type=float, default=1.0) 
 parser.add_argument('--action_std', type=float, default=0.5)
 parser.add_argument('--m', type=int, default=10)
+parser.add_argument('--c1', type=float, default=1.6)
 # meta settings
 parser.add_argument('--meta', dest='meta', action='store_true')
 parser.add_argument('--no-meta', dest='meta', action='store_false')
@@ -267,7 +268,7 @@ if __name__ == '__main__':
             + "_c" + str(coeff) + "_tau" + str(tau) \
                 + "_goal" + str(args.goal)\
                     + "_steps" + str(max_steps)\
-                        + "_mass" + str(args.mass) \
+                        + "_c1" + str(args.c1) \
                           + "_mc" + str(args.m)
                         
  
@@ -291,7 +292,7 @@ if __name__ == '__main__':
         actor_policy = GaussianVPGMC(env.observation_space, env.action_space,
                                 hidden_sizes=hidden_sizes, activation=activation, alpha=alpha,
                                 beta=beta, action_std=action_std, gamma=gamma, device=device,
-                                lam=lam, lam_decay=lam_decay, m = m)
+                                lam=lam, lam_decay=lam_decay, m = m, c1=args.c1)
     if learner == "ppo":
         print("-----initialize meta policy-------")
         # here we could also use PPO, need to check difference between them

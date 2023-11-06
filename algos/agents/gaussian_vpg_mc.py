@@ -225,7 +225,7 @@ class GaussianContActor(nn.Module):
 class GaussianVPGMC(nn.Module):
     def __init__(self, state_space, action_space, hidden_sizes=(64, 64), activation=nn.Tanh,
                  alpha=3e-4, beta=3e-4, gamma=0.9, device="cpu", action_std=0.5, \
-                    lam=0.9, lam_decay=0.999, m = 10):
+                    lam=0.9, lam_decay=0.999, m = 10, c1=1.6):
         super(GaussianVPGMC, self).__init__()
         state_dim = state_space.shape[0]
         self.gamma = gamma
@@ -233,6 +233,7 @@ class GaussianVPGMC(nn.Module):
         self.lam = lam
         self.lam_decay = lam_decay
         self.m = m
+        self.c1 = c1
         # self.with_model = with_model
         if isinstance(action_space, Discrete):
             self.discrete_action = True
@@ -384,7 +385,7 @@ class GaussianVPGMC(nn.Module):
                     v[key]+=policy_m_para_after[key] - policy_m_para_before[key]
             
         for key, meta_para in zip(v, self.new_default_policy.parameters()):
-            meta_para.data.copy_(meta_para.data + 1.6*v[key]/self.m)
+            meta_para.data.copy_(meta_para.data + self.c1*v[key]/self.m)
        
 
     def update_default_and_prior_policy(self):

@@ -211,6 +211,7 @@ if __name__ == '__main__':
     action_std = args.action_std
     lam = args.lam
     lam_decay = args.lam_decay
+    adj = args.adj
     ############ For All #########################
     gamma = 0.99                # discount factor
     render = False
