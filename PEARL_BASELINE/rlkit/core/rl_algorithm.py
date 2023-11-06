@@ -4,6 +4,7 @@ import time
 import os 
 import gtimer as gt
 import numpy as np
+import sys 
 
 from rlkit.core import logger, eval_util
 from rlkit.data_management.env_replay_buffer import MultiTaskReplayBuffer
@@ -151,8 +152,9 @@ class MetaRLAlgorithm(metaclass=abc.ABCMeta):
             filename += "_run" + str(self.run)
         if not os.path.exists(resdir):
             os.makedirs(resdir)
-            self.meta_rew_file = open(resdir + "pearl_" + filename + ".txt", "w")
-            print(self.meta_rew_file)
+        self.meta_rew_file = open(resdir + "pearl_" + filename + ".txt", "w")
+        print(self.meta_rew_file)
+        sys.exit(0)
 
     def make_exploration_policy(self, policy):
          return policy
@@ -175,6 +177,7 @@ class MetaRLAlgorithm(metaclass=abc.ABCMeta):
         meta-training loop
         '''
         self.pretrain()# nothing
+        print("################### finished pretrain")
         params = self.get_epoch_snapshot(-1)
         logger.save_itr_params(-1, params)
         gt.reset()
@@ -187,7 +190,7 @@ class MetaRLAlgorithm(metaclass=abc.ABCMeta):
                 range(self.num_iterations),
                 save_itrs=True,
         ):
-
+            print("################### run iteration{}".format(it_))
             self._start_epoch(it_)
             self.training_mode(True)
 
