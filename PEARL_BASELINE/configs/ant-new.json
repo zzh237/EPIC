@@ -1,6 +1,6 @@
 {
     "env_name": "ant-new",
-    "n_train_tasks": 5,
+    "n_train_tasks": 10,
     "n_eval_tasks": 30,
     "env_params": {
         "n_tasks": 5
@@ -22,7 +22,7 @@
         "kl_lambda": 1.0,
         "resdir": "simple/",
         "env_name": "Ant-Direction",
-        "run":0,
+        "run":1,
         "num_iterations":1000
     }
 }
