@@ -26,6 +26,9 @@ import copy
 from datetime import datetime
 ## this is version 2.0
 
+import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:1024"
+
 now = datetime.now()
 current_time = now.strftime("%m-%d %H:%M:%S")
 
