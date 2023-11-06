@@ -192,19 +192,18 @@ class MetaRLAlgorithm(metaclass=abc.ABCMeta):
         ):
             print("################### run iteration{}".format(it_))
             self._start_epoch(it_)
-            print("################### _start_epoch")
             self.training_mode(True)
 
             self.task_idx = idx
             self.env.reset_task(idx)
             path_cum_reward = self.collect_data(self.num_initial_steps, 1, self._M)# collect 10 episodes in our code
-            print("################### collect_data")
+            print("################### path_cum_reward{}".format(path_cum_reward))
             path_cum_rewards.append(path_cum_reward)
             print(path_cum_reward)
             idx += 1
 
             if idx == len(self.train_tasks):
-                print("################### {}###".format(len(self.train_tasks)))
+                print("################### train_tasks N = {}###".format(len(self.train_tasks)))
                 for train_step in range(self.num_train_steps_per_itr):
                     # print("################### {}###".format(self.num_train_steps_per_itr))
                     indices = np.random.choice(self.train_tasks, self.meta_batch)
