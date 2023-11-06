@@ -5,6 +5,14 @@ from gym.envs.mujoco import MuJocoPyEnv
 from gym.spaces import Box
 
 class AntDirection(MuJocoPyEnv, utils.EzPickle):
+    metadata = {
+        "render_modes": [
+            "human",
+            "rgb_array",
+            "depth_array",
+        ],
+        "render_fps": 20,
+    }
     def __init__(self,**kwargs):
         observation_space = Box(
             low=-np.inf, high=np.inf, shape=(111,), dtype=np.float64
@@ -71,6 +79,14 @@ class AntDirection(MuJocoPyEnv, utils.EzPickle):
 
 
 class AntForwardBackward(MuJocoPyEnv, utils.EzPickle):
+    metadata = {
+        "render_modes": [
+            "human",
+            "rgb_array",
+            "depth_array",
+        ],
+        "render_fps": 20,
+    }
     def __init__(self,**kwargs):
         observation_space = Box(
             low=-np.inf, high=np.inf, shape=(111,), dtype=np.float64
