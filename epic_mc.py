@@ -1,9 +1,10 @@
 import torch
+import sys
 import torch.nn as nn
 import argparse
 import gym
-
 import os 
+#os.environ['OPENBLAS_NUM_THREADS'] = '1'
 import mujoco_py
 import random
 import numpy as np
@@ -23,14 +24,14 @@ from envs.new_humanoid import HumanoidDirection, HumanoidForwardBackward
 
 import logging
 import copy
-from datetime import datetime
+#from datetime import datetime
 ## this is version 2.0
 
 import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:1024"
 
-now = datetime.now()
-current_time = now.strftime("%m-%d %H:%M:%S")
+#now = datetime.now()
+#current_time = now.strftime("%m-%d %H:%M:%S")
 
 parser = argparse.ArgumentParser()
 # change cpu to cuda if running on server
@@ -272,8 +273,8 @@ if __name__ == '__main__':
                 + "_goal" + str(args.goal)\
                     + "_steps" + str(max_steps)\
                         + "_c1" + str(args.c1) \
-                          + "_mc" + str(args.m)
-                        
+                          + "_mc" + str(args.m)\
+                            + "_lam" + str(args.lam)
  
     if not use_meta:
         filename += "_nometa"
