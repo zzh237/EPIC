@@ -305,7 +305,7 @@ if __name__ == '__main__':
                 learning_rate=lr, coeff=coeff, tau=tau, m = m)
         
         
-
+    KL = 0
     for sample in range(samples):
         print("#### Learning environment {} sample {}".format(env_name, sample))
         ########## creating environment
@@ -374,13 +374,16 @@ if __name__ == '__main__':
             mc_rewards = np.append(mc_rewards, epi_reward) 
             # meta_memory.clear_memory()
 
-        meta_rew_file.write("sample: {}, mc_sample: {}, mean reward: {}, std reward: {}\n".format(
-                        sample, m, np.round(np.mean(mc_rewards), decimals=3), np.round(np.std(mc_rewards), decimals=3)))
+        meta_rew_file.write("sample: {}, mc_sample: {}, mean reward: {}, std reward: {}, kl: {}\n".format(
+                        sample, m, np.round(np.mean(mc_rewards), decimals=3), \
+                          np.round(np.std(mc_rewards), decimals=3), \
+                            np.round(KL,decimals=3)))
         actor_policy.update_mu_theta_for_default(meta_memories, meta_update_every, H=1*(1-gamma**max_steps)/(1-gamma))
         
 
         if (sample+1) % meta_update_every == 0:
             actor_policy.update_default_and_prior_policy()
+            KL = actor_policy.KL
 
         env.close()
 
