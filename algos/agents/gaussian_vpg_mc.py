@@ -342,6 +342,9 @@ class GaussianVPGMC(nn.Module):
 
         # calculate regularizer
         KL = []
+        f = open('output.txt', 'a')
+        original_stdout = sys.stdout
+        sys.stdout = f
         for policy_layer, prior_layer in zip(self.policy_m[j].action_layer, \
                                              self.prior_policy.action_layer):
             assert type(policy_layer) == type(prior_layer), "default_layer and prior_layer should match each other"
@@ -374,13 +377,16 @@ class GaussianVPGMC(nn.Module):
         print("#### parameters are {}".format(a))
         for key in self.policy_m[0].action_layer.state_dict():
             print("##### updated are{}".format(key))
+            print("##### values are {}".format(self.policy_m[0].action_layer.parameters()[0].clone()))
         
         
         self.optimizer[j].zero_grad()
         total_loss.backward()
         self.optimizer[j].step()
         self.KL = KL/self.m
-        
+        print("##### values after are {}".format(self.policy_m[0].action_layer.parameters()[0].clone()))
+        sys.stdout = original_stdout
+        f.close()
 
     def update_mu_theta_for_default(self, memories, N, H):
         v = {}
