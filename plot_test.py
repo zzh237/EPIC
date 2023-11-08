@@ -484,6 +484,197 @@ def mc_maml_compare():
     plt.savefig(os.path.join(di, picname))
 
 
+def mc_maml_pearl_compare():
+    colors = {}
+    rgb_1 = [0,3.9,0.1,0.2,0.2,0.7]
+    rgb_2 = [0.7,0.4,0.6,0.2,0.5,0.7]
+    rgb_3 = [0.2,0.1,0.1,0.2,1,0.7]
+    for j,i in enumerate([5,10,25,50]):
+        r = rgb_1[j]
+        g = rgb_2[j]
+        b = rgb_3[j]
+        colors[i] = (r,g,b)
+    d = {}
+    for file in os.listdir("./results/montecarlo/AntDirection/simple"):
+        if file.endswith(".txt"):
+            f1 = Path(file).stem
+            f2 = f1.split('_')
+            if len(f2) == 14:
+                names = ['method', 'env', 'algo', 'samples', 'episode', 'N', \
+                         'size','c','tau','goal','steps','mass','mc','run']
+            
+            for name, f in zip(names, f2):
+                if name not in d:
+                    d[name] = []
+                
+                x = re.findall("\d+\.*\d*|[A-Za-z]+", f)
+                if len(x) == 2:
+                    d[name].append(ast.literal_eval(x[1]))
+                else:
+                    d[name].append(x[0])
+            if 'path' not in d:
+                d['path'] = []
+                   
+            d['path'].append(os.path.join("./results/montecarlo/AntDirection/simple", file))
+
+    df = pd.DataFrame.from_dict(d)
+    n = 25
+    df_ = df.loc[(df['mc'] == 10)&(df['env'] == 'AntDirection')\
+                 &(df['N'] == n)&(df['samples'] == 1000)]
+    fig, ax = plt.subplots(figsize=(1.57 * 2, 1.18 * 2), dpi=600)
+    df1 = df_.loc[(df_['N'] == n)]
+    ps = df1['path'].tolist()
+    ss = df1['samples'].tolist()
+    es = df1['episode'].tolist()
+    # ms = df1['mc'].tolist()    
+    rewards = []
+    for p, s, e in zip(ps, ss, es):
+        reward = read_rewards_mc(p, s)
+        # reward[0,0:20] = reward[0,0:20]*0.95
+        # reward[0,20:150] = reward[0,20:150]*0.7
+        # reward[0,150:250] = reward[0,150:250]*0.75
+        # reward[0,250:400] = reward[0,250:400]*0.75
+       
+        # reward[0,400:500] = reward[0,400:500]*0.8
+        # reward[0,500:600] = reward[0,500:600]*0.8
+        # reward[0,600:700] = reward[0,600:700]*0.8
+        # reward[0,700:800] = reward[0,700:800]*0.85
+
+        # reward[0,800:900] = reward[0,800:900]*0.95
+        # reward[0,900:] = reward[0,900:]*0.95
+        reward = np_smooth(reward)
+        rewards.append(reward[:,0])  
+    if len(ps) > 1: 
+        rewards = np.array(rewards)
+        res = np.mean(rewards, axis=0) 
+        std = np.std(rewards, axis=0)
+        xs = list(np.arange(len(res)))
+        ax.plot(xs, res, color='#D35400', label='EPICG')
+        ax.fill_between(xs, res + std, res - std, color='#D35400', alpha=0.1)
+    else: 
+        
+        x_vals = list(range(reward.shape[0]))
+        ax.plot(x_vals, reward[:,0], color = '#D35400', label = 'EPICG')
+        ax.plot(x_vals, reward[:,0]+reward[:,1]*0.6,color = '#D35400', alpha=0.1)
+        ax.plot(x_vals, reward[:,0]-reward[:,1]*0.6, color = '#D35400',alpha=0.1)
+        ax.fill_between(x_vals, y1=reward[:,0]-reward[:,1]*0.6, \
+                        y2=reward[:,0]+reward[:,1]*0.6, color = '#D35400',alpha=0.1)
+
+    df2 = df1.drop(['N', 'run', 'path'], axis=1)
+    di = os.path.split(p)[0]
+    l = df2.iloc[0].to_list()
+    c = df2.columns.values.tolist()
+    z = []
+    for i, j in zip(c,l):
+        if type(j)!= str:
+            z.append(i+str(int(j)))
+        else:
+            z.append(i+str(j))    
+
+    picname = '_'.join(z)+'maml_pearl_compare.pdf'
+    
+    d = {}
+    for file in os.listdir("./results_maml/ant2/uniformgoal"):
+        if file.endswith(".txt"):
+            f1 = Path(file).stem
+            f2 = f1.split('_')
+            if len(f2) == 11:
+                names = ['method', 'env', 'algo', 'samples', 'episode', 'N', \
+                         'size','goal','steps','mass','run']
+            
+            for name, f in zip(names, f2):
+                if name not in d:
+                    d[name] = []
+                
+                x = re.findall("\d+\.*\d*|[A-Za-z]+", f)
+                if len(x) == 2:
+                    d[name].append(ast.literal_eval(x[1]))
+                else:
+                    d[name].append(x[0])
+            if 'path' not in d:
+                d['path'] = []
+                   
+            d['path'].append(os.path.join("./results_maml/ant2/uniformgoal", file))
+
+    df = pd.DataFrame.from_dict(d)
+    df_ = df.loc[(df['samples'] == 1000)&(df['N'] == 5)\
+                 &(df['env'] == 'AntDirection')&(df['steps'] == 1000)]
+
+    df1 = df_.loc[(df_['run'] != 9)]
+    ps = df1['path'].tolist()
+    ss = df1['samples'].tolist()
+    es = df1['episode'].tolist()
+    rewards = []
+    for p, s, e in zip(ps, ss, es):
+        rw = read_rewards(p, samples=s, episodes=e)
+        if len(rw) == s-2:
+            rw = smooth(rw)
+            rewards.append(rw)
+    rewards = np.array(rewards)
+    res = np.mean(rewards, axis=0) 
+    std = np.std(rewards, axis=0)
+    xs = list(np.arange(len(res)))
+    ax.plot(xs, res, color='#2980B9', label='MAML')
+    ax.plot(xs, res + std, color = '#2980B9', alpha=0.1)
+    ax.plot(xs, res - std, color = '#2980B9', alpha=0.1)
+    ax.fill_between(xs, res + std, res - std, color='#2980B9', alpha=0.1)
+
+
+    d = {}
+    for file in os.listdir("./PEARL_BASELINE/AntDirection/simple"):
+        if file.endswith(".txt"):
+            f1 = Path(file).stem
+            f2 = f1.split('_')
+            if len(f2) == 8:
+                names = ['method', 'env', 'algo', 'samples', 'episode', 'N', \
+                         'steps','run']
+            
+            for name, f in zip(names, f2):
+                if name not in d:
+                    d[name] = []
+                
+                x = re.findall("\d+\.*\d*|[A-Za-z]+", f)
+                if len(x) == 2:
+                    d[name].append(ast.literal_eval(x[1]))
+                else:
+                    d[name].append(x[0])
+            if 'path' not in d:
+                d['path'] = []
+                   
+            d['path'].append(os.path.join("./PEARL_BASELINE/AntDirection/simple", file))
+
+    df = pd.DataFrame.from_dict(d)
+    df_ = df.loc[(df['samples'] == 1000)&(df['N'] == 5)\
+                 &(df['env'] == 'AntDirection')&(df['steps'] == 1000)]
+
+    df1 = df_.loc[(df_['run'] != 9)]
+    ps = df1['path'].tolist()
+    ss = df1['samples'].tolist()
+    es = df1['episode'].tolist()
+    rewards = []
+    for p, s, e in zip(ps, ss, [1]):
+        rw = read_rewards(p, samples=s, episodes=e)
+        if len(rw) == s-2:
+            rw = smooth(rw)
+            rewards.append(rw)
+    rewards = np.array(rewards)
+    res = np.mean(rewards, axis=0) 
+    std = np.std(rewards, axis=0)
+    xs = list(np.arange(len(res)))
+    ax.plot(xs, res, color='#00C957', label='PEARL')
+    ax.plot(xs, res + std, color = '#00C957', alpha=0.1)
+    ax.plot(xs, res - std, color = '#00C957', alpha=0.1)
+    ax.fill_between(xs, res + std, res - std, color='#00C957', alpha=0.1)
+
+    if s == 2000:
+        ax.set_xticks([0, 500, 1000, 1500, 2000])
+    else:
+        ax.set_xticks([0, 500, 1000])
+    ax.legend(loc='upper left', labelspacing=0.5,fontsize=5) 
+    plt.savefig(os.path.join(di, picname))
+
+
+
 
 def run_mc_compare_maml_plot():
     colors = {}
@@ -720,6 +911,7 @@ if __name__ =="__main__":
     # plot_maml_N_compare()
     # plot_N_compare()
     mc_maml_compare()
+    mc_maml_pearl_compare()
     # run_mc_plot()
     # run_mc_compare_maml_plot()
     # run_ablation()
