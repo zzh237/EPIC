@@ -107,6 +107,19 @@ def make_cart_env(seed, env="CartPole-v0"):
     elif args.goal == 10:
       goalcart=np.random.uniform(-1,1)
       env = NewCartPoleEnv(goal=goalcart)
+    elif args.goal == 100:
+      goalcart=np.random.uniform(-1,1)
+      masscart=np.random.choice(np.array([1.0, 2.0, 3.0, 4.0, 5.0]), p=[0.15,0.18,0.34,0.18,0.15])
+      masspole=np.random.choice(np.array([0.1, 0.2, 0.3, 0.4, 0.5]), p=[0.34,0.18, 0.18, 0.15, 0.15])
+      length=np.random.choice(np.array([0.3, 0.4, 0.5, 0.6, 0.7]), p=[0.15,0.18,0.34,0.18,0.15])
+      print("seed{}".format(seed))
+      masscart = 0.1 * seed* np.random.randn() + masscart
+      masspole = 0.01 * seed*np.random.rand() + masspole
+      length = 0.01*seed*np.random.rand() + length
+      env = NewCartPoleEnv(masscart=masscart,
+                         masspole=masspole,
+                         length=length,
+                         goal=goalcart)
     else:
       env = NewCartPoleEnv()
     return env
@@ -217,6 +230,8 @@ if __name__ == '__main__':
       resdir = os.path.join(args.resdir, 'multimodal',"")
     elif args.mass == 10.0:
       resdir = os.path.join(args.resdir, 'uniform',"")
+    elif args.mass == 100:
+      resdir = os.path.join(args.resdir, 'dynamic',"")
     else:
       resdir = os.path.join(args.resdir, 'simple',"")
     filename = env_name + "_" + learner + "_s" + str(samples) + "_n" + str(max_episodes) \
@@ -237,7 +252,7 @@ if __name__ == '__main__':
 
     #env = make_env(env_name, args.seed)
     envfunc = envs[env_name]
-    env = envfunc(env_name)
+    env = envfunc(0,env_name)
     if learner == "vpg":
         actor_policy = VPG(env.observation_space, env.action_space, hidden_sizes=hidden_sizes,
                            activation=activation, gamma=gamma, device=device, alpha=alpha,
@@ -252,7 +267,7 @@ if __name__ == '__main__':
         meta_memory = Memory()
         print("#### MAML environment {} sample {}".format(env_name, sample))
         # env = make_env(env_name, sample)
-        env = envfunc(env_name)
+        env = envfunc(sample,env_name)
 
         memory = Memory()
 

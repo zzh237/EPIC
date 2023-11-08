@@ -11,17 +11,17 @@ fi
 source ~/.bashrc
 
 RUNS=1
-for env_name in  "HalfcheetahForwardBackward"
+for env_name in  "CartPole-v0"
 do
-for n in 25 50 
+for n in 25 
 do 
-for step in 1000
+for step in 100
 do
-for mass in 1.0
+for mass in 100
 do
 for ((i=0;i<${RUNS};i++));
 do
-    python maml.py --run ${i} --env "${env_name}" --device "${device}" --samples 1000 --meta_update_every $n --steps $step --mass $mass --resdir "results_maml/${env_name}/"
+    python maml.py --run ${i} --env "${env_name}" --device "${device}" --samples 1000 --meta_update_every $n --steps $step --goal 100 --mass $mass --resdir "results_maml/${env_name}/"
 done
 done
 done
