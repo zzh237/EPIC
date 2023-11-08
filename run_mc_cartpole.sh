@@ -8,11 +8,11 @@ fi
 source ~/.bashrc
 RUNS=1
 env="CartPole-v0"
-for n in 25 
+for n in 1 
 do
 for step in 100
 do
-for m in 2 
+for m in 1 
 do
 for lam in 0.1  0.3  0.5  0.7  0.9
 do
