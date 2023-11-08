@@ -346,6 +346,7 @@ class GaussianVPGMC(nn.Module):
                                              self.prior_policy.action_layer):
             assert type(policy_layer) == type(prior_layer), "default_layer and prior_layer should match each other"
             if isinstance(policy_layer, StochasticLinear):
+                print("################ the policy layer is stochastic######")
                 KL.append(calculate_KL(mu1=policy_layer.w_mu, \
                                        sigma1=policy_layer.w_log_var,
                                         mu2=prior_layer.w_mu, \
@@ -355,6 +356,7 @@ class GaussianVPGMC(nn.Module):
                                        sigma1=policy_layer.b_log_var,
                                        mu2=prior_layer.b_mu, \
                                         sigma2=prior_layer.b_log_var))
+                
         KL = torch.stack(KL).sum()
 
         c = torch.tensor(1.5)
@@ -366,6 +368,7 @@ class GaussianVPGMC(nn.Module):
         # reg = torch.sqrt((KL + torch.log(2 * np.sqrt(torch.tensor(N)) / 0.01)) / (2*N))
         # reg = torch.sqrt(reg/(2*N))
         # calculate total loss and back propagate
+        print("##### the regularzation is {}".format(reg.cpu().data.numpy().flatten()))
         total_loss = policy_gradient + reg 
         self.optimizer[j].zero_grad()
         total_loss.backward()
@@ -384,7 +387,6 @@ class GaussianVPGMC(nn.Module):
                     v[key] = policy_m_para_after[key] - policy_m_para_before[key]
                 else:
                     v[key]+=policy_m_para_after[key] - policy_m_para_before[key]
-    
         for key, meta_para in zip(v, self.new_default_policy.parameters()):
             meta_para.data.copy_(meta_para.data + self.c1*v[key]/self.m)
        

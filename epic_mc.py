@@ -17,7 +17,7 @@ from algos.agents.gaussian_ppo import GaussianPPO
 from envs.new_cartpole import NewCartPoleEnv
 from envs.new_swimmer import new_Swimmer
 from envs.new_lunar_lander import NewLunarLander
-from envs.new_ant import AntDirection, AntForwardBackward
+#from envs.new_ant import AntDirection, AntForwardBackward
 from envs.new_halfcheetah import HalfCheetahForwardBackward
 from envs.new_humanoid import HumanoidDirection, HumanoidForwardBackward
 
@@ -379,11 +379,12 @@ if __name__ == '__main__':
                           np.round(np.std(mc_rewards), decimals=3), \
                             np.round(KL,decimals=3)))
         actor_policy.update_mu_theta_for_default(meta_memories, meta_update_every, H=1*(1-gamma**max_steps)/(1-gamma))
+        KL = actor_policy.KL.data.cpu().numpy()
         
 
         if (sample+1) % meta_update_every == 0:
             actor_policy.update_default_and_prior_policy()
-            KL = actor_policy.KL
+            
 
         env.close()
 
