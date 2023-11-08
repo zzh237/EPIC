@@ -373,20 +373,18 @@ class GaussianVPGMC(nn.Module):
         # calculate total loss and back propagate
         print("##### the regularzation is {}".format(reg.cpu().data.numpy().flatten()))
         print("##### the policy_gradient is {}".format(policy_gradient.cpu().data.numpy().flatten()))
-        total_loss = policy_gradient + reg 
+        total_loss = policy_gradient + 1000*reg 
         befores = []
         for i,key in enumerate(self.policy_m[0].action_layer.state_dict()):
             #print("##### updated are{}".format(key))
             #print("##### values are {}".format(torch.norm(list(self.policy_m[0].action_layer.parameters())[i]).clone()))
-            befores.append(torch.norm(list(self.policy_m[0].action_layer.parameters())[i]).clone())
-        
-        
+            befores.append(list(self.policy_m[0].action_layer.parameters())[i].clone())
         self.optimizer[j].zero_grad()
         total_loss.backward()
         self.optimizer[j].step()
         self.KL = KL/self.m
         for i,key in enumerate(self.policy_m[0].action_layer.state_dict()):
-            print("##### after values are {}:{}".format(key, befores[i]-torch.norm(list(self.policy_m[0].action_layer.parameters())[i]).clone()))
+            print("##### after values are {}:{}".format(  torch.norm(key, befores[i]-list(self.policy_m[0].action_layer.parameters())[i].clone())  ))
         sys.stdout = original_stdout
         f.close()
 
