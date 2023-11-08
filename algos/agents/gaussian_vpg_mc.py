@@ -403,7 +403,7 @@ class GaussianVPGMC(nn.Module):
                     v[key] = policy_m_para_after[key] - policy_m_para_before[key]
                 else:
                     v[key]+=policy_m_para_after[key] - policy_m_para_before[key]
-                print("##### another way to see the change values {}".format(v[key]))
+                print("##### another way to see the change values {}".format(torch.norm(v[key])))
         for key, meta_para in zip(v, self.new_default_policy.parameters()):
             meta_para.data.copy_(meta_para.data + self.c1*v[key]/self.m)
        
