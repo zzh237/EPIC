@@ -17,7 +17,7 @@ from algos.agents.gaussian_ppo import GaussianPPO
 from envs.new_cartpole import NewCartPoleEnv
 from envs.new_swimmer import new_Swimmer
 from envs.new_lunar_lander import NewLunarLander
-#from envs.new_ant import AntDirection, AntForwardBackward
+from envs.new_ant import AntDirection, AntForwardBackward
 from envs.new_halfcheetah import HalfCheetahForwardBackward
 from envs.new_humanoid import HumanoidDirection, HumanoidForwardBackward
 
