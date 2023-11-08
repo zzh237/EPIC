@@ -372,7 +372,7 @@ class GaussianVPGMC(nn.Module):
         total_loss = policy_gradient + reg 
         a = list(self.policy_m[0].action_layer.parameters())[0].clone() 
         print("#### parameters are {}".format(a))
-        for key, val in self.policy_m[0].action_layer.parameters():
+        for key in self.policy_m[0].action_layer.state_dict():
             print("##### updated are{}".format(key))
         
         
