@@ -370,6 +370,8 @@ class GaussianVPGMC(nn.Module):
         # calculate total loss and back propagate
         print("##### the regularzation is {}".format(reg.cpu().data.numpy().flatten()))
         total_loss = policy_gradient + reg 
+        a = list(self.policy_m[0].action_layer.parameters())[0].clone() 
+        print("#### parameters are {}".format(a))
         self.optimizer[j].zero_grad()
         total_loss.backward()
         self.optimizer[j].step()
