@@ -377,14 +377,14 @@ class GaussianVPGMC(nn.Module):
         print("#### parameters are {}".format(a))
         for key in self.policy_m[0].action_layer.state_dict():
             print("##### updated are{}".format(key))
-            print("##### values are {}".format(self.policy_m[0].action_layer.parameters()[0].clone()))
+            print("##### values are {}".format(list(self.policy_m[0].action_layer.parameters())[0].clone()))
         
         
         self.optimizer[j].zero_grad()
         total_loss.backward()
         self.optimizer[j].step()
         self.KL = KL/self.m
-        print("##### values after are {}".format(self.policy_m[0].action_layer.parameters()[0].clone()))
+        print("##### values after are {}".format(list(self.policy_m[0].action_layer.parameters())[0].clone()))
         sys.stdout = original_stdout
         f.close()
 
