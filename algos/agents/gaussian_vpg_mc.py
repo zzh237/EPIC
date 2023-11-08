@@ -342,7 +342,7 @@ class GaussianVPGMC(nn.Module):
 
         # calculate regularizer
         KL = []
-        f = open('output.txt', 'w')
+        f = open('output.txt', 'a')
         original_stdout = sys.stdout
         sys.stdout = f
         for policy_layer, prior_layer in zip(self.policy_m[j].action_layer, \
@@ -376,8 +376,8 @@ class GaussianVPGMC(nn.Module):
         total_loss = policy_gradient + reg 
         befores = []
         for i,key in enumerate(self.policy_m[0].action_layer.state_dict()):
-            print("##### updated are{}".format(key))
-            print("##### values are {}".format(torch.norm(list(self.policy_m[0].action_layer.parameters())[i]).clone()))
+            #print("##### updated are{}".format(key))
+            #print("##### values are {}".format(torch.norm(list(self.policy_m[0].action_layer.parameters())[i]).clone()))
             befores.append(torch.norm(list(self.policy_m[0].action_layer.parameters())[i]).clone())
         
         
