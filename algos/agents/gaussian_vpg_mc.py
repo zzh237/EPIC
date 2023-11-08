@@ -363,7 +363,6 @@ class GaussianVPGMC(nn.Module):
             (1+torch.log(KL/np.log(2/delta)))
         reg = (1+c)/2*torch.sqrt(torch.tensor(2.0)) * \
             torch.sqrt((KL + np.log(2/delta) + epsilon) * N * H**2)
-        self.KL += KL
         # reg = torch.sqrt((KL + torch.log(2 * np.sqrt(torch.tensor(N)) / 0.01)) / (2*N))
         # reg = torch.sqrt(reg/(2*N))
         # calculate total loss and back propagate
@@ -371,6 +370,7 @@ class GaussianVPGMC(nn.Module):
         self.optimizer[j].zero_grad()
         total_loss.backward()
         self.optimizer[j].step()
+        self.KL = KL/self.m
 
     def update_mu_theta_for_default(self, memories, N, H):
         v = {}
@@ -385,7 +385,6 @@ class GaussianVPGMC(nn.Module):
                 else:
                     v[key]+=policy_m_para_after[key] - policy_m_para_before[key]
             
-        self.KL = self.KL/self.m
         for key, meta_para in zip(v, self.new_default_policy.parameters()):
             meta_para.data.copy_(meta_para.data + self.c1*v[key]/self.m)
        
