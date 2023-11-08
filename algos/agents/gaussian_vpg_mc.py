@@ -374,8 +374,6 @@ class GaussianVPGMC(nn.Module):
         print("##### the regularzation is {}".format(reg.cpu().data.numpy().flatten()))
         print("##### the policy_gradient is {}".format(policy_gradient.cpu().data.numpy().flatten()))
         total_loss = policy_gradient + reg 
-        a = list(self.policy_m[0].action_layer.parameters())[0].clone() 
-        print("#### parameters are {}".format(a))
         for i,key in enumerate(self.policy_m[0].action_layer.state_dict()):
             print("##### updated are{}".format(key))
             print("##### values are {}".format(torch.norm(list(self.policy_m[0].action_layer.parameters())[i]).clone()))

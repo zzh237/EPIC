@@ -1,0 +1,61 @@
+################ the policy layer is stochastic######
+################ the policy layer is stochastic######
+################ the policy layer is stochastic######
+##### the regularzation is [20448.72]
+##### the policy_gradient is [8053.58]
+#### parameters are tensor([[ 0.1222,  0.1321,  0.4130,  0.4499],
+        [ 0.4875,  0.1023, -0.3760, -0.1793],
+        [ 0.2158, -0.1499,  0.0777,  0.4038],
+        ...,
+        [-0.3889,  0.0626, -0.2366,  0.3908],
+        [-0.2580, -0.1852, -0.3625, -0.4034],
+        [ 0.5041, -0.2835,  0.4471,  0.1155]], device='cuda:0',
+       grad_fn=<CloneBackward0>)
+##### updated are0.w_mu
+##### values are 9.596697807312012
+##### updated are0.w_log_var
+##### values are 319.90447998046875
+##### updated are0.b_mu
+##### values are 4.675942420959473
+##### updated are0.b_log_var
+##### values are 160.04180908203125
+##### updated are2.w_mu
+##### values are 9.409123420715332
+##### updated are2.w_log_var
+##### values are 2560.115478515625
+##### updated are2.b_mu
+##### values are 0.5789748430252075
+##### updated are2.b_log_var
+##### values are 160.01998901367188
+##### updated are4.w_mu
+##### values are 0.9413807988166809
+##### updated are4.w_log_var
+##### values are 226.21798706054688
+##### updated are4.b_mu
+##### values are 0.04671013355255127
+##### updated are4.b_log_var
+##### values are 14.045650482177734
+##### updated are0.w_mu
+##### after values are 9.59715747833252
+##### updated are0.w_log_var
+##### after values are 319.90447998046875
+##### updated are0.b_mu
+##### after values are 4.675840377807617
+##### updated are0.b_log_var
+##### after values are 160.0417938232422
+##### updated are2.w_mu
+##### after values are 9.409910202026367
+##### updated are2.w_log_var
+##### after values are 2560.11572265625
+##### updated are2.b_mu
+##### after values are 0.578924834728241
+##### updated are2.b_log_var
+##### after values are 160.01998901367188
+##### updated are4.w_mu
+##### after values are 0.9418078660964966
+##### updated are4.w_log_var
+##### after values are 226.21807861328125
+##### updated are4.b_mu
+##### after values are 0.04669094458222389
+##### updated are4.b_log_var
+##### after values are 14.045663833618164
