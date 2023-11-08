@@ -384,7 +384,7 @@ class GaussianVPGMC(nn.Module):
         self.optimizer[j].step()
         self.KL = KL/self.m
         for i,key in enumerate(self.policy_m[0].action_layer.state_dict()):
-            print("##### after values are {}:{}".format(  torch.norm(key, befores[i]-list(self.policy_m[0].action_layer.parameters())[i].clone())  ))
+            print("##### after values are {}:{}".format(  key, torch.norm(befores[i]-list(self.policy_m[0].action_layer.parameters())[i].clone())  ))
         sys.stdout = original_stdout
         f.close()
 
