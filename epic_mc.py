@@ -17,7 +17,7 @@ from algos.agents.gaussian_ppo import GaussianPPO
 from envs.new_cartpole import NewCartPoleEnv
 from envs.new_swimmer import new_Swimmer
 from envs.new_lunar_lander import NewLunarLander
-from envs.new_ant import AntDirection, AntForwardBackward
+#from envs.new_ant import AntDirection, AntForwardBackward
 from envs.new_halfcheetah import HalfCheetahForwardBackward
 from envs.new_humanoid import HumanoidDirection, HumanoidForwardBackward
 
@@ -122,9 +122,10 @@ def make_cart_env(seed, env="CartPole-v0"):
       masscart=np.random.choice(np.array([1.0, 2.0, 3.0, 4.0, 5.0]), p=[0.15,0.18,0.34,0.18,0.15])
       masspole=np.random.choice(np.array([0.1, 0.2, 0.3, 0.4, 0.5]), p=[0.34,0.18, 0.18, 0.15, 0.15])
       length=np.random.choice(np.array([0.3, 0.4, 0.5, 0.6, 0.7]), p=[0.15,0.18,0.34,0.18,0.15])
-      masscart = 0.1 * np.random.randn()*seed + masscart
-      masspole = 0.01 * np.random.rand()*seed + masspole
-      length = 0.01*np.random.rand()*seed + length
+      print("seed{}".format(seed))
+      masscart = 0.1 * seed* np.random.randn() + masscart
+      masspole = 0.01 * seed*np.random.rand() + masspole
+      length = 0.01*seed*np.random.rand() + length
       env = NewCartPoleEnv(masscart=masscart,
                          masspole=masspole,
                          length=length,
@@ -303,7 +304,7 @@ if __name__ == '__main__':
 
     # env = gym.make(env_name)
     envfunc = envs[env_name]
-    env = envfunc(env_name)
+    env = envfunc(1,env_name)
     m = args.m
     if learner == "vpg":
         print("-----initialize meta policy-------")
