@@ -342,7 +342,7 @@ class GaussianVPGMC(nn.Module):
 
         # calculate regularizer
         KL = []
-        f = open('output.txt', 'w')
+        f = open('output.txt', 'a')
         original_stdout = sys.stdout
         sys.stdout = f
         for policy_layer, prior_layer in zip(self.policy_m[j].action_layer, \
@@ -374,9 +374,11 @@ class GaussianVPGMC(nn.Module):
         print("##### the regularzation is {}".format(reg.cpu().data.numpy().flatten()))
         print("##### the policy_gradient is {}".format(policy_gradient.cpu().data.numpy().flatten()))
         total_loss = policy_gradient + reg 
+        befores = []
         for i,key in enumerate(self.policy_m[0].action_layer.state_dict()):
-            print("##### updated are{}".format(key))
-            print("##### values are {}".format(torch.norm(list(self.policy_m[0].action_layer.parameters())[i]).clone()))
+            #print("##### updated are{}".format(key))
+            #print("##### values are {}".format(torch.norm(list(self.policy_m[0].action_layer.parameters())[i]).clone()))
+            befores.append(torch.norm(list(self.policy_m[0].action_layer.parameters())[i]).clone())
         
         
         self.optimizer[j].zero_grad()
@@ -385,7 +387,7 @@ class GaussianVPGMC(nn.Module):
         self.KL = KL/self.m
         for i,key in enumerate(self.policy_m[0].action_layer.state_dict()):
             print("##### updated are{}".format(key))
-            print("##### after values are {}".format(torch.norm(list(self.policy_m[0].action_layer.parameters())[i]).clone()))
+            print("##### after values are {}".format(befores[i]-torch.norm(list(self.policy_m[0].action_layer.parameters())[i]).clone()))
         sys.stdout = original_stdout
         f.close()
 
