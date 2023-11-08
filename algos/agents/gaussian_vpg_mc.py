@@ -386,13 +386,15 @@ class GaussianVPGMC(nn.Module):
         self.optimizer[j].step()
         self.KL = KL/self.m
         for i,key in enumerate(self.policy_m[0].action_layer.state_dict()):
-            print("##### updated are{}".format(key))
-            print("##### after values are {}".format(befores[i]-torch.norm(list(self.policy_m[0].action_layer.parameters())[i]).clone()))
+            print("##### after values are {}:{}".format(key, befores[i]-torch.norm(list(self.policy_m[0].action_layer.parameters())[i]).clone()))
         sys.stdout = original_stdout
         f.close()
 
     def update_mu_theta_for_default(self, memories, N, H):
         v = {}
+        f = open('output1.txt', 'a')
+        original_stdout = sys.stdout
+        sys.stdout = f
         for j in range(self.m):
             policy_m_para_before = copy.deepcopy(self.policy_m[j].state_dict())
             self.update_policy_m_with_regularizer(memories, N, H, j)
@@ -403,7 +405,9 @@ class GaussianVPGMC(nn.Module):
                     v[key] = policy_m_para_after[key] - policy_m_para_before[key]
                 else:
                     v[key]+=policy_m_para_after[key] - policy_m_para_before[key]
-                print("##### another way to see the change values {}".format(torch.norm(v[key])))
+                print("##### another way to see the change values{}: {}".format(key, torch.norm(v[key])))
+        sys.stdout = original_stdout
+        f.close()
         for key, meta_para in zip(v, self.new_default_policy.parameters()):
             meta_para.data.copy_(meta_para.data + self.c1*v[key]/self.m)
        
