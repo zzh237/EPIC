@@ -378,7 +378,7 @@ class GaussianVPGMC(nn.Module):
         print("#### parameters are {}".format(a))
         for i,key in enumerate(self.policy_m[0].action_layer.state_dict()):
             print("##### updated are{}".format(key))
-            print("##### values are {}".format(torch.norm(list(self.policy_m[i].action_layer.parameters())[0]).clone()))
+            print("##### values are {}".format(torch.norm(list(self.policy_m[0].action_layer.parameters())[i]).clone()))
         
         
         self.optimizer[j].zero_grad()
@@ -387,7 +387,7 @@ class GaussianVPGMC(nn.Module):
         self.KL = KL/self.m
         for i,key in enumerate(self.policy_m[0].action_layer.state_dict()):
             print("##### updated are{}".format(key))
-            print("##### after values are {}".format(torch.norm(list(self.policy_m[i].action_layer.parameters())[0]).clone()))
+            print("##### after values are {}".format(torch.norm(list(self.policy_m[0].action_layer.parameters())[i]).clone()))
         sys.stdout = original_stdout
         f.close()
 
