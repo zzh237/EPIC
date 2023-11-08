@@ -12,7 +12,7 @@ for n in 25
 do
 for step in 100
 do
-for m in 1 
+for m in 10 
 do
 for lam in 0.9
 do
