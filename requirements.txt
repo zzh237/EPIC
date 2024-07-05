@@ -1,6 +1,6 @@
 torch==1.7.1
 gym==0.18.0
 numpy==1.21.6
-Box2D==2.3
+Box2D==2.3.10
 higher==0.2.1
 PPO==0.1.1
