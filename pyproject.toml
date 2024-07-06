@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "epic"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+packages = [
+    {include = "epic", from = "src"},
+    {include = "scripts"}
+]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+torch = "1.7.1"
+gym = "^0.26.2"
+box2d = "^2.3.10"
+higher = "^0.2.1"
+mujoco-py = "^2.1.2.14"
+cython = ">=0.29.6,<0.30.0"
+
+[tool.poetry.scripts]
+epic-main = "scripts.run_epic:main"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
