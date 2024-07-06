@@ -10,7 +10,7 @@ from gym.spaces import Box, Discrete
 from .model import GaussianActor, GaussianContActor
 from torch.distributions import Categorical, MultivariateNormal
 import copy
-from algos.agents.model import EltwiseLayer
+from ..agents.model import EltwiseLayer
 import math
 
 

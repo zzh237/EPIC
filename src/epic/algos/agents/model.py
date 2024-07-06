@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.distributions import Categorical, MultivariateNormal
-from algos.agents.gaussian_model import CloneLinear
+from ..agents.gaussian_model import CloneLinear
 import numpy
 import numpy as np
 
