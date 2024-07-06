@@ -7,18 +7,17 @@ import mujoco_py
 import random
 import numpy as np
 from gym.spaces import Box, Discrete
-import setup
-from algos.memory import Memory, ReplayMemory
-from algos.agents.new_gaussian_vpg import GaussianVPG
-from algos.agents.gaussian_ppo import GaussianPPO
-from envs.new_cartpole import NewCartPoleEnv
-from envs.new_lunar_lander import NewLunarLander
-from envs.swimmer_rand_vel import SwimmerEnvRandVel
-from envs.half_cheetah_rand_dir import HalfCheetahEnvRandDir
-from envs.half_cheetah_rand_vel import HalfCheetahEnvRandVel
-from envs.ant_rand_dir import AntEnvRandDir
-from envs.ant_rand_goal import AntEnvRandGoal
-from envs.ant_rand_vel import AntEnvRandVel
+from epic.algos.memory import Memory, ReplayMemory
+from epic.algos.agents.new_gaussian_vpg import GaussianVPG
+from epic.algos.agents.gaussian_ppo import GaussianPPO
+from epic.envs.new_cartpole import NewCartPoleEnv
+from epic.envs.new_lunar_lander import NewLunarLander
+from epic.envs.swimmer_rand_vel import SwimmerEnvRandVel
+from epic.envs.half_cheetah_rand_dir import HalfCheetahEnvRandDir
+from epic.envs.half_cheetah_rand_vel import HalfCheetahEnvRandVel
+from epic.envs.ant_rand_dir import AntEnvRandDir
+from epic.envs.ant_rand_goal import AntEnvRandGoal
+from epic.envs.ant_rand_vel import AntEnvRandVel
 # from stable_baselines.common.env_checker import check_env
 
 import logging
@@ -128,7 +127,7 @@ def make_mujoco_env(seed, env="Swimmer"):
 
 envs = {'Swimmer':make_mujoco_env, 'LunarLander-v2': make_lunar_env, 'CartPole-v0':make_cart_env}
 
-if __name__ == '__main__':
+def main():
     ############## Hyperparameters ##############
     env_name = args.env #"LunarLander-v2"
     # env_name = "LunarLander-v2"
@@ -275,4 +274,5 @@ if __name__ == '__main__':
     # rew_file.close()
     meta_rew_file.close()
 
-            
+if __name__ == '__main__':
+    main()
