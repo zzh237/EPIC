@@ -9,6 +9,7 @@ from torch.autograd import Variable
 from gym.spaces import Box, Discrete
 from torch.distributions import Categorical, MultivariateNormal
 import copy
+from ..agents.model import EltwiseLayer
 import math
 
 

@@ -11,7 +11,7 @@ from gym.spaces import Box, Discrete
 from .model import Actor, ContActor, Dynamics
 from .gaussian_model import PolicyHub
 from .updates import vpg_update
-from algos.memory import Memory
+from ..memory import Memory
 from torch.distributions import Categorical
 
 class GaussianPPO(nn.Module):
