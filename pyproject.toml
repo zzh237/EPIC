@@ -13,7 +13,7 @@ packages = [
 python = "^3.8"
 torch = "1.7.1"
 gym = "^0.26.2"
-box2d = "^2.3.10"
+Box2D = "^2.3.10"
 higher = "^0.2.1"
 mujoco-py = "^2.1.2.14"
 cython = ">=0.29.6,<0.30.0"
