@@ -16,7 +16,7 @@ gym = "^0.26.2"
 Box2D = "^2.3.10"
 higher = "^0.2.1"
 mujoco-py = "^2.1.2.14"
-cython = ">=0.29.6,<0.30.0"
+cython = "==0.29.36"
 
 [tool.poetry.scripts]
 epic-main = "scripts.run_epic:main"
