@@ -13,9 +13,9 @@ from epic.algos.agents.new_gaussian_vpg import GaussianVPG
 from epic.algos.agents.gaussian_ppo import GaussianPPO
 from epic.envs.new_cartpole import NewCartPoleEnv
 from epic.envs.new_lunar_lander import NewLunarLander
-from epic.envs.swimmer_rand_vel import SwimmerEnvRandVel
-from epic.envs.half_cheetah_rand_dir import HalfCheetahEnvRandDir
-from epic.envs.half_cheetah_rand_vel import HalfCheetahEnvRandVel
+# from epic.envs.swimmer_rand_vel import SwimmerEnvRandVel
+# from epic.envs.half_cheetah_rand_dir import HalfCheetahEnvRandDir
+# from epic.envs.half_cheetah_rand_vel import HalfCheetahEnvRandVel
 from epic.envs.ant_rand_dir import AntEnvRandDir
 from epic.envs.ant_rand_goal import AntEnvRandGoal
 from epic.envs.ant_rand_vel import AntEnvRandVel
@@ -211,7 +211,7 @@ def main():
     action_std = args.action_std
     lam = args.lam
     lam_decay = args.lam_decay
-    adj = args.adj
+    # adj = args.adj
     ############ For All #########################
     gamma = 0.99                # discount factor
     render = False

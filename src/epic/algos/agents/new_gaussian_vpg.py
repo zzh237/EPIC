@@ -345,8 +345,8 @@ class GaussianVPG(nn.Module):
 
         c = torch.tensor(1.5)
         delta = torch.tensor(0.01)
-        epsilon = torch.log(torch.tensor(2))/(2*torch.log(c)) * (1+torch.log(KL/np.log(2/delta)))
-        reg = (1+c)/2*torch.sqrt(torch.tensor(2)) * torch.sqrt((KL + np.log(2/delta) + epsilon) * N * H**2)
+        epsilon = torch.log(torch.tensor(2.))/(2*torch.log(c)) * (1+torch.log(KL/torch.log(2./delta)))
+        reg = (1+c)/2*torch.sqrt(torch.tensor(2.)) * torch.sqrt((KL + torch.log(2./delta) + epsilon) * N * H**2)
 
         # reg = torch.sqrt((KL + torch.log(2 * np.sqrt(torch.tensor(N)) / 0.01)) / (2*N))
         # reg = torch.sqrt(reg/(2*N))
