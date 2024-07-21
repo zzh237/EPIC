@@ -1,17 +1,17 @@
 name: epic
 channels:
-  - conda-forge
   - pytorch
+  - conda-forge
 dependencies:
   - python=3.8
   - box2d-py
   - higher
-  - numpy
-  - gym=0.18.0
-  - pytorch=1.7.1
   - cudatoolkit=11.0
-  - mlflow
+  - pytorch::pytorch=1.7.1
   - cython=0.29.36
+  - pip
+  - pip:
+    - mlflow
+    - gym==0.18.0
 variables:
   CC: gcc-12
-  LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia:$HOME/.mujoco/mujoco210/bin
