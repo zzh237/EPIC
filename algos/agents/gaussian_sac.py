@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import copy
 import math
-from typing import TypedDict
+from typing import List, Sequence, TypedDict
 
 import numpy as np
 import torch
@@ -14,6 +14,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.distributions import Distribution, Normal
+
+from algos.memory import Memory
 
 LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20
@@ -237,13 +239,14 @@ class TanhGaussianPolicy(nn.Module):
 
 class StochasticQNetwork(nn.Module):
     """A Q-network using stochasticLinear layers."""
+
     def __init__(self, num_inputs: int, num_actions, int, hidden_dims: tuple[int, ...]):
         input_dim = num_inputs + num_actions
         self.fcs = []
         for next_dim in hidden_dims:
             self.fcs.append(StochasticLinear(input_dim, next_dim))
             input_dim = next_dim
-        
+
         self.last_fc = StochasticLinear(input_dim, 1)
 
     def forward(self, state, action):
@@ -253,6 +256,14 @@ class StochasticQNetwork(nn.Module):
 
         return self.last_fc(hidden_act)
 
+
+from torch.optim import Optimizer
+
+
+class EpicOptimizers(TypedDict):
+    default_policy: Optimizer
+    prior_policy: Optimizer
+    q_networks: List[Optimizer]
 
 
 class EpicSAC(nn.Module):
@@ -265,13 +276,47 @@ class EpicSAC(nn.Module):
         policy_hidden_sizes: tuple[int, ...],
         obs_dim: int,
         action_dim: int,
+        optimizer_class: type[Optimizer],
+        policy_lr: float,
+        q_networks: List[StochasticQNetwork],
+        q_network_lr: float,
     ):
         super().__init__()
+
+        self.optimizers = dict()
 
         # policies
         self.default_policy = TanhGaussianPolicy(
             hidden_sizes=policy_hidden_sizes, obs_dim=obs_dim, action_dim=action_dim
         )
+        self.optimizers["default_policy"] = optimizer_class(self.default_policy.parameters(), lr=policy_lr)
         self.prior_policy = copy.deepcopy(self.default_policy)
+        self.optimizers["prior_policy"] = optimizer_class(self.prior_policy.parameters(), lr=policy_lr)
 
+        # q networks
+        self.q_networks = q_networks
+        self.optimizers["q_networks"] = list()
+        for network in q_networks:
+            self.optimizers["q_networks"].append(optimizer_class(network.parameters(), lr=q_network_lr))
+
+    def initialize_default_policy(self):
+        """Initialize the default policy by copying it from the prior."""
+        self.default_policy.load_state_dict(copy.deepcopy(self.default_policy.state_dict()))
+
+    def initialize_policy_m(self):
+        self.initialize_default_policy()
+
+    def train(self):
+        pass
+
+    def act_policy_m(self, state, task_idx):
+        """Take an action using the policy as of task {task_idx}"""
+        return self.act(state)
+
+    def act(self, state):
+        self.default_policy.get_action(state, deterministic=False)
+
+
+    def update_mu_theta_for_default(self, meta_memory: Memory, meta_update_every: int, H):
+        pass
 
