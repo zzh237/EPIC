@@ -1,12 +1,14 @@
 """
-An SAC agent that uses gaussian parameterization of its parameters.
+An SAC agent that uses StochasticLinear gaussian-parameterized layers.
 """
 
 from __future__ import annotations
 
 import copy
 import math
+from torch.optim import Optimizer
 from typing import List, Sequence, TypedDict
+from torch.optim import Adam
 
 import numpy as np
 import torch
@@ -69,7 +71,7 @@ class StochasticLinear(nn.Module):
         self.w_log_var.data.normal_(log_var_init["mean"], log_var_init["std"])
         if self.use_bias:
             # TODO use bias size instead?
-            self.b_mu.data.uniform(-stdv, stdv)
+            self.b_mu.data.uniform_(-stdv, stdv)
             self.b_log_var.data.normal_(log_var_init["mean"], log_var_init["std"])
 
     def operation(self, x, weight, bias):
@@ -168,15 +170,16 @@ class TanhGaussianPolicy(nn.Module):
     and mean of a gaussian output.
     """
 
-    def __init__(self, hidden_sizes: tuple[int, ...] | int, obs_dim: int, action_dim: int, std: float | None = None):
+    def __init__(self, hidden_sizes: tuple[int, ...] | int, obs_dim: int, action_dim: int, device: str, std: float | None = None):
         super().__init__()
+        self.device = device
         if isinstance(hidden_sizes, int):
             hidden_sizes = tuple(hidden_sizes)
         # init fc layers
         in_size = obs_dim
         self.fcs = []
         for i, next_size in enumerate(hidden_sizes):
-            fc = StochasticLinear(in_size, next_size)
+            fc = StochasticLinear(in_size, next_size).to(device=device)
             in_size = next_size
             self.fcs.append(fc)
         self.last_fc = StochasticLinear(in_size, action_dim)
@@ -187,18 +190,22 @@ class TanhGaussianPolicy(nn.Module):
             last_hidden_size = obs_dim
             if len(hidden_sizes) > 0:
                 last_hidden_size = hidden_sizes[-1]
-            self.last_fc_log_std = StochasticLinear(last_hidden_size, action_dim)
+            self.last_fc_log_std = StochasticLinear(last_hidden_size, action_dim).to(device=device)
         else:
             self.log_std = np.log(std)
 
-    def get_action(self, obs, deterministic=False):
-        actions = self.get_actions(obs, deterministic=deterministic)
-        return actions[0, :], {}
+        self.to(device=device)
 
-    @torch.no_grad
-    def get_actions(self, obs, deterministic=False):
-        outputs = self.forward(obs, deterministic=deterministic)[0]
-        return outputs.cpu().detach().numpy()
+    def get_action(self, obs, deterministic=False) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        # state, detached action, action logprob
+        obs = torch.from_numpy(obs).float().to(self.device)
+        state, action, log_prob = self.get_actions(obs, deterministic=deterministic)
+        return state, action, log_prob
+
+    @torch.no_grad()
+    def get_actions(self, obs: torch.Tensor, deterministic=False):
+        action, _, _, log_prob, _, _, _, _ = self.forward(obs, deterministic=deterministic, return_log_prob=True)
+        return obs, action.detach(), log_prob
 
     def forward(self, obs, reparameterize=False, deterministic=False, return_log_prob=False):
         h = obs
@@ -227,7 +234,8 @@ class TanhGaussianPolicy(nn.Module):
                 else:
                     action, pre_tanh_value = tanh_normal.sample(return_pretanh_value=True)
                 log_prob = tanh_normal.log_prob(action, pre_tanh_value=pre_tanh_value)
-                log_prob = log_prob.sum(dim=1, keepdim=True)
+                
+                log_prob = log_prob.sum()
             else:
                 if reparameterize:
                     action = tanh_normal.rsample()
@@ -240,7 +248,8 @@ class TanhGaussianPolicy(nn.Module):
 class StochasticQNetwork(nn.Module):
     """A Q-network using stochasticLinear layers."""
 
-    def __init__(self, num_inputs: int, num_actions, int, hidden_dims: tuple[int, ...]):
+    def __init__(self, num_inputs: int, num_actions: int, hidden_dims: tuple[int, ...]):
+        super().__init__()
         input_dim = num_inputs + num_actions
         self.fcs = []
         for next_dim in hidden_dims:
@@ -257,8 +266,6 @@ class StochasticQNetwork(nn.Module):
         return self.last_fc(hidden_act)
 
 
-from torch.optim import Optimizer
-
 
 class EpicOptimizers(TypedDict):
     default_policy: Optimizer
@@ -268,18 +275,19 @@ class EpicOptimizers(TypedDict):
 
 class EpicSAC(nn.Module):
     """
-    Keeps multiple copies of a TanhGaussianPolicy to perform EPIC updates on.
+    Keeps multiple copies of a TanhGaussianPolicy to perform EPIC updates on. This is a metalearning policy.
     """
 
     def __init__(
         self,
-        policy_hidden_sizes: tuple[int, ...],
         obs_dim: int,
         action_dim: int,
-        optimizer_class: type[Optimizer],
+        policy_hidden_sizes: tuple[int, ...],
         policy_lr: float,
         q_networks: List[StochasticQNetwork],
         q_network_lr: float,
+        device: str,
+        optimizer_class: type[Optimizer] = Adam,
     ):
         super().__init__()
 
@@ -287,17 +295,23 @@ class EpicSAC(nn.Module):
 
         # policies
         self.default_policy = TanhGaussianPolicy(
-            hidden_sizes=policy_hidden_sizes, obs_dim=obs_dim, action_dim=action_dim
-        )
+            hidden_sizes=policy_hidden_sizes, obs_dim=obs_dim, action_dim=action_dim, device=device
+        ).to(device=device)
         self.optimizers["default_policy"] = optimizer_class(self.default_policy.parameters(), lr=policy_lr)
-        self.prior_policy = copy.deepcopy(self.default_policy)
+        self.prior_policy = copy.deepcopy(self.default_policy).to(device=device)
         self.optimizers["prior_policy"] = optimizer_class(self.prior_policy.parameters(), lr=policy_lr)
 
         # q networks
         self.q_networks = q_networks
         self.optimizers["q_networks"] = list()
         for network in q_networks:
+            network.to(device)
             self.optimizers["q_networks"].append(optimizer_class(network.parameters(), lr=q_network_lr))
+
+        self.KL = torch.tensor(0.)
+
+
+        self.to(device=device)
 
     def initialize_default_policy(self):
         """Initialize the default policy by copying it from the prior."""
@@ -309,14 +323,14 @@ class EpicSAC(nn.Module):
     def train(self):
         pass
 
-    def act_policy_m(self, state, task_idx):
+    def act_policy_m(self, state, task_idx: int):
         """Take an action using the policy as of task {task_idx}"""
         return self.act(state)
 
     def act(self, state):
-        self.default_policy.get_action(state, deterministic=False)
+        return self.default_policy.get_action(state, deterministic=False)
 
 
     def update_mu_theta_for_default(self, meta_memory: Memory, meta_update_every: int, H):
+        """Do an SAC update on the default network."""
         pass
-
