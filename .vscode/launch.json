@@ -7,11 +7,29 @@
         
         {
             "name": "Python: 当前文件",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": false
+        },
+        {
+            "name": "Python SAC",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/epic_mc.py",
+            "args": [
+                "--run", "1",
+                "--env", "LunarLander-v2-cont",
+                "--device", "cuda",
+                "--learner", "sac",
+                "--meta_update_every", "10",
+                "--steps", "10",
+                "--mass", "5",
+                "--m", "15",
+                "--goal", "10.0",
+                "--resdir", "results/montecarlo/testsac"               
+        ]
         }
     ]
 }
