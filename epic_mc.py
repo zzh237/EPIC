@@ -1,3 +1,4 @@
+from typing import Callable, Dict
 import torch
 import sys
 import torch.nn as nn
@@ -9,6 +10,7 @@ import mujoco_py
 import random
 import numpy as np
 from gym.spaces import Box, Discrete
+from algos.agents.gaussian_sac import EpicSAC, StochasticQNetwork
 import setup
 from algos.memory import Memory, ReplayMemory
 from algos.agents.gaussian_vpg_mc import GaussianVPGMC
@@ -17,8 +19,9 @@ from algos.agents.gaussian_ppo import GaussianPPO
 from envs.new_cartpole import NewCartPoleEnv
 from envs.new_swimmer import new_Swimmer
 from envs.new_lunar_lander import NewLunarLander
-#from envs.new_ant import AntDirection, AntForwardBackward
+# from envs.new_ant import AntDirection, AntForwardBackward
 from envs.new_halfcheetah import HalfCheetahForwardBackward
+from functools import partial
 from envs.new_humanoid import HumanoidDirection, HumanoidForwardBackward
 
 
@@ -134,9 +137,7 @@ def make_cart_env(seed, env="CartPole-v0"):
       env = NewCartPoleEnv()
     return env
 
-def make_lunar_env(seed, env="LunarLander-v2"):
-    # goal = np.random.uniform(-1, 1)
-    assert env=="LunarLander-v2"
+def make_lunar_env(seed, env="LunarLander-v2", continuous=False):
     if args.mass == 5:
       main_engine_power = np.random.choice(np.array([11.0, 12.0, 13.0, 14.0, 15.0]),
                                          p=[0.15,0.18,0.34,0.18,0.15])
@@ -145,21 +146,21 @@ def make_lunar_env(seed, env="LunarLander-v2"):
       main_engine_power = main_engine_power + 0.1*np.random.randn()
       side_engine_power = side_engine_power + 0.01*np.random.randn()
       env = NewLunarLander(main_engine_power=main_engine_power,
-                         side_engine_power=side_engine_power)
+                         side_engine_power=side_engine_power, continuous=continuous)
     elif args.mass == 10:
       main_engine_power = np.random.uniform(3, 20)
       side_engine_power = np.random.uniform(0.15, 0.95)
       env = NewLunarLander(main_engine_power=main_engine_power,
-                         side_engine_power=side_engine_power)
+                         side_engine_power=side_engine_power, continuous=continuous)
     elif args.goal == 5:
       goal=np.random.choice(np.array([-0.99, -0.5, 0, 0.5, 0.99]), p=[0.15,0.18,0.34,0.18,0.15])
       goal = 0.1 * np.random.randn() + goal
-      env = NewLunarLander(goal=goal)
+      env = NewLunarLander(goal=goal, continuous=continuous)
     elif args.goal == 10:
       goal=np.random.uniform(-1,1)
-      env = NewLunarLander(goal=goal)
+      env = NewLunarLander(goal=goal, continuous=continuous)
     else:
-      env = NewLunarLander()
+      env = NewLunarLander(continuous=continuous)
     # check_env(env, warn=True)
     return env
 
@@ -221,15 +222,17 @@ def make_humanoidforwardbackward(env):
 #     env = new_Walker2dEnv()
 #     return env
 
-envs = {'LunarLander-v2': make_lunar_env,
-        'CartPole-v0':make_cart_env,
-        'AntDirection': make_antdirection,
-        'AntForwardBackward': make_antforwardbackward,
-        'HalfcheetahForwardBackward': make_half_cheetah,
-        'HumanoidDirection': make_humanoiddirection,
-        'HumanoidForwardBackward': make_humanoidforwardbackward,
-        'Swimmer':make_swimmer_env,
-        }
+envs: Dict[str, Callable[..., gym.Env]] = {
+   'LunarLander-v2': make_lunar_env,
+   "LunarLander-v2-cont": partial(make_lunar_env, continuous=True),
+   'CartPole-v0':make_cart_env,
+    # 'AntDirection': make_antdirection,
+   # 'AntForwardBackward': make_antforwardbackward,
+    'HalfcheetahForwardBackward': make_half_cheetah,
+    'HumanoidDirection': make_humanoiddirection,
+    'HumanoidForwardBackward': make_humanoidforwardbackward,
+    'Swimmer':make_swimmer_env,
+  }
 
 if __name__ == '__main__':
     ############## Hyperparameters ##############
@@ -240,6 +243,7 @@ if __name__ == '__main__':
     max_steps = args.steps         # max timesteps in one episode
     meta_episodes = args.meta_episodes
     learner = args.learner
+    lr = args.lr
 
     alpha = args.alpha
     beta = args.beta
@@ -304,7 +308,7 @@ if __name__ == '__main__':
 
     # env = gym.make(env_name)
     envfunc = envs[env_name]
-    env = envfunc(1,env_name)
+    env: gym.Env = envfunc(1,env_name)
     m = args.m
     if learner == "vpg":
         print("-----initialize meta policy-------")
@@ -312,12 +316,31 @@ if __name__ == '__main__':
                                 hidden_sizes=hidden_sizes, activation=activation, alpha=alpha,
                                 beta=beta, action_std=action_std, gamma=gamma, device=device,
                                 lam=lam, lam_decay=lam_decay, m = m, c1=args.c1)
-    if learner == "ppo":
+    elif learner == "ppo":
         print("-----initialize meta policy-------")
         # here we could also use PPO, need to check difference between them
         actor_policy = GaussianPPO(env.observation_space, env.action_space, meta_update_every,
                 hidden_sizes=hidden_sizes, activation=activation, gamma=gamma, device=device, 
                 learning_rate=lr, coeff=coeff, tau=tau, m = m)
+        
+    elif learner.lower() == "sac":
+        print("-----initialize meta policy-------")
+        if isinstance(env, Discrete):
+           raise ValueError("SAC does not support discrete action spaces")
+        # TODO don't hardcode hidden sizes
+        actor_policy = EpicSAC(obs_dim=env.observation_space.shape[0],
+                               action_dim=env.action_space.shape[0],
+                               policy_hidden_sizes=(256, 256),
+                               policy_lr=lr,
+                               q_networks=[StochasticQNetwork(
+                                  num_inputs=env.observation_space.shape[0],
+                                  num_actions=env.action_space.shape[0],
+                                  hidden_dims=(256, 256)
+                                  ) for _ in range(2)],
+                              q_network_lr=lr,
+                              device=device
+                                  )
+
         
         
     KL = 0
@@ -361,7 +384,7 @@ if __name__ == '__main__':
         for j in range(m):
             meta_memory = Memory()
             epi_reward = 0
-            for episode in range(start_episode, meta_episodes):
+            for episode in range(start_episode, meta_episodes): # rollout multiple episodes on this env
               state = env.reset()
               rewards = []
               for steps in range(max_steps):
