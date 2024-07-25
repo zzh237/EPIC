@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys
 import torch
 import gym
@@ -143,7 +145,7 @@ class GaussianActor(nn.Module):
         self.action_layer = nn.Sequential(*layers).to(device)
         self.device = device
 
-    def act(self, state):
+    def act(self, state) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         state = torch.from_numpy(state).float().to(self.device)
         action_probs = self.action_layer(state)
         dist = Categorical(action_probs)
