@@ -78,9 +78,7 @@ class NewLunarLander(gym.Env, EzPickle):
         'video.frames_per_second' : FPS
     }
 
-    continuous = False
-
-    def __init__(self, main_engine_power=13, side_engine_power=0.6, goal=0):
+    def __init__(self, main_engine_power=13, side_engine_power=0.6, goal=0, continuous=False):
         EzPickle.__init__(self)
         self.seed()
         self.viewer = None
@@ -93,6 +91,7 @@ class NewLunarLander(gym.Env, EzPickle):
         self.goal = goal
         self.MAIN_ENGINE_POWER = main_engine_power
         self.SIDE_ENGINE_POWER = side_engine_power
+        self.continuous = continuous
 
 
         self.prev_reward = None
