@@ -13,5 +13,6 @@ dependencies:
   - pip:
     - mlflow
     - gym==0.18.0
+    - wandb
 variables:
   CC: gcc-12
