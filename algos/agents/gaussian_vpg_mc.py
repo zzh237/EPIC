@@ -12,6 +12,7 @@ from gym.spaces import Box, Discrete
 from torch.distributions import Categorical, MultivariateNormal
 import copy
 import math
+import wandb
 
 
 def calculate_KL(mu1, sigma1, mu2, sigma2):
@@ -389,6 +390,11 @@ class GaussianVPGMC(nn.Module):
             print("##### after values are {}:{}".format(  key, torch.norm(befores[i]-list(self.policy_m[0].action_layer.parameters())[i].clone())  ))
         sys.stdout = original_stdout
         f.close()
+
+        wandb.log({
+            "policy_gradient_loss": policy_gradient.detach(),
+            "epic_reg": reg.detach()
+        })
 
     def update_mu_theta_for_default(self, memories, N, H):
         v = {}
