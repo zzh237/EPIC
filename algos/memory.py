@@ -1,5 +1,7 @@
 import random
 import numpy as np
+from torch import from_numpy as tfn
+
 
 class ReplayMemory:
     def __init__(self, capacity):
@@ -13,12 +15,17 @@ class ReplayMemory:
         self.buffer[self.position] = (state, action, reward, next_state, done)
         self.position = (self.position + 1) % self.capacity
 
-    def sample(self, batch_size):
+    def sample(self, batch_size, as_tensors=False, device="cpu"):
         if batch_size > self.position:
             batch_size = self.position
         batch = random.sample(self.buffer, batch_size)
         state, action, reward, next_state, done = map(np.stack, zip(*batch))
-        return state, action, reward, next_state, done
+        if as_tensors:
+            return( tfn(state).to(device), tfn(action).to(device), 
+                   tfn(reward).to(device), tfn(next_state).to(device), 
+                   tfn(done).to(device))
+        else:
+            return state, action, reward, next_state, done
 
     def size(self):
         return len(self.buffer)
