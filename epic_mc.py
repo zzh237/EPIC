@@ -10,7 +10,7 @@ import mujoco_py
 import random
 import numpy as np
 from gym.spaces import Box, Discrete
-from algos.agents.gaussian_sac import EpicSAC, StochasticQNetwork
+from algos.agents.gaussian_sac import EpicSAC, FlattenStochasticMlp, StochasticMlp
 import setup
 from algos.memory import Memory, ReplayMemory
 from algos.agents.gaussian_vpg_mc import GaussianVPGMC
@@ -19,10 +19,11 @@ from algos.agents.gaussian_ppo import GaussianPPO
 from envs.new_cartpole import NewCartPoleEnv
 from envs.new_swimmer import new_Swimmer
 from envs.new_lunar_lander import NewLunarLander
-# from envs.new_ant import AntDirection, AntForwardBackward
+from envs.new_ant import AntDirection, AntForwardBackward
 from envs.new_halfcheetah import HalfCheetahForwardBackward
 from functools import partial
 from envs.new_humanoid import HumanoidDirection, HumanoidForwardBackward
+import wandb
 
 
 import logging
@@ -72,6 +73,10 @@ parser.add_argument('--meta_update_every', type=int, default=50)  # need to tune
 parser.add_argument('--hiddens', nargs='+', type=int)
 parser.add_argument('--lam', type=float, default=0.9)
 parser.add_argument('--lam_decay', type=float, default=0.95)
+## learner - sac
+parser.add_argument("--replay-capacity", type=int, default=10_000)
+parser.add_argument("--batch-size", type=int, default=256)
+parser.add_argument("--discount", type=float, default=0.99)
 
 
 # file settings
@@ -199,12 +204,12 @@ def make_half_cheetah(env='half_cheetah'):
     env = HalfCheetahForwardBackward()
     return env
 
-def make_antdirection(env):
+def make_antdirection(seed, env):
     # assert env=='Ant'
     env = AntDirection()
     return env
 
-def make_antforwardbackward(env):
+def make_antforwardbackward(seed, env):
     # assert env=='Ant'
     env = AntForwardBackward()
     return env
@@ -226,8 +231,8 @@ envs: Dict[str, Callable[..., gym.Env]] = {
    'LunarLander-v2': make_lunar_env,
    "LunarLander-v2-cont": partial(make_lunar_env, continuous=True),
    'CartPole-v0':make_cart_env,
-    # 'AntDirection': make_antdirection,
-   # 'AntForwardBackward': make_antforwardbackward,
+    'AntDirection': make_antdirection,
+   'AntForwardBackward': make_antforwardbackward,
     'HalfcheetahForwardBackward': make_half_cheetah,
     'HumanoidDirection': make_humanoiddirection,
     'HumanoidForwardBackward': make_humanoidforwardbackward,
@@ -269,6 +274,10 @@ if __name__ == '__main__':
     use_model = False
     
     torch.cuda.empty_cache()
+
+    wandb.init(project="epic",
+               config=args)
+    
     ########## file related ####
     ########## file related
     print(args.mass, args.goal)
@@ -332,16 +341,26 @@ if __name__ == '__main__':
                                action_dim=env.action_space.shape[0],
                                policy_hidden_sizes=(256, 256),
                                policy_lr=lr,
-                               q_networks=[StochasticQNetwork(
-                                  num_inputs=env.observation_space.shape[0],
-                                  num_actions=env.action_space.shape[0],
+                               q_networks=[FlattenStochasticMlp(
+                                  input_size=env.observation_space.shape[0] + env.action_space.shape[0],
+                                  output_size=1,
                                   hidden_dims=(256, 256)
-                                  ) for _ in range(2)],
+                                  ).to(device) for _ in range(2)],
                               q_network_lr=lr,
-                              device=device
+                              v_network=StochasticMlp(
+                                 input_size=env.observation_space.shape[0],
+                                 output_size=1,
+                                 hidden_dims=(256,256)
+                              ).to(device),
+                              v_network_lr=lr,
+                              device=device,
+                              replay_capacity=args.replay_capacity,
+                              batch_size=args.batch_size,
+                              discount=args.discount,
+                              m=m # MC runs
                                   )
-
-        
+    
+    wandb.watch(actor_policy, log_freq=5)
         
     KL = 0
     for sample in range(samples):
@@ -399,7 +418,10 @@ if __name__ == '__main__':
                   new_state, reward, done, _ = env.step(action)
                   rewards.append(reward)
                   meta_memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
+                  if learner == "sac":
+                     actor_policy.replay_buffer.push(state, action, reward, new_state, done)
                   state = new_state
+                  
 
                   if done or steps == max_steps - 1:
                       epi_reward +=np.sum(rewards)
@@ -416,6 +438,10 @@ if __name__ == '__main__':
                         sample, m, np.round(np.mean(mc_rewards), decimals=3), \
                           np.round(np.std(mc_rewards), decimals=3), \
                             np.round(KL,decimals=3)))
+        
+        wandb.log(
+           {"sample": sample, "mc_sample": m, "reward": {"mean": np.mean(mc_rewards), "std": np.std(mc_rewards)}, "KL": KL}
+        )
         actor_policy.update_mu_theta_for_default(meta_memories, meta_update_every, H=1*(1-gamma**max_steps)/(1-gamma))
         KL = actor_policy.KL.data.cpu().numpy()
         
