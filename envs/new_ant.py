@@ -1,10 +1,11 @@
 import numpy as np
 from gym import utils
 # from gym.envs.mujoco import mujoco_env
-from gym.envs.mujoco import MuJocoPyEnv
+from gym.envs.mujoco.mujoco_env import MujocoEnv
+# from gym.envs.mujoco import MuJocoPyEnv
 from gym.spaces import Box
 
-class AntDirection(MuJocoPyEnv, utils.EzPickle):
+class AntDirection(MujocoEnv, utils.EzPickle):
     metadata = {
         "render_modes": [
             "human",
@@ -17,15 +18,17 @@ class AntDirection(MuJocoPyEnv, utils.EzPickle):
         observation_space = Box(
             low=-np.inf, high=np.inf, shape=(111,), dtype=np.float64
         )
-        MuJocoPyEnv.__init__(
-            self, "ant.xml", 5, observation_space=observation_space, **kwargs
-        )
+        # MujocoEnv.__init__(
+        #     self, "ant.xml", 5, observation_space=observation_space, **kwargs
+        # )
+        
         utils.EzPickle.__init__(self, **kwargs)
 
         theta = np.random.uniform(0, 2*np.pi)
         self.goal_direction = np.array([np.sin(theta), np.cos(theta)])
         # mujoco_env.MujocoEnv.__init__(self, "ant.xml", 5)
         # utils.EzPickle.__init__(self)
+        super().__init__("ant.xml", frame_skip=5)
 
     def step(self, a):
         xposbefore = self.get_body_com("torso")[:2]
@@ -78,7 +81,7 @@ class AntDirection(MuJocoPyEnv, utils.EzPickle):
 
 
 
-class AntForwardBackward(MuJocoPyEnv, utils.EzPickle):
+class AntForwardBackward(MujocoEnv, utils.EzPickle):
     metadata = {
         "render_modes": [
             "human",
@@ -91,7 +94,7 @@ class AntForwardBackward(MuJocoPyEnv, utils.EzPickle):
         observation_space = Box(
             low=-np.inf, high=np.inf, shape=(111,), dtype=np.float64
         )
-        MuJocoPyEnv.__init__(
+        MujocoEnv.__init__(
             self, "ant.xml", 5, observation_space=observation_space, **kwargs
         )
         utils.EzPickle.__init__(self, **kwargs)
