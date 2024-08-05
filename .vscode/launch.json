@@ -24,12 +24,15 @@
                 "--device", "cuda",
                 "--learner", "sac",
                 "--meta_update_every", "10",
-                "--steps", "10",
+                "--steps", "300",
                 "--mass", "5",
                 "--m", "15",
                 "--goal", "10.0",
                 "--resdir", "results/montecarlo/testsac"               
-        ]
+        ],
+        "env": {
+            "WANDB_MODE": "disabled"
+        }
         }
     ]
 }
