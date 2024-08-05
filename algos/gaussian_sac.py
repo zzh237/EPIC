@@ -373,7 +373,7 @@ class UpdateMetrics(TypedDict, total=False):
 
 class EpicSACActor(nn.Module):
     """
-    Combination of q, v, policy and priors.
+    Combination of q, v, policy.
     """
 
     def __init__(
@@ -409,7 +409,7 @@ class EpicSACActor(nn.Module):
         self.policy_default = TanhGaussianPolicy(
             hidden_sizes=policy_hidden_sizes, obs_dim=obs_dim, action_dim=action_dim, device=device
         )
-        self.policy_prior = self.policy_default.copy()
+       
         self.optimizers["policy"] = optimizer_class(self.policy_default.parameters(), lr=policy_lr)
 
         # q networks
@@ -418,11 +418,8 @@ class EpicSACActor(nn.Module):
         for network in self.q_networks:
             self.optimizers["q_networks"].append(optimizer_class(network.parameters(), lr=q_network_lr))
 
-        self.q_priors = nn.ModuleList(q.copy() for q in q_networks)
-
-        self.v_network_prior = v_network
-        self.v_network_default = self.v_network_prior.copy()
-        self.target_v_network = self.v_network_prior.copy()
+        self.v_network_default = v_network
+        self.target_v_network = self.v_network_default.copy()
         self.v_criterion = nn.MSELoss()
         self.soft_target_tau = soft_target_tau
         self.optimizers["v_network"] = optimizer_class(self.v_network_default.parameters(), lr=v_network_lr)
@@ -431,11 +428,12 @@ class EpicSACActor(nn.Module):
         self.policy_std_reg_weight = policy_std_reg_weight
         self.policy_pre_activation_weight = policy_pre_activation_weight
 
+
     def min_q(self, obs, actions):
         values, _ = torch.min(torch.cat([q(obs, actions) for q in self.q_networks], dim=1), dim=1, keepdim=True)
         return values
 
-    def update(self, N: int, H: int) -> UpdateMetrics:
+    def update(self, prior: "EpicSACActor", N: int, H: int) -> UpdateMetrics:
         """
         Perform 1 SAC update on this actor.
         """
@@ -466,7 +464,7 @@ class EpicSACActor(nn.Module):
         metrics["q_loss"] = q_loss.cpu().detach()
         if self.kl_settings["q_network"]:
             q_kl_sum = 0
-            for q_default, q_prior in zip(self.q_networks, self.q_priors):
+            for q_default, q_prior in zip(self.q_networks, prior.q_networks):
                 q_kl_sum += kl_regularizer(model_kl_div(q_default, q_prior), N, H)
             q_loss += q_kl_sum
             metrics["q_epic_reg"] = q_kl_sum.cpu().detach()
@@ -488,7 +486,7 @@ class EpicSACActor(nn.Module):
 
         # kl-divergence for v_function, put default on left and prior on right
         if self.kl_settings["v_network"]:
-            v_kl_regularizer = kl_regularizer(model_kl_div(self.v_network_default, self.v_network_prior), N, H)
+            v_kl_regularizer = kl_regularizer(model_kl_div(self.v_network_default, prior.v_network_default), N, H)
             v_loss += v_kl_regularizer
             # m_metrics["v_epic_reg"].append(v_kl_regularizer.cpu().detach())
             metrics["v_epic_reg"] = v_kl_regularizer.cpu().detach()
@@ -512,7 +510,7 @@ class EpicSACActor(nn.Module):
         policy_loss = policy_loss + policy_reg_loss
         metrics["policy_loss"] = policy_loss.cpu().detach()
         if self.kl_settings["policy"]:
-            policy_epic_reg = kl_regularizer(model_kl_div(self.policy_default, self.policy_prior), N, H)
+            policy_epic_reg = kl_regularizer(model_kl_div(self.policy_default, prior.policy_default), N, H)
             metrics["policy_epic_reg"] = policy_epic_reg.cpu().detach()
             policy_loss += policy_epic_reg
 
@@ -555,20 +553,27 @@ class EpicSAC(nn.Module):
         batch_size: int,
         device: str,
         m: int,
+        c1: float = 1.6,
+        lam: float = 0.9,
+        lam_decay: float = 0.999,
         soft_target_tau: float = 1e-2,
         policy_mean_reg_weight: float = 1e-3,
         policy_std_reg_weight: float = 1e-3,
         policy_pre_activation_weight: float = 0.0,
         optimizer_class: type[Optimizer] = Adam,
-        c1=1.6,
         kl_settings: KlRegularizationSettings = KlRegularizationSettings(q_network=True, v_network=True, policy=True),
     ):
         super().__init__()
 
         self.c1 = c1
+        self.lam = lam
+        self.lam_decay = lam_decay
+        self.m = m
+        # this isn't used for anything
+        self.KL = torch.tensor(0.)
 
         
-        self.default_actor = EpicSACActor(
+        self.prior_actor = EpicSACActor(
             obs_dim=obs_dim,
             action_dim=action_dim,
             policy_hidden_sizes=policy_hidden_sizes,
@@ -588,59 +593,16 @@ class EpicSAC(nn.Module):
             policy_std_reg_weight=policy_std_reg_weight,
             optimizer_class=optimizer_class,
         )
+        self.default_actor = self.prior_actor.copy()
         self.new_actor = self.default_actor.copy()
         # instantiate M copies of the SAC actor for MC updates
-        self.actors: nn.ModuleList = nn.ModuleList(self.default_actor.copy() for _ in range(m))
+        self.mc_actors: nn.ModuleList = nn.ModuleList(self.default_actor.copy() for _ in range(m))
         self.to(device=torch.device(device))
-
-        # self.batch_size = batch_size
-        # self.discount = discount
-        # self.device = device
-        # self.m = m  # MC copies
-        # self.kl_settings = kl_settings
-
-        # self.optimizers = dict()
-
-        # # policies
-        # self.new_default_policy = TanhGaussianPolicy(hidden_sizes=policy_hidden_sizes,
-        #                                              obs_dim=obs_dim, action_dim=action_dim, device=device)
-        # self.default_policy = self.new_default_policy.copy()
-        # self.policies_mc = nn.ModuleList(self.new_default_policy.copy() for _ in range(self.m))
-        # self.optimizers["default_policy"] = [optimizer_class(self.default_policy.parameters(), lr=policy_lr) for _ in range(self.m)]
-        # self.prior_policy = copy.deepcopy(self.default_policy)
-        # self.optimizers["prior_policy"] = optimizer_class(self.prior_policy.parameters(), lr=policy_lr)
-
-        # # q networks
-        # self.q_networks = nn.ModuleList(q_networks)
-
-        # self.optimizers["q_networks"] = list()
-        # for network in q_networks:
-        #     self.optimizers["q_networks"].append(optimizer_class(network.parameters(), lr=q_network_lr))
-
-        # self.q_priors = [q.copy() for q in q_networks]
-
-        # self.prior_vf = v_network.to(device)
-        # self.default_vf = self.prior_vf.copy()
-        # self.target_vf = self.default_vf.copy()
-        # self.v_criterion = nn.MSELoss()
-        # self.soft_target_tau = soft_target_tau
-        # self.optimizers["v_network"] = optimizer_class(self.default_vf.parameters(), lr=v_network_lr)
-
-        # self.policy_mean_reg_weight = policy_mean_reg_weight
-        # self.policy_std_reg_weight = policy_std_reg_weight
-        # self.policy_pre_activation_weight = policy_pre_activation_weight
-
-        # # KL summary value
-        # self.KL = torch.tensor(0.0)
-
-        # self.replay_buffer = ReplayMemory(capacity=replay_capacity)
-
-        # self.to(device=device)
 
     def initialize_policy_m(self):
         """Initialize the MC actors by loading the state from the default actor"""
         actor: EpicSACActor
-        for actor in self.actors:
+        for actor in self.mc_actors:
             actor.load_from(self.default_actor)
 
     def train(self):
@@ -648,7 +610,7 @@ class EpicSAC(nn.Module):
 
     def act_policy_m(self, state, m_idx: int):
         """Retrieve action from MC copy {i}"""
-        return self.actors[m_idx].act(state)
+        return self.mc_actors[m_idx].act(state)
 
     def act(self, state):
         return self.default_actor.act(state, deterministic=False)
@@ -659,24 +621,36 @@ class EpicSAC(nn.Module):
         m_metrics = defaultdict(list)  # metrics across the whole MC step
 
         actor: EpicSACActor
-        for m_idx, actor in enumerate(self.actors):
+        for m_idx, actor in enumerate(self.mc_actors):
             # load actors with default policy's params
             actor_parameters_before = copy.deepcopy(actor.state_dict())
-            update_dict = actor.update(N, H)
+            update_dict = actor.update(self.prior_actor, N, H)
             for k, v in update_dict.items():
                 m_metrics[k].append(v)
 
-            # accumulate the parameter step
-            v = defaultdict(lambda: Tensor(0.))
+            # accumulate the parameter step, subtract out the previous value
+            v = copy.deepcopy(actor.state_dict())
             for key in actor_parameters_before:
-                v[key] += actor.state_dict()[key] - actor_parameters_before[key]
+                v[key] -= actor_parameters_before[key]
 
         # update the new_actor with the MC update
         for name, param in self.new_actor.named_parameters():
             param.data.copy_(param.data + self.c1*v[name]/self.m)
-            
 
         wandb.log({name: wandb.Histogram(values) for name, values in m_metrics.items()})
 
     def update_default_and_prior_policy(self):
-        pass
+        self.default_actor.load_from(self.new_actor)
+
+        # update the prior with decay
+        # TODO not sure if this will mess up stepping
+        wandb.log({"lambda": self.lam})
+
+        for prior_param, new_default_param in zip(self.prior_actor.parameters(), 
+                                                  self.new_actor.parameters()):
+            prior_param.data.copy_((1-self.lam) * new_default_param.data + self.lam * prior_param.data)
+
+
+        self.lam *= self.lam_decay
+
+
