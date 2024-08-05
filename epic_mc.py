@@ -275,11 +275,20 @@ if __name__ == '__main__':
     
     torch.cuda.empty_cache()
 
-    wandb.init(project="epic",
-               config=args)
+    wandb.init(project="epic")
+
+    wandb.config.update({
+       "samples": samples,
+       "max_episodes": max_episodes,
+       "max_steps": max_steps,
+       "meta_episodes": meta_episodes,
+       "mass": args.mass,
+       "goal": args.goal,
+       "env_name": env_name,
+       "learner": learner
+    })
     
     ########## file related ####
-    ########## file related
     print(args.mass, args.goal)
     if args.mass == 1.0 and args.goal == 5.0:
       resdir = os.path.join(args.resdir, 'multimodalgoal',"")
