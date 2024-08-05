@@ -285,7 +285,6 @@ class GaussianVPGMC(nn.Module):
         self.activation = activation
         self.alpha = alpha
         self.beta = beta
-        self.optimizer_m = {j:optim.Adam(self.policy_m[j].parameters(), lr=alpha) for j in range(m)}
         self.optimizer = {j:optim.Adam(self.policy_m[j].parameters(), lr=beta) for j in range(m)}
 
     def act_policy_m(self, state, j):
@@ -294,31 +293,6 @@ class GaussianVPGMC(nn.Module):
     def initialize_policy_m(self):
         for j in range(self.m):
             self.policy_m[j].load_state_dict(copy.deepcopy(self.default_policy.state_dict()))
-
-    def update_policy_m(self, memory, j):
-        # caculate policy gradient
-        discounted_reward = []
-        Gt = 0
-        for reward, is_terminal in zip(reversed(memory.rewards), reversed(memory.is_terminals)):
-            if is_terminal:
-                Gt = 0
-            Gt = reward + (self.gamma * Gt)
-            discounted_reward.insert(0, Gt)
-
-        policy_gradient = []
-        gamma_pow = 1
-
-        for log_prob, Gt, is_terminal in zip(memory.logprobs, discounted_reward, memory.is_terminals):
-            policy_gradient.append(-log_prob * Gt * gamma_pow)
-            if is_terminal:
-                gamma_pow = 1
-            else:
-                gamma_pow *= self.gamma
-
-        self.optimizer_m[j].zero_grad()
-        policy_gradient = torch.stack(policy_gradient).sum()
-        policy_gradient.backward()
-        self.optimizer_m[j].step()
 
     def update_policy_m_with_regularizer(self, memories, N, H, j):
         memory = memories[j]
