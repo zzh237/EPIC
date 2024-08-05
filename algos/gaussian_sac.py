@@ -406,11 +406,10 @@ class EpicSACActor(nn.Module):
         self.kl_settings = kl_settings
 
         # policy
-        self.policy_new = TanhGaussianPolicy(
+        self.policy_default = TanhGaussianPolicy(
             hidden_sizes=policy_hidden_sizes, obs_dim=obs_dim, action_dim=action_dim, device=device
         )
-        self.policy_default = self.policy_new.copy()
-        self.policy_prior = self.policy_new.copy()
+        self.policy_prior = self.policy_default.copy()
         self.optimizers["policy"] = optimizer_class(self.policy_default.parameters(), lr=policy_lr)
 
         # q networks
@@ -561,12 +560,15 @@ class EpicSAC(nn.Module):
         policy_std_reg_weight: float = 1e-3,
         policy_pre_activation_weight: float = 0.0,
         optimizer_class: type[Optimizer] = Adam,
+        c1=1.6,
         kl_settings: KlRegularizationSettings = KlRegularizationSettings(q_network=True, v_network=True, policy=True),
     ):
         super().__init__()
 
-        # instantiate M copies of the SAC actor for MC updates
-        self.default_actor: EpicSACActor = EpicSACActor(
+        self.c1 = c1
+
+        
+        self.default_actor = EpicSACActor(
             obs_dim=obs_dim,
             action_dim=action_dim,
             policy_hidden_sizes=policy_hidden_sizes,
@@ -584,7 +586,10 @@ class EpicSAC(nn.Module):
             policy_mean_reg_weight=policy_mean_reg_weight,
             policy_pre_activation_weight=policy_pre_activation_weight,
             policy_std_reg_weight=policy_std_reg_weight,
+            optimizer_class=optimizer_class,
         )
+        self.new_actor = self.default_actor.copy()
+        # instantiate M copies of the SAC actor for MC updates
         self.actors: nn.ModuleList = nn.ModuleList(self.default_actor.copy() for _ in range(m))
         self.to(device=torch.device(device))
 
@@ -656,11 +661,20 @@ class EpicSAC(nn.Module):
         actor: EpicSACActor
         for m_idx, actor in enumerate(self.actors):
             # load actors with default policy's params
+            actor_parameters_before = copy.deepcopy(actor.state_dict())
             update_dict = actor.update(N, H)
             for k, v in update_dict.items():
                 m_metrics[k].append(v)
 
-        # update the default actor with the MC update
+            # accumulate the parameter step
+            v = defaultdict(lambda: Tensor(0.))
+            for key in actor_parameters_before:
+                v[key] += actor.state_dict()[key] - actor_parameters_before[key]
+
+        # update the new_actor with the MC update
+        for name, param in self.new_actor.named_parameters():
+            param.data.copy_(param.data + self.c1*v[name]/self.m)
+            
 
         wandb.log({name: wandb.Histogram(values) for name, values in m_metrics.items()})
 
