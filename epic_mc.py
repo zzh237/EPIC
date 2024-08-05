@@ -428,7 +428,7 @@ if __name__ == '__main__':
                   rewards.append(reward)
                   meta_memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
                   if learner == "sac":
-                     actor_policy.replay_buffer.push(state, action, reward, new_state, done)
+                     actor_policy.actors[j].replay_buffer.push(state, action, reward, new_state, done)
                   state = new_state
                   
 
