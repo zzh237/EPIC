@@ -16,12 +16,14 @@ import itertools
 from functools import wraps
 import numpy as np
 import torch
+from torch import Tensor
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.parameter import Parameter
 from torch.autograd import Variable
 from torch.distributions import Distribution, Normal
 import inspect
-from epic.algos.memory import Memory, ReplayMemory
+from algos.memory import Memory, ReplayMemory
 
 LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20
@@ -42,7 +44,7 @@ def KL_div(mu1, sigma1, mu2, sigma2):
 def get_param(shape: int | tuple[int, ...]):
     if isinstance(shape, int):
         shape = (shape,)
-    return nn.Parameter(torch.FloatTensor(*shape))
+    return Parameter(torch.FloatTensor(*shape))
 
 
 class MeanStd(TypedDict):
@@ -184,12 +186,12 @@ class TanhGaussianPolicy(nn.Module):
         super().__init__()
         self.device = device
         if isinstance(hidden_sizes, int):
-            hidden_sizes = tuple(hidden_sizes)
+            hidden_sizes = (hidden_sizes,)
         # init fc layers
         in_size = obs_dim
         self.fcs = nn.ModuleList()
         for i, next_size in enumerate(hidden_sizes):
-            fc = StochasticLinear(in_size, next_size).to(device=device)
+            fc = StochasticLinear(in_size, next_size)
             in_size = next_size
             self.fcs.append(fc)
         self.last_fc = StochasticLinear(in_size, action_dim)
@@ -200,25 +202,21 @@ class TanhGaussianPolicy(nn.Module):
             last_hidden_size = obs_dim
             if len(hidden_sizes) > 0:
                 last_hidden_size = hidden_sizes[-1]
-            self.last_fc_log_std = StochasticLinear(last_hidden_size, action_dim).to(device=device)
+            self.last_fc_log_std = StochasticLinear(last_hidden_size, action_dim)
         else:
             self.log_std = np.log(std)
-
-        self.to(device=device)
 
     def copy(self):
         # some module types are not cloneable, so you'll have to rebuild the network here if so
         new = copy.deepcopy(self)
         new.load_from(self)
         return new
- 
 
     def load_from(self, other: "TanhGaussianPolicy"):
         """Reload own parameters with those from another network."""
         self.load_state_dict(other.state_dict())
 
-
-    def get_action(self, obs, deterministic=False) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def get_action(self, obs, deterministic=False) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
         # state, detached action, action logprob
         obs = torch.from_numpy(obs).float().to(self.device)
         state, action, log_prob = self.get_actions(obs, deterministic=deterministic)
@@ -229,7 +227,9 @@ class TanhGaussianPolicy(nn.Module):
         action, _, _, log_prob, _, _, _, _ = self.forward(obs, deterministic=deterministic, return_log_prob=True)
         return obs, action.detach(), log_prob
 
-    def forward(self, obs, reparameterize=False, deterministic=False, return_log_prob=False):
+    def forward(
+        self, obs, reparameterize=False, deterministic=False, return_log_prob=False
+    ) -> tuple[Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor]:
         h = obs
         for fc in self.fcs:
             h = F.relu(fc(h))
@@ -264,7 +264,7 @@ class TanhGaussianPolicy(nn.Module):
                 else:
                     action = tanh_normal.sample()
 
-        return (action, mean, log_std, log_prob, expected_log_prob, std, mean_action_log_prob, pre_tanh_value)
+        return (action, mean, log_std, log_prob, expected_log_prob, std, mean_action_log_prob, pre_tanh_value)  # type: ignore
 
 
 class StochasticMlp(nn.Module):
@@ -331,7 +331,7 @@ def kl_regularizer(kl, N, H, c=torch.tensor(1.5), delta=torch.tensor(0.01)):
     return reg
 
 
-class EpicOptimizers(TypedDict):
+class EpicOptimizers(TypedDict, total=False):
     policy: Optimizer
     q_networks: List[Optimizer]
     v_network: Optimizer
@@ -361,7 +361,8 @@ class KlRegularizationSettings(TypedDict):
     v_network: bool
     policy: bool
 
-class UpdateMetrics(TypedDict):
+
+class UpdateMetrics(TypedDict, total=False):
     q_loss: float
     q_epic_reg: float
     v_loss: float
@@ -374,27 +375,28 @@ class EpicSACActor(nn.Module):
     """
     Combination of q, v, policy and priors.
     """
-    def __init__(self,
-                 obs_dim: int,
-                 action_dim :int,
-                 policy_hidden_sizes: tuple[int, ...],
-                 policy_lr: float,
-                 discount: float,
-                 batch_size: int,
-                 q_networks: Sequence[StochasticMlp],
-                 q_network_lr: float,
-                 v_network: StochasticMlp,
-                 v_network_lr: float,
-                 soft_target_tau: float,
-                 policy_mean_reg_weight: float,
-                 policy_std_reg_weight: float,
-                 policy_pre_activation_weight: float,
-                 replay_capacity: int,
-                 device: str,
-                 kl_settings: KlRegularizationSettings = KlRegularizationSettings(q_network=True, v_network=True, 
-                                                                                  policy=True),
-                 optimizer_class: type[Optimizer] = Adam,
-                 ):
+
+    def __init__(
+        self,
+        obs_dim: int,
+        action_dim: int,
+        policy_hidden_sizes: tuple[int, ...],
+        policy_lr: float,
+        discount: float,
+        batch_size: int,
+        q_networks: Sequence[StochasticMlp],
+        q_network_lr: float,
+        v_network: StochasticMlp,
+        v_network_lr: float,
+        soft_target_tau: float,
+        policy_mean_reg_weight: float,
+        policy_std_reg_weight: float,
+        policy_pre_activation_weight: float,
+        replay_capacity: int,
+        device: str,
+        kl_settings: KlRegularizationSettings = KlRegularizationSettings(q_network=True, v_network=True, policy=True),
+        optimizer_class: type[Optimizer] = Adam,
+    ):
         self.replay_buffer = ReplayMemory(capacity=replay_capacity)
         self.device = device
         self.optimizers = EpicOptimizers()
@@ -403,9 +405,9 @@ class EpicSACActor(nn.Module):
         self.kl_settings = kl_settings
 
         # policy
-        self.policy_new = TanhGaussianPolicy(hidden_sizes=policy_hidden_sizes,
-                                         obs_dim=obs_dim,
-                                         action_dim=action_dim)
+        self.policy_new = TanhGaussianPolicy(
+            hidden_sizes=policy_hidden_sizes, obs_dim=obs_dim, action_dim=action_dim, device=device
+        )
         self.policy_default = self.policy_new.copy()
         self.policy_prior = self.policy_new.copy()
         self.optimizers["policy"] = optimizer_class(self.policy_default.parameters(), lr=policy_lr)
@@ -427,9 +429,11 @@ class EpicSACActor(nn.Module):
 
         self.policy_mean_reg_weight = policy_mean_reg_weight
         self.policy_std_reg_weight = policy_std_reg_weight
-        self.policy_pre_activation_weight = policy_pre_activation_weight    
+        self.policy_pre_activation_weight = policy_pre_activation_weight
 
-
+    def min_q(self, obs, actions):
+        values, _ = torch.min(torch.cat([q(obs, actions) for q in self.q_networks], dim=1), dim=1, keepdim=True)
+        return values
 
     def update(self, N: int, H: int) -> UpdateMetrics:
         """
@@ -438,9 +442,9 @@ class EpicSACActor(nn.Module):
         metrics = UpdateMetrics()
 
         states, actions, rewards, succ_states, dones = self.replay_buffer.sample(
-                self.batch_size, as_tensors=True, device=self.device
-            )
-        dones = dones.to(float)
+            self.batch_size, as_tensors=True, device=self.device
+        )
+        dones = dones.to(dtype=torch.float32)
 
         policy_outputs = self.policy_default(states, return_log_prob=True)
         # (action, mean, log_std, log_prob, expected_log_prob, std, mean_action_log_prob, pre_tanh_value)
@@ -515,9 +519,18 @@ class EpicSACActor(nn.Module):
         self.optimizers["policy"].zero_grad()
         policy_loss.backward()
         self.optimizers["policy"].step()
-        
+
         return metrics
     
+    def copy(self):
+        return copy.deepcopy(self)
+    
+    def load_from(self, other: "EpicSACActor"):
+        self.load_state_dict(other.state_dict())
+
+    def act(self, obs, deterministic=True):
+        return self.policy_default.get_action(obs, deterministic=deterministic)
+
 
 
 class EpicSAC(nn.Module):
@@ -552,7 +565,7 @@ class EpicSAC(nn.Module):
         super().__init__()
 
         # instantiate M copies of the SAC actor for MC updates
-        self.default_actor = EpicSACActor(
+        self.default_actor: EpicSACActor = EpicSACActor(
             obs_dim=obs_dim,
             action_dim=action_dim,
             policy_hidden_sizes=policy_hidden_sizes,
@@ -565,14 +578,13 @@ class EpicSAC(nn.Module):
             replay_capacity=replay_capacity,
             device=device,
             kl_settings=kl_settings,
-
-            
-
+            batch_size=batch_size,
+            soft_target_tau=soft_target_tau,
+            policy_mean_reg_weight=policy_mean_reg_weight,
+            policy_pre_activation_weight=policy_pre_activation_weight,
+            policy_std_reg_weight=policy_std_reg_weight,
         )
-        self.actors: nn.ModuleList[EpicSACActor] = nn.ModuleList(self.default_actor.copy() 
-                                                                 for _ in range(m))
-
-        
+        self.actors: nn.ModuleList = nn.ModuleList(self.default_actor.copy() for _ in range(m))
 
         # self.batch_size = batch_size
         # self.discount = discount
@@ -634,22 +646,20 @@ class EpicSAC(nn.Module):
         return self.act(state)
 
     def act(self, state):
-        return self.default_policy.get_action(state, deterministic=False)
+        return self.default_actor.act(state, deterministic=False)
 
-    def min_q(self, obs, actions):
-        values, _ = torch.min(torch.cat([q(obs, actions) for q in self.q_networks], dim=1), dim=1, keepdim=True)
-        return values
 
     def update_mu_theta_for_default(self, meta_memory: Memory, N: int, H: int):
         """Do one SAC update on the default policy."""
         m_metrics = defaultdict(list)  # metrics across the whole MC step
 
+        actor: EpicSACActor
         for m_idx, actor in enumerate(self.actors):
             # load actors with default policy's params
-            update_dict = actor.update()
+            update_dict = actor.update(N, H)
             for k, v in update_dict.items():
                 m_metrics[k].append(v)
-        
+
             # states, actions, rewards, succ_states, dones = self.replay_buffer.sample(
             #     self.batch_size, as_tensors=True, device=self.device
             # )
@@ -729,7 +739,6 @@ class EpicSAC(nn.Module):
             # self.optimizers["default_policy"].step()
 
         # update the default actor with the MC update
-        
 
         wandb.log({name: wandb.Histogram(values) for name, values in m_metrics.items()})
 

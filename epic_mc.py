@@ -10,7 +10,7 @@ import mujoco_py
 import random
 import numpy as np
 from gym.spaces import Box, Discrete
-from algos.agents.gaussian_sac import EpicSAC, FlattenStochasticMlp, StochasticMlp
+from algos.gaussian_sac import EpicSAC, FlattenStochasticMlp, StochasticMlp
 import setup
 from algos.memory import Memory, ReplayMemory
 from algos.agents.gaussian_vpg_mc import GaussianVPGMC

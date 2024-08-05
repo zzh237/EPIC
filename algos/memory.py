@@ -29,7 +29,7 @@ class ReplayMemory:
 
     def size(self):
         return len(self.buffer)
-    
+
     
     
 class Memory:
