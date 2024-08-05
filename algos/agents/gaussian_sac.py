@@ -4,24 +4,31 @@ An SAC agent that uses StochasticLinear gaussian-parameterized layers.
 
 from __future__ import annotations
 
+from collections import defaultdict
 import copy
 import math
 from torch.optim import Optimizer
 from typing import List, Sequence, TypedDict
 from torch.optim import Adam
 import wandb
+import itertools
 
+from functools import wraps
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.distributions import Distribution, Normal
-
+import inspect
 from algos.memory import Memory, ReplayMemory
 
 LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20
+
+
+def flatmap(func, iterable):
+    return itertools.chain.from_iterable(map(func, iterable))
 
 
 def KL_div(mu1, sigma1, mu2, sigma2):
@@ -171,14 +178,16 @@ class TanhGaussianPolicy(nn.Module):
     and mean of a gaussian output.
     """
 
-    def __init__(self, hidden_sizes: tuple[int, ...] | int, obs_dim: int, action_dim: int, device: str, std: float | None = None):
+    def __init__(
+        self, hidden_sizes: tuple[int, ...] | int, obs_dim: int, action_dim: int, device: str, std: float | None = None
+    ):
         super().__init__()
         self.device = device
         if isinstance(hidden_sizes, int):
             hidden_sizes = tuple(hidden_sizes)
         # init fc layers
         in_size = obs_dim
-        self.fcs = []
+        self.fcs = nn.ModuleList()
         for i, next_size in enumerate(hidden_sizes):
             fc = StochasticLinear(in_size, next_size).to(device=device)
             in_size = next_size
@@ -196,6 +205,18 @@ class TanhGaussianPolicy(nn.Module):
             self.log_std = np.log(std)
 
         self.to(device=device)
+
+    def copy(self):
+        # some module types are not cloneable, so you'll have to rebuild the network here if so
+        new = copy.deepcopy(self)
+        new.load_from(self)
+        return new
+ 
+
+    def load_from(self, other: "TanhGaussianPolicy"):
+        """Reload own parameters with those from another network."""
+        self.load_state_dict(other.state_dict())
+
 
     def get_action(self, obs, deterministic=False) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # state, detached action, action logprob
@@ -235,7 +256,7 @@ class TanhGaussianPolicy(nn.Module):
                 else:
                     action, pre_tanh_value = tanh_normal.sample(return_pretanh_value=True)
                 log_prob = tanh_normal.log_prob(action, pre_tanh_value=pre_tanh_value)
-                
+
                 log_prob = log_prob.sum()
             else:
                 if reparameterize:
@@ -264,9 +285,10 @@ class StochasticMlp(nn.Module):
         for fc in self.fcs:
             hidden_act = fc(hidden_act)
         return self.last_fc(hidden_act)
-        
+
     def copy(self):
         return copy.deepcopy(self)
+
 
 class FlattenStochasticMlp(StochasticMlp):
     """MLP which flattens its inputs along the first nonbatch dimension."""
@@ -275,36 +297,238 @@ class FlattenStochasticMlp(StochasticMlp):
         flat = torch.cat(x, dim=1)
         return super().forward(flat)
 
-    
+
 def model_kl_div(default: nn.Module, prior: nn.Module):
+    # calculate KL div between a default model and a prior
     kl = []
-    for default_layer, prior_layer in zip((layer1 for layer1 in default.modules() if isinstance(layer1, StochasticLinear)),
-                              (layer2 for layer2 in prior.modules() if isinstance(layer2, StochasticLinear))):
-      kl.append(KL_div(mu1=default_layer.w_mu, sigma1=default_layer.w_log_var, mu2=prior_layer.w_mu, sigma2=prior_layer.w_log_var))
-      kl.append(KL_div(mu1=default_layer.b_mu, sigma1=default_layer.b_log_var, mu2=prior_layer.b_mu, sigma2=prior_layer.b_log_var))
+    for default_layer, prior_layer in zip(
+        (layer1 for layer1 in default.modules() if isinstance(layer1, StochasticLinear)),
+        (layer2 for layer2 in prior.modules() if isinstance(layer2, StochasticLinear)),
+    ):
+        kl.append(
+            KL_div(
+                mu1=default_layer.w_mu,
+                sigma1=default_layer.w_log_var,
+                mu2=prior_layer.w_mu,
+                sigma2=prior_layer.w_log_var,
+            )
+        )
+        kl.append(
+            KL_div(
+                mu1=default_layer.b_mu,
+                sigma1=default_layer.b_log_var,
+                mu2=prior_layer.b_mu,
+                sigma2=prior_layer.b_log_var,
+            )
+        )
 
     return torch.stack(kl).sum()
 
-def kl_regularizer(kl, N, H, c = torch.tensor(1.5), delta = torch.tensor(0.01)):
-    epsilon = torch.log(torch.tensor(2.)) / (2 * torch.log(c)) * (1 + torch.log(kl / torch.log(2. / delta)))
-    reg = (1 + c) / 2 * torch.sqrt(torch.tensor(2.)) * torch.sqrt((kl + torch.log(2./delta) + epsilon) * N * H**2)
+
+def kl_regularizer(kl, N, H, c=torch.tensor(1.5), delta=torch.tensor(0.01)):
+    epsilon = torch.log(torch.tensor(2.0)) / (2 * torch.log(c)) * (1 + torch.log(kl / torch.log(2.0 / delta)))
+    reg = (1 + c) / 2 * torch.sqrt(torch.tensor(2.0)) * torch.sqrt((kl + torch.log(2.0 / delta) + epsilon) * N * H**2)
     return reg
 
 
 class EpicOptimizers(TypedDict):
-    default_policy: Optimizer
-    prior_policy: Optimizer
+    policy: Optimizer
     q_networks: List[Optimizer]
     v_network: Optimizer
+
+
+def get_default_args(func):
+    signature = inspect.signature(func)
+    return {k: v.default for k, v in signature.parameters.items() if v.default is not inspect.Parameter.empty}
+
+
+def track_config(init):
+    """Log all arguments to init as config objects in wandb."""
+
+    @wraps(init)
+    def wrapper(self, **kwargs):
+        default_args = get_default_args(init)
+        params = kwargs
+        params.update(default_args)
+        wandb.config.update(params)
+        return init(self, **kwargs)
+
+    return wrapper
+
+
+class KlRegularizationSettings(TypedDict):
+    q_network: bool
+    v_network: bool
+    policy: bool
+
+class UpdateMetrics(TypedDict):
+    q_loss: float
+    q_epic_reg: float
+    v_loss: float
+    v_epic_reg: float
+    policy_loss: float
+    policy_epic_reg: float
+
+
+class EpicSACActor(nn.Module):
+    """
+    Combination of q, v, policy and priors.
+    """
+    def __init__(self,
+                 obs_dim: int,
+                 action_dim :int,
+                 policy_hidden_sizes: tuple[int, ...],
+                 policy_lr: float,
+                 discount: float,
+                 batch_size: int,
+                 q_networks: Sequence[StochasticMlp],
+                 q_network_lr: float,
+                 v_network: StochasticMlp,
+                 v_network_lr: float,
+                 soft_target_tau: float,
+                 policy_mean_reg_weight: float,
+                 policy_std_reg_weight: float,
+                 policy_pre_activation_weight: float,
+                 replay_capacity: int,
+                 device: str,
+                 kl_settings: KlRegularizationSettings = KlRegularizationSettings(q_network=True, v_network=True, 
+                                                                                  policy=True),
+                 optimizer_class: type[Optimizer] = Adam,
+                 ):
+        self.replay_buffer = ReplayMemory(capacity=replay_capacity)
+        self.device = device
+        self.optimizers = EpicOptimizers()
+        self.discount = discount
+        self.batch_size = batch_size
+        self.kl_settings = kl_settings
+
+        # policy
+        self.policy_new = TanhGaussianPolicy(hidden_sizes=policy_hidden_sizes,
+                                         obs_dim=obs_dim,
+                                         action_dim=action_dim)
+        self.policy_default = self.policy_new.copy()
+        self.policy_prior = self.policy_new.copy()
+        self.optimizers["policy"] = optimizer_class(self.policy_default.parameters(), lr=policy_lr)
+
+        # q networks
+        self.q_networks = nn.ModuleList(q_networks)
+        self.optimizers["q_networks"] = list()
+        for network in self.q_networks:
+            self.optimizers["q_networks"].append(optimizer_class(network.parameters(), lr=q_network_lr))
+
+        self.q_priors = nn.ModuleList(q.copy() for q in q_networks)
+
+        self.v_network_prior = v_network
+        self.v_network_default = self.v_network_prior.copy()
+        self.target_v_network = self.v_network_prior.copy()
+        self.v_criterion = nn.MSELoss()
+        self.soft_target_tau = soft_target_tau
+        self.optimizers["v_network"] = optimizer_class(self.v_network_default, lr=v_network_lr)
+
+        self.policy_mean_reg_weight = policy_mean_reg_weight
+        self.policy_std_reg_weight = policy_std_reg_weight
+        self.policy_pre_activation_weight = policy_pre_activation_weight    
+
+
+
+    def update(self, N: int, H: int) -> UpdateMetrics:
+        """
+        Perform 1 SAC update on this actor.
+        """
+        metrics = UpdateMetrics()
+
+        states, actions, rewards, succ_states, dones = self.replay_buffer.sample(
+                self.batch_size, as_tensors=True, device=self.device
+            )
+        dones = dones.to(float)
+
+        policy_outputs = self.policy_default(states, return_log_prob=True)
+        # (action, mean, log_std, log_prob, expected_log_prob, std, mean_action_log_prob, pre_tanh_value)
+        new_actions, policy_mean, policy_log_std, log_pi, *_ = policy_outputs
+
+        # update Q and V networks
+        q_preds = [q_net(states, actions) for q_net in self.q_networks]
+        v_pred = self.v_network_default(states)
+
+        with torch.no_grad():
+            target_v_values = self.target_v_network(succ_states)
+
+        # qf update
+        for o in self.optimizers["q_networks"]:
+            o.zero_grad()
+
+        q_target = rewards + (1.0 - dones) * self.discount * target_v_values
+        q_loss = sum([torch.mean((q_pred - q_target) ** 2) for q_pred in q_preds])
+        metrics["q_loss"] = q_loss.cpu().detach()
+        if self.kl_settings["q_network"]:
+            q_kl_sum = 0
+            for q_default, q_prior in zip(self.q_networks, self.q_priors):
+                q_kl_sum += kl_regularizer(model_kl_div(q_default, q_prior), N, H)
+            q_loss += q_kl_sum
+            metrics["q_epic_reg"] = q_kl_sum.cpu().detach()
+            # m_metrics["q_epic_reg"].append(q_kl_sum.cpu().detach())
+
+        q_loss.backward()
+        for o in self.optimizers["q_networks"]:
+            o.step()
+
+        # minq
+        min_q_new_actions = self.min_q(states, new_actions)
+
+        # v update
+        # I think this one is KL - regularized?
+        v_target = min_q_new_actions - log_pi
+        v_loss = self.v_criterion(v_pred, v_target.detach())
+
+        # m_metrics["v_loss"].append(v_loss.cpu().detach())
+
+        # kl-divergence for v_function, put default on left and prior on right
+        if self.kl_settings["v_network"]:
+            v_kl_regularizer = kl_regularizer(model_kl_div(self.v_network_default, self.v_network_prior), N, H)
+            v_loss += v_kl_regularizer
+            # m_metrics["v_epic_reg"].append(v_kl_regularizer.cpu().detach())
+            metrics["v_epic_reg"] = v_kl_regularizer.cpu().detach()
+
+        self.optimizers["v_network"].zero_grad()
+        v_loss.backward()
+        self.optimizers["v_network"].step()
+
+        # update the target (polyak)
+        for target_p, p in zip(self.target_v_network.parameters(), self.v_network_default.parameters()):
+            target_p.data.copy_(target_p.data * (1.0 - self.soft_target_tau) + p.data * self.soft_target_tau)
+
+        # policy update
+        log_policy_target = min_q_new_actions
+        policy_loss = (log_pi - log_policy_target).mean()
+        mean_reg_loss = self.policy_mean_reg_weight * (policy_mean**2).mean()
+        std_reg_loss = self.policy_std_reg_weight * (policy_log_std**2).mean()
+        pre_tanh_value = policy_outputs[-1]
+        pre_activation_reg_loss = self.policy_pre_activation_weight * (pre_tanh_value**2).sum().mean()
+        policy_reg_loss = mean_reg_loss + std_reg_loss + pre_activation_reg_loss
+        policy_loss = policy_loss + policy_reg_loss
+        metrics["policy_loss"] = policy_loss.cpu().detach()
+        if self.kl_settings["policy"]:
+            policy_epic_reg = kl_regularizer(model_kl_div(self.policy_default, self.policy_prior), N, H)
+            metrics["policy_epic_reg"] = policy_epic_reg.cpu().detach()
+            policy_loss += policy_epic_reg
+
+        self.optimizers["policy"].zero_grad()
+        policy_loss.backward()
+        self.optimizers["policy"].step()
+        
+        return metrics
     
+
 
 class EpicSAC(nn.Module):
     """
-    Keeps multiple copies of a TanhGaussianPolicy to perform EPIC updates on. This is a metalearning policy.
+    Keeps multiple copies of an EpicSACActor to do an MC update on. Each Actor is metalearning policy.
     """
 
+    @track_config
     def __init__(
         self,
+        *,
         obs_dim: int,
         action_dim: int,
         policy_hidden_sizes: tuple[int, ...],
@@ -317,60 +541,89 @@ class EpicSAC(nn.Module):
         replay_capacity: int,
         batch_size: int,
         device: str,
-        m: int ,
+        m: int,
         soft_target_tau: float = 1e-2,
         policy_mean_reg_weight: float = 1e-3,
         policy_std_reg_weight: float = 1e-3,
-        policy_pre_activation_weight: float = 0.,
+        policy_pre_activation_weight: float = 0.0,
         optimizer_class: type[Optimizer] = Adam,
+        kl_settings: KlRegularizationSettings = KlRegularizationSettings(q_network=True, v_network=True, policy=True),
     ):
         super().__init__()
 
-        self.batch_size = batch_size
-        self.discount = discount
-        self.device = device
-        self.m = m  # mc steps
+        # instantiate M copies of the SAC actor for MC updates
+        self.default_actor = EpicSACActor(
+            obs_dim=obs_dim,
+            action_dim=action_dim,
+            policy_hidden_sizes=policy_hidden_sizes,
+            policy_lr=policy_lr,
+            q_networks=q_networks,
+            q_network_lr=q_network_lr,
+            v_network=v_network,
+            v_network_lr=v_network_lr,
+            discount=discount,
+            replay_capacity=replay_capacity,
+            device=device,
+            kl_settings=kl_settings,
+            
+            
 
-        self.optimizers = dict()
+        )
+        self.actors: nn.ModuleList[EpicSACActor] = nn.ModuleList(self.default_actor.copy() 
+                                                                 for _ in range(m))
 
-        # policies
-        self.default_policy = TanhGaussianPolicy(
-            hidden_sizes=policy_hidden_sizes, obs_dim=obs_dim, action_dim=action_dim, device=device
-        ).to(device=device)
-        self.optimizers["default_policy"] = optimizer_class(self.default_policy.parameters(), lr=policy_lr)
-        self.prior_policy = copy.deepcopy(self.default_policy).to(device=device)
-        self.optimizers["prior_policy"] = optimizer_class(self.prior_policy.parameters(), lr=policy_lr)
+        
 
-        # q networks
-        self.q_networks = q_networks
-        self.optimizers["q_networks"] = list()
-        for network in q_networks:
-            network.to(device)
-            self.optimizers["q_networks"].append(optimizer_class(network.parameters(), lr=q_network_lr))
+        # self.batch_size = batch_size
+        # self.discount = discount
+        # self.device = device
+        # self.m = m  # MC copies
+        # self.kl_settings = kl_settings
 
-        self.prior_vf = v_network.to(device)
-        self.default_vf = self.prior_vf.copy()
-        self.target_vf = self.default_vf.copy()
-        self.v_criterion = nn.MSELoss()
-        self.soft_target_tau = soft_target_tau
-        self.optimizers["v_network"] = optimizer_class(self.default_vf.parameters(), lr=v_network_lr)
+        # self.optimizers = dict()
 
-        self.policy_mean_reg_weight = policy_mean_reg_weight
-        self.policy_std_reg_weight = policy_std_reg_weight
-        self.policy_pre_activation_weight = policy_pre_activation_weight
+        # # policies
+        # self.new_default_policy = TanhGaussianPolicy(hidden_sizes=policy_hidden_sizes,
+        #                                              obs_dim=obs_dim, action_dim=action_dim, device=device)
+        # self.default_policy = self.new_default_policy.copy()
+        # self.policies_mc = nn.ModuleList(self.new_default_policy.copy() for _ in range(self.m))
+        # self.optimizers["default_policy"] = [optimizer_class(self.default_policy.parameters(), lr=policy_lr) for _ in range(self.m)]
+        # self.prior_policy = copy.deepcopy(self.default_policy)
+        # self.optimizers["prior_policy"] = optimizer_class(self.prior_policy.parameters(), lr=policy_lr)
 
-        # KL summary value
-        self.KL = torch.tensor(0.)
+        # # q networks
+        # self.q_networks = nn.ModuleList(q_networks)
 
-        self.replay_buffer = ReplayMemory(capacity=replay_capacity)
+        # self.optimizers["q_networks"] = list()
+        # for network in q_networks:
+        #     self.optimizers["q_networks"].append(optimizer_class(network.parameters(), lr=q_network_lr))
 
-        self.to(device=device)
+        # self.q_priors = [q.copy() for q in q_networks]
+
+        # self.prior_vf = v_network.to(device)
+        # self.default_vf = self.prior_vf.copy()
+        # self.target_vf = self.default_vf.copy()
+        # self.v_criterion = nn.MSELoss()
+        # self.soft_target_tau = soft_target_tau
+        # self.optimizers["v_network"] = optimizer_class(self.default_vf.parameters(), lr=v_network_lr)
+
+        # self.policy_mean_reg_weight = policy_mean_reg_weight
+        # self.policy_std_reg_weight = policy_std_reg_weight
+        # self.policy_pre_activation_weight = policy_pre_activation_weight
+
+        # # KL summary value
+        # self.KL = torch.tensor(0.0)
+
+        # self.replay_buffer = ReplayMemory(capacity=replay_capacity)
+
+        # self.to(device=device)
 
     def initialize_default_policy(self):
         """Initialize the default policy by copying it from the prior."""
         self.default_policy.load_state_dict(copy.deepcopy(self.default_policy.state_dict()))
 
     def initialize_policy_m(self):
+        """Initialize the MC policies by loading the state from the default policy"""
         self.initialize_default_policy()
 
     def train(self):
@@ -382,89 +635,103 @@ class EpicSAC(nn.Module):
 
     def act(self, state):
         return self.default_policy.get_action(state, deterministic=False)
-    
 
     def min_q(self, obs, actions):
-        values, _ = torch.min(torch.cat([q(obs, actions) for q in self.q_networks], dim=1), 
-                              dim=1, keepdim=True)
+        values, _ = torch.min(torch.cat([q(obs, actions) for q in self.q_networks], dim=1), dim=1, keepdim=True)
         return values
-
 
     def update_mu_theta_for_default(self, meta_memory: Memory, N: int, H: int):
         """Do one SAC update on the default policy."""
-        for m_idx in range(self.m):
-            states, actions, rewards, succ_states, dones = self.replay_buffer.sample(self.batch_size, 
-                                                                                    as_tensors=True, 
-                                                                                    device=self.device)
-            
-            dones = dones.to(float)
+        m_metrics = defaultdict(list)  # metrics across the whole MC step
 
-            policy_outputs = self.default_policy(states, return_log_prob=True)
-            # (action, mean, log_std, log_prob, expected_log_prob, std, mean_action_log_prob, pre_tanh_value)
-            new_actions, policy_mean, policy_log_std, log_pi, *_ = policy_outputs
+        for m_idx, actor in enumerate(self.actors):
+            # load actors with default policy's params
+            update_dict = actor.update()
+            for k, v in update_dict.items():
+                m_metrics[k].append(v)
+        
+            # states, actions, rewards, succ_states, dones = self.replay_buffer.sample(
+            #     self.batch_size, as_tensors=True, device=self.device
+            # )
+            # dones = dones.to(float)
 
-            # update Q and V networks
-            q_preds = [q_net(states, actions) for q_net in self.q_networks]
-            v_pred = self.default_vf(states)
+            # policy_outputs = self.default_policy(states, return_log_prob=True)
+            # # (action, mean, log_std, log_prob, expected_log_prob, std, mean_action_log_prob, pre_tanh_value)
+            # new_actions, policy_mean, policy_log_std, log_pi, *_ = policy_outputs
 
-            with torch.no_grad():
-                target_v_values = self.target_vf(succ_states)
-            
-            # qf update
-            for o in self.optimizers["q_networks"]:
-                o.zero_grad()
+            # # update Q and V networks
+            # q_preds = [q_net(states, actions) for q_net in self.q_networks]
+            # v_pred = self.default_vf(states)
 
-            q_target = rewards + (1. - dones) * self.discount * target_v_values
-            # I think this isn't KL regularized. maybe??
-            q_loss = sum([torch.mean((q_pred - q_target) ** 2) for q_pred in q_preds])
-            q_loss.backward()
-            for o in self.optimizers["q_networks"]:
-                o.step()
+            # with torch.no_grad():
+            #     target_v_values = self.target_vf(succ_states)
 
-            # minq
-            min_q_new_actions = self.min_q(states, new_actions)
+            # # qf update
+            # for o in self.optimizers["q_networks"]:
+            #     o.zero_grad()
 
-            # v update
-            # I think this one is KL - regularized?
-            v_target = min_q_new_actions - log_pi
-            # kl-divergence for v_function, put default on left and prior on right
-            v_kl_regularizer = kl_regularizer(model_kl_div(self.default_vf, self.prior_vf), N, H)
+            # q_target = rewards + (1.0 - dones) * self.discount * target_v_values
+            # # I think this isn't KL regularized. maybe?
+            # q_loss = sum([torch.mean((q_pred - q_target) ** 2) for q_pred in q_preds])
+            # m_metrics["q_loss"].append(q_loss.cpu().detach())
+            # if self.kl_settings["q_network"]:
+            #     q_kl_sum = 0
+            #     for q_default, q_prior in zip(self.q_networks, self.q_priors):
+            #         q_kl_sum += kl_regularizer(model_kl_div(q_default, q_prior), N, H)
+            #     q_loss += q_kl_sum
+            #     m_metrics["q_epic_reg"].append(q_kl_sum.cpu().detach())
 
-            v_loss = self.v_criterion(v_pred, v_target.detach()) + v_kl_regularizer
-            self.optimizers["v_network"].zero_grad()
-            v_loss.backward()
-            self.optimizers["v_network"].step()
+            # q_loss.backward()
+            # for o in self.optimizers["q_networks"]:
+            #     o.step()
 
-            # update the target (polyak)
-            for target_p, p in zip(self.target_vf.parameters(), self.default_vf.parameters()):
-                target_p.data.copy_(target_p.data * (1.0 - self.soft_target_tau) + p.data * self.soft_target_tau)
+            # # minq
+            # min_q_new_actions = self.min_q(states, new_actions)
 
-            # policy update
-            log_policy_target = min_q_new_actions
-            policy_loss = (log_pi - log_policy_target).mean()
-            mean_reg_loss = self.policy_mean_reg_weight * (policy_mean ** 2).mean()
-            std_reg_loss = self.policy_std_reg_weight * (policy_log_std ** 2).mean()
-            pre_tanh_value = policy_outputs[-1]
-            pre_activation_reg_loss = self.policy_pre_activation_weight * (pre_tanh_value **2).sum().mean()
-            policy_reg_loss = mean_reg_loss + std_reg_loss + pre_activation_reg_loss
-            policy_epic_reg = kl_regularizer(model_kl_div(self.default_policy, self.prior_policy), N, H)
-            policy_loss = policy_loss + policy_reg_loss + policy_epic_reg
+            # # v update
+            # # I think this one is KL - regularized?
+            # v_target = min_q_new_actions - log_pi
+            # v_loss = self.v_criterion(v_pred, v_target.detach())
 
-            self.optimizers["default_policy"].zero_grad()
-            policy_loss.backward()
-            self.optimizers["default_policy"].step()
+            # m_metrics["v_loss"].append(v_loss.cpu().detach())
 
+            # # kl-divergence for v_function, put default on left and prior on right
+            # if self.kl_settings["v_network"]:
+            #     v_kl_regularizer = kl_regularizer(model_kl_div(self.default_vf, self.prior_vf), N, H)
+            #     v_loss += v_kl_regularizer
+            #     m_metrics["v_epic_reg"].append(v_kl_regularizer.cpu().detach())
 
-            wandb.log({
-                "m": m_idx,
-                "v_loss": v_loss.detach(),
-                "policy_epic_reg": policy_epic_reg.detach(),
-                "v_epic_reg": v_kl_regularizer.detach(),
-                "q_loss": q_loss.detach()
-            })
+            # self.optimizers["v_network"].zero_grad()
+            # v_loss.backward()
+            # self.optimizers["v_network"].step()
 
+            # # update the target (polyak)
+            # for target_p, p in zip(self.target_vf.parameters(), self.default_vf.parameters()):
+            #     target_p.data.copy_(target_p.data * (1.0 - self.soft_target_tau) + p.data * self.soft_target_tau)
+
+            # # policy update
+            # log_policy_target = min_q_new_actions
+            # policy_loss = (log_pi - log_policy_target).mean()
+            # mean_reg_loss = self.policy_mean_reg_weight * (policy_mean**2).mean()
+            # std_reg_loss = self.policy_std_reg_weight * (policy_log_std**2).mean()
+            # pre_tanh_value = policy_outputs[-1]
+            # pre_activation_reg_loss = self.policy_pre_activation_weight * (pre_tanh_value**2).sum().mean()
+            # policy_reg_loss = mean_reg_loss + std_reg_loss + pre_activation_reg_loss
+            # policy_loss = policy_loss + policy_reg_loss
+            # m_metrics["policy_loss"].append(policy_loss.cpu().detach())
+            # if self.kl_settings["policy"]:
+            #     policy_epic_reg = kl_regularizer(model_kl_div(self.default_policy, self.prior_policy), N, H)
+            #     m_metrics["policy_epic_reg"].append(policy_epic_reg.cpu().detach())
+            #     policy_loss += policy_epic_reg
+
+            # self.optimizers["default_policy"].zero_grad()
+            # policy_loss.backward()
+            # self.optimizers["default_policy"].step()
+
+        # update the default actor with the MC update
+        
+
+        wandb.log({name: wandb.Histogram(values) for name, values in m_metrics.items()})
 
     def update_default_and_prior_policy(self):
         pass
-
-
