@@ -152,7 +152,7 @@ class TanhNormal(Distribution):
         return self.normal.log_prob(pre_tanh_value) - torch.log(1 - value * value + self.epsilon)
 
     def sample(self, return_pretanh_value=False):
-        z = self.normal.sample()
+        z = self.normal.sample() # gradients stop here
         if return_pretanh_value:
             return torch.tanh(z), z
         else:
@@ -255,7 +255,7 @@ class TanhGaussianPolicy(nn.Module):
                     action, pre_tanh_value = tanh_normal.rsample(return_pretanh_value=True)
                 else:
                     action, pre_tanh_value = tanh_normal.sample(return_pretanh_value=True)
-                log_prob = tanh_normal.log_prob(action, pre_tanh_value=pre_tanh_value)
+                log_prob = tanh_normal.log_prob(action, pre_tanh_value=pre_tanh_value) # gradients can go through here
 
                 log_prob = log_prob.sum()
             else:
@@ -446,29 +446,31 @@ class EpicSACActor(nn.Module):
 
         policy_outputs = self.policy_default(states, return_log_prob=True)
         # (action, mean, log_std, log_prob, expected_log_prob, std, mean_action_log_prob, pre_tanh_value)
+        # TODO make sure these gradients aren't evil
         new_actions, policy_mean, policy_log_std, log_pi, *_ = policy_outputs
 
         # update Q and V networks
         q_preds = [q_net(states, actions) for q_net in self.q_networks]
         v_pred = self.v_network_default(states)
 
+        # I think this is stopped here because target_v_values is 
         with torch.no_grad():
             target_v_values = self.target_v_network(succ_states)
 
-        # qf update
+        # Q update
         for o in self.optimizers["q_networks"]:
             o.zero_grad()
 
         q_target = rewards + (1.0 - dones) * self.discount * target_v_values
-        q_loss = sum([torch.mean((q_pred - q_target) ** 2) for q_pred in q_preds])
+        q_loss = sum([torch.mean((q_pred - q_target) ** 2.0) for q_pred in q_preds])
         metrics["q_loss"] = q_loss.cpu().detach()
+        # TODO sweep on KL reg on q network
         if self.kl_settings["q_network"]:
             q_kl_sum = 0
             for q_default, q_prior in zip(self.q_networks, prior.q_networks):
                 q_kl_sum += kl_regularizer(model_kl_div(q_default, q_prior), N, H)
             q_loss += q_kl_sum
             metrics["q_epic_reg"] = q_kl_sum.cpu().detach()
-            # m_metrics["q_epic_reg"].append(q_kl_sum.cpu().detach())
 
         q_loss.backward()
         for o in self.optimizers["q_networks"]:
@@ -480,11 +482,13 @@ class EpicSACActor(nn.Module):
         # v update
         # I think this one is KL - regularized?
         v_target = min_q_new_actions - log_pi
+        # TODO why is this target detached, I think it's an optimization
         v_loss = self.v_criterion(v_pred, v_target.detach())
 
         # m_metrics["v_loss"].append(v_loss.cpu().detach())
 
         # kl-divergence for v_function, put default on left and prior on right
+        # TODO sweep on the V regularization
         if self.kl_settings["v_network"]:
             v_kl_regularizer = kl_regularizer(model_kl_div(self.v_network_default, prior.v_network_default), N, H)
             v_loss += v_kl_regularizer
@@ -496,12 +500,14 @@ class EpicSACActor(nn.Module):
         self.optimizers["v_network"].step()
 
         # update the target (polyak)
+        # TODO do something with the target
         for target_p, p in zip(self.target_v_network.parameters(), self.v_network_default.parameters()):
             target_p.data.copy_(target_p.data * (1.0 - self.soft_target_tau) + p.data * self.soft_target_tau)
 
         # policy update
         log_policy_target = min_q_new_actions
         policy_loss = (log_pi - log_policy_target).mean()
+        # TODO determine if this is standard SAC stuff or another PEARL trick
         mean_reg_loss = self.policy_mean_reg_weight * (policy_mean**2).mean()
         std_reg_loss = self.policy_std_reg_weight * (policy_log_std**2).mean()
         pre_tanh_value = policy_outputs[-1]
@@ -510,6 +516,7 @@ class EpicSACActor(nn.Module):
         policy_loss = policy_loss + policy_reg_loss
         metrics["policy_loss"] = policy_loss.cpu().detach()
         if self.kl_settings["policy"]:
+            # TODO nograd on prior for optimization?
             policy_epic_reg = kl_regularizer(model_kl_div(self.policy_default, prior.policy_default), N, H)
             metrics["policy_epic_reg"] = policy_epic_reg.cpu().detach()
             policy_loss += policy_epic_reg
@@ -565,6 +572,7 @@ class EpicSAC(nn.Module):
     ):
         super().__init__()
 
+        # TODO try larger / smaller versions of this
         self.c1 = c1
         self.lam = lam
         self.lam_decay = lam_decay
@@ -619,6 +627,7 @@ class EpicSAC(nn.Module):
     def update_mu_theta_for_default(self, meta_memory: Memory, N: int, H: int):
         """Do one SAC update on the default policy."""
         m_metrics = defaultdict(list)  # metrics across the whole MC step
+        # key: q_loss, value: [0.0001, 0.0002, ....] for all MC actors
 
         actor: EpicSACActor
         for m_idx, actor in enumerate(self.mc_actors):
@@ -631,6 +640,7 @@ class EpicSAC(nn.Module):
             # accumulate the parameter step, subtract out the previous value
             v = copy.deepcopy(actor.state_dict())
             for key in actor_parameters_before:
+                # v = current params - before params
                 v[key] -= actor_parameters_before[key]
 
         # update the new_actor with the MC update
