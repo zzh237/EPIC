@@ -1,0 +1,23 @@
+[project]
+authors = []
+dependencies = []
+description = "epic PAC bound for lifetime learning"
+name = "epic"
+requires-python = "~= 3.8"
+version = "0.1.0"
+
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[tool.pixi.project]
+channels = ["conda-forge", "pytorch"]
+platforms = ["osx-arm64", "linux-64"]
+
+[tool.pixi.pypi-dependencies]
+epic = { path = ".", editable = true }
+
+[tool.pixi.tasks]
+
+[tool.pixi.target.linux-64.dependencies]
+pytorch = "1.7.1.*"
