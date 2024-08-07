@@ -80,7 +80,6 @@ class StochasticLinear(nn.Module):
         self.w_mu.data.uniform_(-stdv, stdv)
         self.w_log_var.data.normal_(log_var_init["mean"], log_var_init["std"])
         if self.use_bias:
-            # TODO use bias size instead?
             self.b_mu.data.uniform_(-stdv, stdv)
             self.b_log_var.data.normal_(log_var_init["mean"], log_var_init["std"])
 
@@ -612,9 +611,6 @@ class EpicSAC(nn.Module):
         actor: EpicSACActor
         for actor in self.mc_actors:
             actor.load_from(self.default_actor)
-
-    def train(self):
-        pass
 
     def act_policy_m(self, state, m_idx: int):
         """Retrieve action from MC copy {i}"""
