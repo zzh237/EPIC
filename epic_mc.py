@@ -427,7 +427,8 @@ if __name__ == '__main__':
                   new_state, reward, done, _ = env.step(action)
                   rewards.append(reward)
                   meta_memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
-                  if learner == "sac":
+                  if isinstance(actor_policy, EpicSAC):
+                     # particular MC actor 
                      actor_policy.mc_actors[j].replay_buffer.push(state, action, reward, new_state, done)
                   state = new_state
                   
@@ -449,7 +450,7 @@ if __name__ == '__main__':
                             np.round(KL,decimals=3)))
         
         wandb.log(
-           {"sample": sample, "mc_sample": m, "reward": {"mean": np.mean(mc_rewards), "std": np.std(mc_rewards)}, "KL": KL}
+           {"sample": sample, "reward": {"mean": np.mean(mc_rewards), "std": np.std(mc_rewards)}, "KL": KL.cpu().numpy()}
         )
         actor_policy.update_mu_theta_for_default(meta_memories, meta_update_every, H=1*(1-gamma**max_steps)/(1-gamma))
         KL = actor_policy.KL.data.cpu().numpy()
