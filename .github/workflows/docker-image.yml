@@ -13,5 +13,5 @@ jobs:
     - name: Build and push Docker image
       uses: macbre/push-to-ghcr@master
       with:
-        image_name: ${{ github.repository }}
+        image_name: ckchow/epic
         github_token: ${{ secrets.GITHUB_TOKEN }}
