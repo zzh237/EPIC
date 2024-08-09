@@ -10,9 +10,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag ghcr.io/ckchow/epic
-    - name: Push image
-      run: docker push ghcr.io/ckchow/epic
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Build and push Docker image
+      uses: macbre/push-to-ghcr@master
+      with:
+        image_name: ${{ github.repository }}
+        github_token: ${{ secrets.GITHUB_TOKEN }}
