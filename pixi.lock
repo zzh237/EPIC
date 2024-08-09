@@ -426,7 +426,7 @@ packages:
   name: epic
   version: 0.1.0
   path: .
-  sha256: b09ebe2dae4d1e3b1eb69c0541dd8cd7d22a7ee1280fd70012308ff4400bed0f
+  sha256: a7d4a12130b18698c6317c980ef2148f7e4aec20c362c58acfd1b320f95b7872
   requires_dist:
   - gym==0.22.0
   - mlflow>=2.15.1,<3
