@@ -13,9 +13,8 @@ jobs:
       contents: read
 
     steps:
-    - uses: actions/checkout@v4
     - name: Build and push Docker image
-      uses: macbre/push-to-ghcr@master
+      uses: docker/build-push-action@v6
       with:
-        image_name: ckchow/epic
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+        push: true
+        tags: ckchow/epic:latest
