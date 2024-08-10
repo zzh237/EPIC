@@ -31,7 +31,8 @@
                 "--resdir", "results/montecarlo/testsac"               
         ],
         "env": {
-            "WANDB_MODE": "disabled"
+            "WANDB_MODE": "disabled",
+            "CC": "gcc-12"
         }
         }
     ]
