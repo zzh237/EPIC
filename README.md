@@ -38,3 +38,7 @@ Code
   * To run a different algorithm, for example, MAML, you can run "maml.py"
   * The results will be saved under the results folder. 
   * Some codes are not used for future research. 
+
+
+# micromamba prep for sweep
+`micromamba create -n epic -f ./environment.yml`

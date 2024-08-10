@@ -373,6 +373,7 @@ class GaussianVPGMC(nn.Module):
     def update_mu_theta_for_default(self, memories, N, H):
         v = {}
         f = open('output1.txt', 'a')
+
         original_stdout = sys.stdout
         sys.stdout = f
         for j in range(self.m):

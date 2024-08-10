@@ -1,18 +1,23 @@
 name: epic
 channels:
-  - pytorch
+  - pytorch-lts
   - conda-forge
+  - nvidia
 dependencies:
   - python=3.8
   - box2d-py
   - higher
-  - cudatoolkit=11.0
-  - pytorch::pytorch=1.7.1
-  - cython=0.29.36
+  - cudatoolkit=11.1
+  - pytorch=1.8.2
+  - mkl=2024.0
+  - cython<3
   - pip
+  # this project depends on gcc 12
+  # not sure how to get conda-cython to use its self-installed gcc, however
   - pip:
     - mlflow
-    - gym==0.18.0
+    - gym==0.22.0
     - wandb
+    - mujoco-py<2.2,>=2.1
 variables:
   CC: gcc-12
