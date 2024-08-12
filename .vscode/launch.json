@@ -26,9 +26,10 @@
                 "--meta_update_every", "10",
                 "--steps", "300",
                 "--mass", "5",
-                "--m", "15",
+                "--m", "2",
                 "--goal", "10.0",
-                "--resdir", "results/montecarlo/testsac"               
+                "--resdir", "results/montecarlo/testsac",
+                "--replay-capacity", "2"               
         ],
         "env": {
             "WANDB_MODE": "disabled",
