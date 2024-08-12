@@ -24,6 +24,7 @@ from envs.new_halfcheetah import HalfCheetahForwardBackward
 from functools import partial
 from envs.new_humanoid import HumanoidDirection, HumanoidForwardBackward
 import wandb
+from algos.gaussian_sac import KlRegularizationSettings
 
 
 import logging
@@ -77,6 +78,9 @@ parser.add_argument('--lam_decay', type=float, default=0.95)
 parser.add_argument("--replay-capacity", type=int, default=10_000)
 parser.add_argument("--batch-size", type=int, default=256)
 parser.add_argument("--discount", type=float, default=0.99)
+parser.add_argument("--q-kl-reg", action="store_true")
+parser.add_argument("--v-kl-reg", action="store_true")
+parser.add_argument("--policy-kl-reg", action="store_true")
 
 
 # file settings
@@ -366,7 +370,13 @@ if __name__ == '__main__':
                               replay_capacity=args.replay_capacity,
                               batch_size=args.batch_size,
                               discount=args.discount,
-                              m=m # MC runs
+                              m=m, # MC runs
+                              c1=args.c1,
+                              kl_settings=KlRegularizationSettings(
+                                 q_network=args.q_kl_reg,
+                                 v_network=args.v_kl_reg,
+                                 policy=args.policy_kl_reg
+                              )
                                   )
     
     wandb.watch(actor_policy, log_freq=5)
@@ -450,7 +460,7 @@ if __name__ == '__main__':
                             np.round(KL,decimals=3)))
         
         wandb.log(
-           {"sample": sample, "reward": {"mean": np.mean(mc_rewards), "std": np.std(mc_rewards)}, "KL": KL.cpu().numpy()}
+           {"sample": sample, "reward": {"mean": np.mean(mc_rewards), "std": np.std(mc_rewards)}}
         )
         actor_policy.update_mu_theta_for_default(meta_memories, meta_update_every, H=1*(1-gamma**max_steps)/(1-gamma))
         KL = actor_policy.KL.data.cpu().numpy()
