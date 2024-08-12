@@ -17,7 +17,7 @@ dependencies:
   - pip:
     - mlflow
     - gym==0.22.0
-    - wandb
+    - wandb==0.17.5
     - mujoco-py<2.2,>=2.1
 variables:
   CC: gcc-12
