@@ -445,7 +445,6 @@ class EpicSACActor(nn.Module):
 
         policy_outputs = self.policy_default(states, return_log_prob=True)
         # (action, mean, log_std, log_prob, expected_log_prob, std, mean_action_log_prob, pre_tanh_value)
-        # TODO make sure these gradients aren't evil
         new_actions, policy_mean, policy_log_std, log_pi, *_ = policy_outputs
 
         # update Q and V networks
