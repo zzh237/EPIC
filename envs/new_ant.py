@@ -78,9 +78,6 @@ class AntDirection(MujocoEnv, utils.EzPickle):
         self.viewer.cam.distance = self.model.stat.extent * 0.5
 
 
-
-
-
 class AntForwardBackward(MujocoEnv, utils.EzPickle):
     metadata = {
         "render_modes": [
@@ -90,16 +87,19 @@ class AntForwardBackward(MujocoEnv, utils.EzPickle):
         ],
         "render_fps": 20,
     }
-    def __init__(self,**kwargs):
+    def __init__(self, **kwargs):
         observation_space = Box(
             low=-np.inf, high=np.inf, shape=(111,), dtype=np.float64
         )
-        MujocoEnv.__init__(
-            self, "ant.xml", 5, observation_space=observation_space, **kwargs
-        )
+        # MujocoEnv.__init__(
+
+        #     self, "ant.xml", 5, observation_space=observation_space, **kwargs
+        # )
+       
         utils.EzPickle.__init__(self, **kwargs)
         theta = np.random.choice([0, np.pi])
         self.goal_direction = np.array([np.sin(theta), np.cos(theta)])
+        super().__init__(model_path="ant.xml", frame_skip=5)
         # mujoco_env.MujocoEnv.__init__(self, "ant.xml", 5)
         # utils.EzPickle.__init__(self)
 
