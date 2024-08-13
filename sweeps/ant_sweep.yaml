@@ -1,0 +1,59 @@
+program: epic_mc.py
+name: sweep_ant_v1
+method: bayes
+metric:
+  goal: maximize
+  name: reward.mean
+parameters:
+  # ---- fixed parameters
+  env:
+    value: AntForwardBackward
+  run:
+    value: 1
+  device:
+    value: cuda
+  learner:
+    value: sac
+  steps:
+    value: 1000
+  # ---- non-fixed hyperparameters
+  meta_update_every:
+    distribution: q_uniform
+    q: 10
+    min: 10
+    max: 100
+  # MC children
+  m:
+    distribution: int_uniform
+    min: 1
+    max: 30
+  c1:
+    distribution: log_uniform_values
+    min: 0.1
+    max: 1000
+  batch-size:
+    values: [32, 128, 256, 1024, 2048]
+  replay-capacity:
+    values: [1000, 10_000, 100_000, 100]
+  lr:
+    distribution: log_uniform_values
+    min: 0.00001
+    max: 0.001
+  q-kl-reg:
+    values:
+      - true
+      - false
+  v-kl-reg:
+    values: 
+      - true
+      - false
+  policy-kl-reg:
+    values: 
+      - true
+      - false
+
+command:
+ - ${env}
+ - ${interpreter}
+ - ${program}
+ - ${args_no_boolean_flags}
