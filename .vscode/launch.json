@@ -46,9 +46,8 @@
                 "--env", "AntForwardBackward",
                 "--device", "cuda",
                 "--learner", "sac",
-                "--samples", "1000",
                 "--meta_update_every", "10",
-                "--steps", "1000",
+                "--steps", "10",
                 "--resdir", "results/montecarlo/testsac",
                 "--replay-capacity", "2"               
         ],

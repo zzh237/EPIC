@@ -1,6 +1,7 @@
 import random
 import numpy as np
 from torch import from_numpy as tfn
+import torch
 
 
 class ReplayMemory:
@@ -21,9 +22,10 @@ class ReplayMemory:
         batch = random.sample(self.buffer, batch_size)
         state, action, reward, next_state, done = map(np.stack, zip(*batch))
         if as_tensors:
-            return( tfn(state).to(device), tfn(action).to(device), 
-                   tfn(reward).to(device), tfn(next_state).to(device), 
-                   tfn(done).to(device))
+            
+            return tuple(tfn(t).to(device=device, dtype=torch.float) for t in 
+                         (state, action, reward, next_state, done))
+
         else:
             return state, action, reward, next_state, done
 
