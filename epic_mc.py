@@ -1,39 +1,31 @@
-from typing import Callable, Dict
-import torch
-import sys
-import torch.nn as nn
 import argparse
-import gym
-import os
-
-# os.environ['OPENBLAS_NUM_THREADS'] = '1'
-import mujoco_py
-import random
-import numpy as np
-from gym.spaces import Box, Discrete
-from algos.gaussian_sac import EpicSAC, FlattenStochasticMlp, StochasticMlp
-import setup
-from algos.memory import Memory, ReplayMemory
-from algos.agents.gaussian_vpg_mc import GaussianVPGMC
-from algos.agents.gaussian_ppo import GaussianPPO
-
-from envs.new_cartpole import NewCartPoleEnv
-from envs.new_swimmer import new_Swimmer
-from envs.new_lunar_lander import NewLunarLander
-from envs.new_ant import AntDirection, AntForwardBackward
-from envs.new_halfcheetah import HalfCheetahForwardBackward
-from functools import partial
-from envs.new_humanoid import HumanoidDirection, HumanoidForwardBackward
-import wandb
-from algos.gaussian_sac import KlRegularizationSettings
-
-
 import logging
-import copy
+
 # from datetime import datetime
 ## this is version 2.0
-
 import os
+from functools import partial
+from typing import Callable, Dict
+
+import gym
+
+# os.environ['OPENBLAS_NUM_THREADS'] = '1'
+import numpy as np
+import torch
+import torch.nn as nn
+from gym.spaces import Discrete
+
+import wandb
+from algos.agents.gaussian_ppo import GaussianPPO
+from algos.agents.gaussian_vpg_mc import GaussianVPGMC
+from algos.gaussian_sac import EpicSAC, FlattenStochasticMlp, KlRegularizationSettings, StochasticMlp
+from algos.memory import Memory
+from envs.new_ant import AntDirection, AntForwardBackward
+from envs.new_cartpole import NewCartPoleEnv
+from envs.new_halfcheetah import HalfCheetahForwardBackward
+from envs.new_humanoid import HumanoidDirection, HumanoidForwardBackward
+from envs.new_lunar_lander import NewLunarLander
+from envs.new_swimmer import new_Swimmer
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:1024"
 
@@ -441,38 +433,15 @@ if __name__ == "__main__":
     for sample in range(samples):
         print("#### Learning environment {} sample {}".format(env_name, sample))
         ########## creating environment
-        # env = gym.make(env_name)
+
         env = envfunc(sample, env_name)
-        # env.seed(sample)
+
         ########## sample a meta learner
         actor_policy.initialize_policy_m()  # initial policy theta
-        # print("weight of layer 0", sample_policy.action_layer[0].weight)
+
         mc_rewards = np.array([])
         start_episode = 0
-        # #use single task policy to collect some trajectories
-        # memory = Memory()
-        # for j in range(m):
-        #   state = env.reset()
-        #   rewards = []
-        #   for steps in range(max_steps):
-        #       state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state, j)
-        #       if isinstance(env.action_space, Discrete):
-        #           action = action_tensor.item()
-        #       else:
-        #           action = action_tensor.cpu().data.numpy().flatten()
-        #       new_state, reward, done, _ = env.step(action)
-        #       rewards.append(reward)
-        #       memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
-        #       state = new_state
-        #       if done or steps == max_steps-1:
-        #           break
-        #   #update single task policy using the trajectory
-        #   actor_policy.update_policy_m(memory, j)
-        #   memory.clear_memory()
-        #   mc_rewards +=np.sum(rewards)
-        # meta_rew_file.write("sample: {}, mc_sample: {}, total reward: {}\n".format(
-        #               sample, m, np.round(1/m*mc_rewards, decimals=3)))
-        # use updated single task policy to collect some trajectories
+
         meta_memories = {}
 
         for j in range(m):
@@ -500,14 +469,10 @@ if __name__ == "__main__":
 
                     if done or steps == max_steps - 1:
                         epi_reward += np.sum(rewards)
-
-                        # meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
-                        #     sample, episode, np.round(np.sum(rewards), decimals=3)))
                         break
             epi_reward = epi_reward / meta_episodes
             meta_memories[j] = meta_memory
             mc_rewards = np.append(mc_rewards, epi_reward)
-            # meta_memory.clear_memory()
 
         meta_rew_file.write(
             "sample: {}, mc_sample: {}, mean reward: {}, std reward: {}, kl: {}\n".format(
