@@ -423,9 +423,14 @@ if __name__ == '__main__':
             if all(dones) or (steps == max_steps - 1):
               break
 
+            states = new_states
+
         # calculate average episode reward across MC workers
         epi_reward = sum((sum(r) for r in episode_rewards)) / meta_episodes
         mc_rewards.append(epi_reward)
+
+        for j in range(m):
+          meta_memories[j] = episode_memories[j]
 
       else:
         env = envfunc(sample, env_name)
