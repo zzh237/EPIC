@@ -16,6 +16,8 @@ parameters:
     value: sac
   steps:
     value: 1000
+  vectorize:
+    value: true
   # ---- non-fixed hyperparameters
   meta_update_every:
     distribution: q_uniform
@@ -26,15 +28,15 @@ parameters:
   m:
     distribution: int_uniform
     min: 1
-    max: 30
+    max: 10
   c1:
     distribution: log_uniform_values
     min: 0.1
     max: 1000
   batch-size:
-    values: [32, 128, 256, 1024, 2048]
+    values: [32, 128, 256, 1024]
   replay-capacity:
-    values: [1000, 10_000, 100_000, 100]
+    values: [100, 1000, 10_000, 100_000]
   lr:
     distribution: log_uniform_values
     min: 0.00001
