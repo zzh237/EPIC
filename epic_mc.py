@@ -1,14 +1,18 @@
 from typing import Callable, Dict
 import torch
+import sys
 import torch.nn as nn
 import argparse
 import gym
 import os 
 #os.environ['OPENBLAS_NUM_THREADS'] = '1'
+import mujoco_py
+import random
 import numpy as np
 from gym.spaces import Box, Discrete
 from algos.gaussian_sac import EpicSAC, FlattenStochasticMlp, StochasticMlp
-from algos.memory import Memory
+import setup
+from algos.memory import Memory, ReplayMemory
 from algos.agents.gaussian_vpg_mc import GaussianVPGMC
 from algos.agents.gaussian_ppo import GaussianPPO
 
@@ -21,13 +25,14 @@ from functools import partial
 from envs.new_humanoid import HumanoidDirection, HumanoidForwardBackward
 import wandb
 from algos.gaussian_sac import KlRegularizationSettings
-from gym.vector.async_vector_env import AsyncVectorEnv
-from itertools import repeat
 
 
 import logging
+import copy
+#from datetime import datetime
 ## this is version 2.0
 
+import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:1024"
 
 #now = datetime.now()
@@ -76,8 +81,6 @@ parser.add_argument("--discount", type=float, default=0.99)
 parser.add_argument("--q-kl-reg", action="store_true")
 parser.add_argument("--v-kl-reg", action="store_true")
 parser.add_argument("--policy-kl-reg", action="store_true")
-
-parser.add_argument("--vectorize", action="store_true")
 
 
 # file settings
@@ -325,6 +328,7 @@ if __name__ == '__main__':
         os.makedirs(resdir)
     meta_rew_file = open(resdir + "EPIC_" + filename + ".txt", "w")
 
+    # env = gym.make(env_name)
     envfunc = envs[env_name]
     env: gym.Env = envfunc(1,env_name)
     m = args.m
@@ -379,57 +383,42 @@ if __name__ == '__main__':
         
     KL = 0
     for sample in range(samples):
-      print("#### Learning environment {} sample {}".format(env_name, sample))
-        ########## creating environment    
-
+        print("#### Learning environment {} sample {}".format(env_name, sample))
+        ########## creating environment
+        # env = gym.make(env_name)
+        env = envfunc(sample,env_name)
+        # env.seed(sample)
         ########## sample a meta learner
-      actor_policy.initialize_policy_m() # initial policy theta
-      # print("weight of layer 0", sample_policy.action_layer[0].weight) 
-        
-      start_episode = 0
-      meta_memories = {}
-
-      if args.vectorize:
-        vector_env = AsyncVectorEnv(
-          env_fns=list(repeat(lambda: envfunc(sample, env_name), m)),
-          context="spawn"
-        )
-        mc_rewards = []
-        for episode in range(start_episode, meta_episodes):
-          states = vector_env.reset()  # num_envs x state_dim
-          episode_memories = [Memory() for _ in range(m)]
-          episode_rewards = [[] for _ in range(m)]
-          episode_dones = [False for _ in range(m)]
-          for steps in range(max_steps):
-            if render:
-              vector_env.render()
-            state_action_logprobs = actor_policy.act_policy_m_batch(states)
-            state_tensor, action_tensor, log_prob_tensor = tuple(torch.cat(res) if res[0] is not None else None 
-                                                             for res in zip(*state_action_logprobs))
-                                                             
-            new_states, rewards, dones, _ = vector_env.step(action_tensor.detach().cpu())
-            
-            # reward / memory updates
-            for i, (s, a, r, n, done, done_bit) in enumerate(
-              zip(states, action_tensor.detach().cpu().numpy(), rewards, new_states, dones, episode_dones)
-            ):
-              if (not done) or (done and not done_bit):
-                episode_rewards[i].append(r)
-                if isinstance(actor_policy, EpicSAC):
-                  actor_policy.mc_actors[i].replay_buffer.push(s, a, r, n, done)
-                if done:
-                  episode_dones[i] = True
-
-            if all(dones) or (steps == max_steps - 1):
-              break
-
-        # calculate average episode reward across MC workers
-        epi_reward = sum((sum(r) for r in episode_rewards)) / meta_episodes
-        mc_rewards.append(epi_reward)
-
-      else:
-        env = envfunc(sample, env_name)
+        actor_policy.initialize_policy_m() # initial policy theta
+        # print("weight of layer 0", sample_policy.action_layer[0].weight) 
         mc_rewards = np.array([])
+        start_episode = 0
+        # #use single task policy to collect some trajectories
+        # memory = Memory() 
+        # for j in range(m):
+        #   state = env.reset()
+        #   rewards = []
+        #   for steps in range(max_steps):
+        #       state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state, j)
+        #       if isinstance(env.action_space, Discrete):
+        #           action = action_tensor.item()
+        #       else:
+        #           action = action_tensor.cpu().data.numpy().flatten()
+        #       new_state, reward, done, _ = env.step(action)
+        #       rewards.append(reward)
+        #       memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
+        #       state = new_state
+        #       if done or steps == max_steps-1:
+        #           break
+        #   #update single task policy using the trajectory
+        #   actor_policy.update_policy_m(memory, j)
+        #   memory.clear_memory()
+        #   mc_rewards +=np.sum(rewards)
+        # meta_rew_file.write("sample: {}, mc_sample: {}, total reward: {}\n".format(
+        #               sample, m, np.round(1/m*mc_rewards, decimals=3)))
+        #use updated single task policy to collect some trajectories
+        meta_memories = {}
+        
         for j in range(m):
             meta_memory = Memory()
             epi_reward = 0
@@ -449,33 +438,41 @@ if __name__ == '__main__':
                   rewards.append(reward)
                   meta_memory.add(state_tensor, action_tensor, log_prob_tensor, reward, done)
                   if isinstance(actor_policy, EpicSAC):
-                    # particular MC actor 
-                    actor_policy.mc_actors[j].replay_buffer.push(state, action, reward, new_state, done)
+                     # particular MC actor 
+                     actor_policy.mc_actors[j].replay_buffer.push(state, action, reward, new_state, done)
                   state = new_state
+                  
 
                   if done or steps == max_steps - 1:
-                    epi_reward +=np.sum(rewards)
-                    break
-              epi_reward = epi_reward/meta_episodes    
-              meta_memories[j] = meta_memory
-              mc_rewards = np.append(mc_rewards, epi_reward)
-            
-      meta_rew_file.write("sample: {}, mean reward: {}, std reward: {}, kl: {}\n".format(
-                          sample, np.round(np.mean(mc_rewards), decimals=3), \
-                            np.round(np.std(mc_rewards), decimals=3), \
-                              np.round(KL,decimals=3)))
-          
-      wandb.log(
-            {"sample": sample, "reward": {"mean": np.mean(mc_rewards), "std": np.std(mc_rewards)}}
-          )
-      
-      actor_policy.update_mu_theta_for_default(meta_memories, meta_update_every, H=1*(1-gamma**max_steps)/(1-gamma))
-      KL = actor_policy.KL.data.cpu().numpy()
+                      epi_reward +=np.sum(rewards)
+                      
+                      # meta_rew_file.write("sample: {}, episode: {}, total reward: {}\n".format(
+                      #     sample, episode, np.round(np.sum(rewards), decimals=3)))
+                      break
+            epi_reward = epi_reward/meta_episodes    
+            meta_memories[j] = meta_memory
+            mc_rewards = np.append(mc_rewards, epi_reward) 
+            # meta_memory.clear_memory()
+
+        meta_rew_file.write("sample: {}, mc_sample: {}, mean reward: {}, std reward: {}, kl: {}\n".format(
+                        sample, m, np.round(np.mean(mc_rewards), decimals=3), \
+                          np.round(np.std(mc_rewards), decimals=3), \
+                            np.round(KL,decimals=3)))
+        
+        wandb.log(
+           {"sample": sample, "reward": {"mean": np.mean(mc_rewards), "std": np.std(mc_rewards)}}
+        )
+        actor_policy.update_mu_theta_for_default(meta_memories, meta_update_every, H=1*(1-gamma**max_steps)/(1-gamma))
+        KL = actor_policy.KL.data.cpu().numpy()
         
 
-      if (sample+1) % meta_update_every == 0:
-          actor_policy.update_default_and_prior_policy()
+        if (sample+1) % meta_update_every == 0:
+            actor_policy.update_default_and_prior_policy()
+            
 
+        env.close()
+
+    # rew_file.close()
     meta_rew_file.close()
 
             

@@ -47,11 +47,9 @@
                 "--device", "cuda",
                 "--learner", "sac",
                 "--meta_update_every", "10",
-                "--m", "2",
                 "--steps", "10",
                 "--resdir", "results/montecarlo/testsac",
-                "--replay-capacity", "2",
-                "--vectorize"            
+                "--replay-capacity", "2"               
         ],
         "env": {
             "WANDB_MODE": "disabled",

@@ -217,8 +217,7 @@ class TanhGaussianPolicy(nn.Module):
 
     def get_action(self, obs, deterministic=False) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
         # state, detached action, action logprob
-        if not isinstance(obs, torch.Tensor):
-            obs = torch.from_numpy(obs).float().to(self.device)
+        obs = torch.from_numpy(obs).float().to(self.device)
         state, action, log_prob = self.get_actions(obs, deterministic=deterministic)
         return state, action, log_prob
 
@@ -604,8 +603,7 @@ class EpicSAC(nn.Module):
         self.new_actor = self.default_actor.copy()
         # instantiate M copies of the SAC actor for MC updates
         self.mc_actors: nn.ModuleList = nn.ModuleList(self.default_actor.copy() for _ in range(m))
-        self.device = torch.device(device)
-        self.to(device=self.device)
+        self.to(device=torch.device(device))
 
     def initialize_policy_m(self):
         """Initialize the MC actors by loading the state from the default actor"""
@@ -616,13 +614,6 @@ class EpicSAC(nn.Module):
     def act_policy_m(self, state, m_idx: int):
         """Retrieve action from MC copy {i}"""
         return self.mc_actors[m_idx].act(state)
-    
-    def act_policy_m_batch(self, state_batch):
-        """Given a state of dim m_actors x state_dim, map the states across actors"""
-        state_batch = torch.from_numpy(state_batch).to(dtype=torch.float, device=self.device)
-        states = torch.tensor_split(state_batch, len(self.mc_actors), )
-        return [actor.act(state) for actor, state in zip(self.mc_actors, states)]
-
 
     def act(self, state):
         return self.default_actor.act(state, deterministic=False)
