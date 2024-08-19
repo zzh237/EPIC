@@ -4,6 +4,10 @@ import logging
 # from datetime import datetime
 ## this is version 2.0
 import os
+
+# this needs to be set before any import of mujoco
+os.environ["CC"] = "x86_64-conda-linux-gnu-gcc"
+
 from functools import partial
 from typing import Callable, Dict
 
@@ -26,8 +30,13 @@ from envs.new_halfcheetah import HalfCheetahForwardBackward
 from envs.new_humanoid import HumanoidDirection, HumanoidForwardBackward
 from envs.new_lunar_lander import NewLunarLander
 from envs.new_swimmer import new_Swimmer
+from algos.agents.sac_basic import VanillaSAC
+import rlkit.torch.pytorch_util
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:1024"
+
+
+# use the conda-provided gcc12 to build cython stubs
 
 # now = datetime.now()
 # current_time = now.strftime("%m-%d %H:%M:%S")
@@ -85,12 +94,16 @@ parser.add_argument("--q-kl-reg", action="store_true")
 parser.add_argument("--v-kl-reg", action="store_true")
 parser.add_argument("--policy-kl-reg", action="store_true")
 
+## learner - vsac
+parser.add_argument("--use-automatic-entropy-tuning", action="store_true")
 
 # file settings
 parser.add_argument("--logdir", type=str, default="logs/")
 parser.add_argument("--resdir", type=str, default="results/")
 parser.add_argument("--moddir", type=str, default="models/")
 parser.add_argument("--loadfile", type=str, default="")
+
+parser.add_argument("--render", action="store_true")
 
 args = parser.parse_args()
 
@@ -258,7 +271,7 @@ if __name__ == "__main__":
     samples = args.samples
     max_episodes = args.episodes  # max training episodes
     max_steps = args.steps  # max timesteps in one episode
-    meta_episodes = args.meta_episodes
+    meta_episodes = args.meta_episodes # episodes per environment
     learner = args.learner
     lr = args.lr
 
@@ -275,19 +288,20 @@ if __name__ == "__main__":
     lam_decay = args.lam_decay
     ############ For All #########################
     gamma = 0.99  # discount factor
-    render = False
+    render = args.render
     save_every = 100
     if args.hiddens:
         hidden_sizes = tuple(args.hiddens)  # need to tune
     else:
         hidden_sizes = (256, 256)
     activation = nn.Tanh  # need to tune
+    rlkit.torch.pytorch_util.device = args.device
 
     use_model = False
 
     torch.cuda.empty_cache()
 
-    wandb.init(project="epic")
+    wandb.init(project="epic-test")
 
     wandb.config.update(
         {
@@ -392,8 +406,22 @@ if __name__ == "__main__":
             tau=tau,
             m=m,
         )
-
     elif learner.lower() == "sac":
+        print("----initializing meta policy------")
+        if isinstance(env, Discrete):
+            raise ValueError("SAC does not support discrete action spaces")
+    
+        actor_policy = VanillaSAC(
+            env=env,
+            device=device,
+            lr=lr,
+            batch_size=args.batch_size,
+            use_automatic_entropy_tuning=args.use_automatic_entropy_tuning,
+            capacity=args.replay_capacity
+        )
+        
+
+    elif learner.lower() == "epic-sac":
         print("-----initialize meta policy-------")
         if isinstance(env, Discrete):
             raise ValueError("SAC does not support discrete action spaces")
@@ -424,14 +452,15 @@ if __name__ == "__main__":
             c1=args.c1,
             kl_settings=KlRegularizationSettings(
                 q_network=args.q_kl_reg, v_network=args.v_kl_reg, policy=args.policy_kl_reg
-            ),
+            )
         )
+
 
     wandb.watch(actor_policy, log_freq=5)
 
     KL = 0
     for sample in range(samples):
-        print("#### Learning environment {} sample {}".format(env_name, sample))
+        print("#### Learning environment {} sample {} ... workers ".format(env_name, sample), end="")
         ########## creating environment
 
         env = envfunc(sample, env_name)
@@ -445,13 +474,14 @@ if __name__ == "__main__":
         meta_memories = {}
 
         for j in range(m):
+            print(f"{j} ", end="", flush=True)
             meta_memory = Memory()
             epi_reward = 0
             for episode in range(start_episode, meta_episodes):  # rollout multiple episodes on this env
                 state = env.reset()
                 rewards = []
-                for steps in range(max_steps):
-                    if render:
+                for step in range(max_steps):
+                    if render and sample % 20 == 0:
                         env.render()
                     state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state, j)
 
@@ -465,9 +495,12 @@ if __name__ == "__main__":
                     if isinstance(actor_policy, EpicSAC):
                         # particular MC actor
                         actor_policy.mc_actors[j].replay_buffer.push(state, action, reward, new_state, done)
+                    elif isinstance(actor_policy, VanillaSAC):
+                        actor_policy.replay_buffer.push(state, action, reward, new_state, done)
+                        actor_policy.update_mu_theta_for_default(meta_memories, None, None)
                     state = new_state
 
-                    if done or steps == max_steps - 1:
+                    if done or step == max_steps - 1:
                         epi_reward += np.sum(rewards)
                         break
             epi_reward = epi_reward / meta_episodes
@@ -484,14 +517,17 @@ if __name__ == "__main__":
             )
         )
 
-        wandb.log({"sample": sample, "reward": {"mean": np.mean(mc_rewards), "std": np.std(mc_rewards)}})
+        print(f"env mean reward {np.mean(mc_rewards):,.3f}")
+        
+        
         actor_policy.update_mu_theta_for_default(
             meta_memories, meta_update_every, H=1 * (1 - gamma**max_steps) / (1 - gamma)
         )
-        KL = actor_policy.KL.data.cpu().numpy()
 
         if (sample + 1) % meta_update_every == 0:
             actor_policy.update_default_and_prior_policy()
+
+        wandb.log({"env_number": sample, "reward": {"mean": np.mean(mc_rewards), "std": np.std(mc_rewards)}})
 
         env.close()
 

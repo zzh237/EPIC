@@ -22,7 +22,7 @@
                 "--run", "1",
                 "--env", "LunarLander-v2-cont",
                 "--device", "cuda",
-                "--learner", "sac",
+                "--learner", "epic-sac",
                 "--meta_update_every", "10",
                 "--steps", "300",
                 "--mass", "5",
@@ -45,7 +45,7 @@
                 "--run", "1",
                 "--env", "AntForwardBackward",
                 "--device", "cuda",
-                "--learner", "sac",
+                "--learner", "epic-sac",
                 "--meta_update_every", "10",
                 "--steps", "10",
                 "--resdir", "results/montecarlo/testsac",
@@ -55,6 +55,26 @@
             "WANDB_MODE": "disabled",
             "CC": "gcc-12"
         }
+        },
+        {
+            "name": "Python vanilla SAC",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/epic_mc.py",
+            "args": [
+                "--run", "1",
+                "--env", "LunarLander-v2-cont",
+                "--device", "cuda",
+                "--learner", "sac",
+                "--meta_update_every", "10",
+                "--steps", "10",
+                "--resdir", "results/montecarlo/testsac",
+                "--replay-capacity", "2"               
+        ],
+        "env": {
+            "WANDB_MODE": "disabled"
+        },
+        "justMyCode": false
         }
     ]
 }

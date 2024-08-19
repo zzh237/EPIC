@@ -13,7 +13,7 @@ parameters:
   device:
     value: cuda
   learner:
-    value: sac
+    value: epic-sac
   steps:
     value: 300
   mass:

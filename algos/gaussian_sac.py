@@ -217,13 +217,14 @@ class TanhGaussianPolicy(nn.Module):
 
     def get_action(self, obs, deterministic=False) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
         # state, detached action, action logprob
-        obs = torch.from_numpy(obs).float().to(self.device)
+        if isinstance(obs, np.ndarray):
+            obs = torch.from_numpy(obs).float().to(self.device)
         state, action, log_prob = self.get_actions(obs, deterministic=deterministic)
         return state, action, log_prob
 
     @torch.no_grad()
     def get_actions(self, obs: torch.Tensor, deterministic=False):
-        action, _, _, log_prob, _, _, _, _ = self.forward(obs, deterministic=deterministic, return_log_prob=True)
+        action, _, _, log_prob, _, _, _, _ = self.forward(obs, deterministic=deterministic, reparameterize=True, return_log_prob=True)
         return obs, action.detach(), log_prob
 
     def forward(
@@ -393,7 +394,7 @@ class EpicSACActor(nn.Module):
         policy_pre_activation_weight: float,
         replay_capacity: int,
         device: str,
-        kl_settings: KlRegularizationSettings = KlRegularizationSettings(q_network=True, v_network=True, policy=True),
+        kl_settings: KlRegularizationSettings,
         optimizer_class: type[Optimizer] = Adam,
     ):
         super().__init__()
@@ -451,7 +452,8 @@ class EpicSACActor(nn.Module):
         q_preds = [q_net(states, actions) for q_net in self.q_networks]
         v_pred = self.v_network_default(states)
 
-        # I think this is stopped here because target_v_values is 
+        # I think this is stopped here because target_v_values is used to calculate the loss for the q functions
+        # and doesn't need to pass gradients to the v network
         with torch.no_grad():
             target_v_values = self.target_v_network(succ_states)
 
@@ -483,7 +485,7 @@ class EpicSACActor(nn.Module):
         # TODO why is this target detached, I think it's an optimization
         v_loss = self.v_criterion(v_pred, v_target.detach())
 
-        # m_metrics["v_loss"].append(v_loss.cpu().detach())
+        metrics["v_loss"] = v_loss.cpu().detach()
 
         # kl-divergence for v_function, put default on left and prior on right
         # TODO sweep on the V regularization
@@ -524,6 +526,9 @@ class EpicSACActor(nn.Module):
         self.optimizers["policy"].step()
 
         return metrics
+    
+    def forward(self, obs):
+        return self.act(obs)
     
     def copy(self):
         return copy.deepcopy(self)
@@ -626,10 +631,10 @@ class EpicSAC(nn.Module):
 
         actor: EpicSACActor
         for m_idx, actor in enumerate(self.mc_actors):
-            # load actors with default policy's params
+            # load MC actors with default policy's params
             actor_parameters_before = copy.deepcopy(actor.state_dict())
-            update_dict = actor.update(self.prior_actor, N, H)
-            for k, v in update_dict.items():
+            update_metrics = actor.update(self.prior_actor, N, H)
+            for k, v in update_metrics.items():
                 m_metrics[k].append(v)
 
             # accumulate the parameter step, subtract out the previous value
@@ -642,14 +647,19 @@ class EpicSAC(nn.Module):
         for name, param in self.new_actor.named_parameters():
             param.data.copy_(param.data + self.c1*v[name]/self.m)
 
-        wandb.log({name: wandb.Histogram(values) for name, values in m_metrics.items()})
+        # wandb.log({name: wandb.Histogram(values) for name, values in m_metrics.items()}, commit=False)
+        out_metrics = {}
+        for name, values in m_metrics.items():
+            out_metrics.update({f"{name}.mean": np.mean(values), f"{name}.std": np.std(values)})
+        wandb.log(out_metrics, commit=False)
+
 
     def update_default_and_prior_policy(self):
         self.default_actor.load_from(self.new_actor)
 
         # update the prior with decay
         # TODO not sure if this will mess up stepping
-        wandb.log({"lambda": self.lam})
+        wandb.log({"lambda": self.lam}, commit=False)
 
         for prior_param, new_default_param in zip(self.prior_actor.parameters(), 
                                                   self.new_actor.parameters()):

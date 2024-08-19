@@ -1,0 +1,44 @@
+program: epic_mc.py
+name: lunarlander_vsac_v1
+method: bayes
+metric:
+  goal: maximize
+  name: reward.mean
+parameters:
+  # ---- fixed parameters
+  env:
+    value: LunarLander-v2-cont
+  run:
+    value: 1
+  device:
+    value: cuda
+  learner:
+    value: sac
+  steps:
+    value: 300
+  mass:
+    value: -1
+  m:
+    value: 1
+  meta-episodes:
+    value: 1
+  # ---- non-fixed hyperparameters
+  batch-size:
+    values: [32, 64, 128, 256, 512, 1024]
+  replay-capacity:
+    values: [1_000, 10_000, 100_000]
+  lr:
+    distribution: log_uniform_values
+    min: 0.00001
+    max: 0.001
+  use-automatic-entropy-tuning:
+    values:
+      - true
+      - false
+    
+
+command:
+ - ${env}
+ - ${interpreter}
+ - ${program}
+ - ${args_no_boolean_flags}
