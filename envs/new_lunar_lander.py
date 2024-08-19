@@ -319,13 +319,13 @@ class NewLunarLander(gym.Env, EzPickle):
             - 100*np.sqrt(state[2]*state[2] + state[3]*state[3]) \
             - 100*abs(state[4]) + 10*state[6] + 10*state[7]  # And ten points for legs contact, the idea is if you
                                                              # lose contact again after landing, you get negative reward
-        # if self.prev_shaping is not None:
-        #     reward = shaping - self.prev_shaping
-        # self.prev_shaping = shaping
+        if self.prev_shaping is not None:
+            reward = shaping - self.prev_shaping
+        self.prev_shaping = shaping
 
-        # reward -= m_power*0.30  # less fuel spent is better, about -30 for heuristic landing
-        # reward -= s_power*0.03
-        #
+        reward -= m_power*0.30  # less fuel spent is better, about -30 for heuristic landing
+        reward -= s_power*0.03
+        
 
         done = False
         if  abs(state[0]) >= 1.0:
