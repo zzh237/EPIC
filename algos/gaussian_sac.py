@@ -7,9 +7,9 @@ from __future__ import annotations
 from collections import defaultdict
 import copy
 import math
-from torch.optim import Optimizer
-from typing import List, Sequence, TypedDict
-from torch.optim import Adam
+from torch.optim.optimizer import Optimizer
+from typing import List, Sequence, TypedDict, Generic, TypeVar, Optional, Iterable, cast
+from torch.optim.adam import Adam
 import wandb
 import itertools
 
@@ -358,7 +358,6 @@ def track_config(init):
 
 class KlRegularizationSettings(TypedDict):
     q_network: bool
-    v_network: bool
     policy: bool
 
 
@@ -369,6 +368,12 @@ class UpdateMetrics(TypedDict, total=False):
     v_epic_reg: float
     policy_loss: float
     policy_epic_reg: float
+
+def soft_update_from_to(source, target, tau):
+    for target_param, param in zip(target.parameters(), source.parameters()):
+        target_param.data.copy_(
+            target_param.data * (1.0 - tau) + param.data * tau
+        )
 
 
 class EpicSACActor(nn.Module):
@@ -396,6 +401,8 @@ class EpicSACActor(nn.Module):
         device: str,
         kl_settings: KlRegularizationSettings,
         optimizer_class: type[Optimizer] = Adam,
+        alpha: float = 1.,
+        target_update_period: int = 1,
     ):
         super().__init__()
         self.replay_buffer = ReplayMemory(capacity=replay_capacity)
@@ -404,6 +411,8 @@ class EpicSACActor(nn.Module):
         self.discount = discount
         self.batch_size = batch_size
         self.kl_settings = kl_settings
+        self.alpha = alpha
+        self.target_update_period = target_update_period
 
         # policy
         self.policy_default = TanhGaussianPolicy(
@@ -418,25 +427,35 @@ class EpicSACActor(nn.Module):
         for network in self.q_networks:
             self.optimizers["q_networks"].append(optimizer_class(network.parameters(), lr=q_network_lr))
 
-        self.v_network_default = v_network
-        self.target_v_network = self.v_network_default.copy()
-        self.v_criterion = nn.MSELoss()
+        self.qf_criterion = nn.MSELoss()
+
+        self.target_q_networks = nn.ModuleList()
+        for n in self.q_networks:
+            self.target_q_networks.append(n.copy())
+
+
+        self.total_steps = 0
+
+        # self.v_network_default = v_network
+        # self.target_v_network = self.v_network_default.copy()
+        # self.v_criterion = nn.MSELoss()
         self.soft_target_tau = soft_target_tau
-        self.optimizers["v_network"] = optimizer_class(self.v_network_default.parameters(), lr=v_network_lr)
+        # self.optimizers["v_network"] = optimizer_class(self.v_network_default.parameters(), lr=v_network_lr)
 
         self.policy_mean_reg_weight = policy_mean_reg_weight
         self.policy_std_reg_weight = policy_std_reg_weight
         self.policy_pre_activation_weight = policy_pre_activation_weight
 
 
-    def min_q(self, obs, actions):
-        values, _ = torch.min(torch.cat([q(obs, actions) for q in self.q_networks], dim=1), dim=1, keepdim=True)
+    def min_q(self, obs, actions, networks):
+        values, _ = torch.min(torch.cat([q(obs, actions) for q in networks], dim=1), dim=1, keepdim=True)
         return values
 
     def update(self, prior: "EpicSACActor", N: int, H: int) -> UpdateMetrics:
         """
         Perform 1 SAC update on this actor.
         """
+        ## Unpack 
         metrics = UpdateMetrics()
 
         states, actions, rewards, succ_states, dones = self.replay_buffer.sample(
@@ -444,79 +463,14 @@ class EpicSACActor(nn.Module):
         )
         dones = dones.to(dtype=torch.float32)
 
+        ## policy loss / update
         policy_outputs = self.policy_default(states, return_log_prob=True)
         # (action, mean, log_std, log_prob, expected_log_prob, std, mean_action_log_prob, pre_tanh_value)
         new_actions, policy_mean, policy_log_std, log_pi, *_ = policy_outputs
+        q_new_actions = self.min_q(states, new_actions, self.q_networks)
+        policy_loss = (self.alpha * log_pi - q_new_actions).mean()
 
-        # update Q and V networks
-        q_preds = [q_net(states, actions) for q_net in self.q_networks]
-        v_pred = self.v_network_default(states)
-
-        # I think this is stopped here because target_v_values is used to calculate the loss for the q functions
-        # and doesn't need to pass gradients to the v network
-        with torch.no_grad():
-            target_v_values = self.target_v_network(succ_states)
-
-        # Q update
-        for o in self.optimizers["q_networks"]:
-            o.zero_grad()
-
-        q_target = rewards + (1.0 - dones) * self.discount * target_v_values
-        q_loss = sum([torch.mean((q_pred - q_target) ** 2.0) for q_pred in q_preds])
-        metrics["q_loss"] = q_loss.cpu().detach()
-        # TODO sweep on KL reg on q network
-        if self.kl_settings["q_network"]:
-            q_kl_sum = 0
-            for q_default, q_prior in zip(self.q_networks, prior.q_networks):
-                q_kl_sum += kl_regularizer(model_kl_div(q_default, q_prior), N, H)
-            q_loss += q_kl_sum
-            metrics["q_epic_reg"] = q_kl_sum.cpu().detach()
-
-        q_loss.backward()
-        for o in self.optimizers["q_networks"]:
-            o.step()
-
-        # minq
-        min_q_new_actions = self.min_q(states, new_actions)
-
-        # v update
-        # I think this one is KL - regularized?
-        v_target = min_q_new_actions - log_pi
-        # TODO why is this target detached, I think it's an optimization
-        v_loss = self.v_criterion(v_pred, v_target.detach())
-
-        metrics["v_loss"] = v_loss.cpu().detach()
-
-        # kl-divergence for v_function, put default on left and prior on right
-        # TODO sweep on the V regularization
-        if self.kl_settings["v_network"]:
-            v_kl_regularizer = kl_regularizer(model_kl_div(self.v_network_default, prior.v_network_default), N, H)
-            v_loss += v_kl_regularizer
-            # m_metrics["v_epic_reg"].append(v_kl_regularizer.cpu().detach())
-            metrics["v_epic_reg"] = v_kl_regularizer.cpu().detach()
-
-        self.optimizers["v_network"].zero_grad()
-        v_loss.backward()
-        self.optimizers["v_network"].step()
-
-        # update the target (polyak)
-        # TODO do something with the target
-        for target_p, p in zip(self.target_v_network.parameters(), self.v_network_default.parameters()):
-            target_p.data.copy_(target_p.data * (1.0 - self.soft_target_tau) + p.data * self.soft_target_tau)
-
-        # policy update
-        log_policy_target = min_q_new_actions
-        policy_loss = (log_pi - log_policy_target).mean()
-        # TODO determine if this is standard SAC stuff or another PEARL trick
-        mean_reg_loss = self.policy_mean_reg_weight * (policy_mean**2).mean()
-        std_reg_loss = self.policy_std_reg_weight * (policy_log_std**2).mean()
-        pre_tanh_value = policy_outputs[-1]
-        pre_activation_reg_loss = self.policy_pre_activation_weight * (pre_tanh_value**2).sum().mean()
-        policy_reg_loss = mean_reg_loss + std_reg_loss + pre_activation_reg_loss
-        policy_loss = policy_loss + policy_reg_loss
-        metrics["policy_loss"] = policy_loss.cpu().detach()
         if self.kl_settings["policy"]:
-            # TODO nograd on prior for optimization?
             policy_epic_reg = kl_regularizer(model_kl_div(self.policy_default, prior.policy_default), N, H)
             metrics["policy_epic_reg"] = policy_epic_reg.cpu().detach()
             policy_loss += policy_epic_reg
@@ -524,6 +478,35 @@ class EpicSACActor(nn.Module):
         self.optimizers["policy"].zero_grad()
         policy_loss.backward()
         self.optimizers["policy"].step()
+
+
+        ## Q loss
+        q_preds = [q(states, actions) for q in self.q_networks]
+        next_policy_outputs = self.policy_default(succ_states, return_log_prob=True)
+        new_next_actions, new_policy_mean, new_policy_log_std, new_log_pi, *_ = next_policy_outputs
+        target_q_values = self.min_q(succ_states, new_next_actions, self.target_q_networks) - self.alpha * new_log_pi
+        q_target = rewards + (1. - dones) * self.discount * target_q_values
+        q_loss = sum([self.qf_criterion(q_pred, q_target.detach()) for q_pred in q_preds])
+        metrics["q_loss"] = q_loss.cpu().detach()
+
+        if self.kl_settings["q_network"]:
+            q_kl_sum = 0
+            for q_default, q_prior in zip(self.q_networks, prior.q_networks):
+                q_kl_sum += kl_regularizer(model_kl_div(q_default, q_prior), N, H)
+            q_loss += q_kl_sum
+            metrics["q_epic_reg"] = q_kl_sum.cpu().detach()
+        
+        q_loss.backward()
+        for o in self.optimizers["q_networks"]:
+            o.step()
+
+
+        self.total_steps += 1
+
+        if self.total_steps % self.target_update_period == 0:
+            for q, q_target in zip(self.q_networks, self.target_q_networks):
+                soft_update_from_to(q, q_target, self.soft_target_tau)
+                
 
         return metrics
     
@@ -571,7 +554,7 @@ class EpicSAC(nn.Module):
         policy_std_reg_weight: float = 1e-3,
         policy_pre_activation_weight: float = 0.0,
         optimizer_class: type[Optimizer] = Adam,
-        kl_settings: KlRegularizationSettings = KlRegularizationSettings(q_network=True, v_network=True, policy=True),
+        kl_settings: KlRegularizationSettings = KlRegularizationSettings(q_network=True, policy=True),
     ):
         super().__init__()
 
@@ -607,7 +590,7 @@ class EpicSAC(nn.Module):
         self.default_actor = self.prior_actor.copy()
         self.new_actor = self.default_actor.copy()
         # instantiate M copies of the SAC actor for MC updates
-        self.mc_actors: nn.ModuleList = nn.ModuleList(self.default_actor.copy() for _ in range(m))
+        self.mc_actors = nn.ModuleList(self.default_actor.copy() for _ in range(m))
         self.to(device=torch.device(device))
 
     def initialize_policy_m(self):
