@@ -1,23 +1,41 @@
 name: epic
 channels:
-  - pytorch-lts
+  - pytorch
   - conda-forge
   - nvidia
+  - menpo
+  - anaconda
 dependencies:
   - python=3.8
   - box2d-py
   - higher
-  - cudatoolkit=11.1
-  - pytorch=1.8.2
-  - mkl=2024.0
+  # - cudatoolkit=11.1
+  # - pytorch=1.8.2
+  - pytorch
+  - pytorch-cuda=12.4
+  # - mkl=2024.0
   - cython<3
-  - pip
+  - pip<24.1
   # this project depends on gcc 12
-  # not sure how to get conda-cython to use its self-installed gcc, however
+  - gcc_impl_linux-64<13
+  - glew
+  - mesalib
+  - mesa-libgl-cos6-x86_64
+  - glfw3
+  - pyglet
+  - xorg-libx11
+  - osmesa
+  - pygame
+  - setuptools=66
+  - wheel=0.38.4
+  - tensorboard
+  - torchvision
   - pip:
     - mlflow
-    - gym==0.22.0
+    - gym==0.21.0
     - wandb==0.17.5
     - mujoco-py<2.2,>=2.1
+    - git+https://github.com/rail-berkeley/rlkit
+    - gtimer
 variables:
   CC: gcc-12
