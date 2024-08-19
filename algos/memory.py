@@ -19,7 +19,7 @@ class ReplayMemory:
     def sample(self, batch_size, as_tensors=False, device="cpu"):
         if batch_size > self.capacity:
             batch_size = self.capacity
-        batch = random.sample(self.buffer, batch_size)
+        batch = random.sample(self.buffer, min(batch_size, self.size()))
         state, action, reward, next_state, done = map(np.stack, zip(*batch))
         if as_tensors:
             
@@ -28,6 +28,10 @@ class ReplayMemory:
 
         else:
             return state, action, reward, next_state, done
+        
+    def clear(self):
+        self.buffer = []
+        self.position = 0
 
     def size(self):
         return len(self.buffer)
