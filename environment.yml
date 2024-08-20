@@ -30,6 +30,7 @@ dependencies:
   - wheel=0.38.4
   - tensorboard
   - torchvision
+  - tqdm
   - pip:
     - mlflow
     - gym==0.21.0

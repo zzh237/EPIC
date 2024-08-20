@@ -13,14 +13,13 @@ from torch.optim import Adam
 import wandb
 import itertools
 
-from functools import wraps
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.distributions import Distribution, Normal
-import inspect
+from algos.logging import track_config
 from algos.memory import Memory, ReplayMemory
 
 LOG_SIG_MAX = 2
@@ -335,25 +334,6 @@ class EpicOptimizers(TypedDict):
     policy: Optimizer
     q_networks: List[Optimizer]
     v_network: Optimizer
-
-
-def get_default_args(func):
-    signature = inspect.signature(func)
-    return {k: v.default for k, v in signature.parameters.items() if v.default is not inspect.Parameter.empty}
-
-
-def track_config(init):
-    """Log all arguments to init as config objects in wandb."""
-
-    @wraps(init)
-    def wrapper(self, **kwargs):
-        default_args = get_default_args(init)
-        params = kwargs
-        params.update(default_args)
-        wandb.config.update(params)
-        return init(self, **kwargs)
-
-    return wrapper
 
 
 class KlRegularizationSettings(TypedDict):

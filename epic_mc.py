@@ -247,6 +247,13 @@ def make_humanoidforwardbackward(env):
     return env
 
 
+def make_pendulum(seed, _):
+    gravity = np.random.uniform(1.0, 20.0)
+
+    env = gym.make("Pendulum-v1", g=gravity)
+    env.seed(seed)
+    return env
+
 # def make_walker(env='walker_2d'):
 #     assert env=='walker_2d'
 #     env = new_Walker2dEnv()
@@ -262,6 +269,7 @@ envs: Dict[str, Callable[..., gym.Env]] = {
     "HumanoidDirection": make_humanoiddirection,
     "HumanoidForwardBackward": make_humanoidforwardbackward,
     "Swimmer": make_swimmer_env,
+    "Pendulum": make_pendulum
 }
 
 if __name__ == "__main__":
@@ -451,7 +459,7 @@ if __name__ == "__main__":
             m=m,  # MC runs
             c1=args.c1,
             kl_settings=KlRegularizationSettings(
-                q_network=args.q_kl_reg, v_network=args.v_kl_reg, policy=args.policy_kl_reg
+                q_network=args.q_kl_reg, policy=args.policy_kl_reg
             )
         )
 
@@ -481,7 +489,7 @@ if __name__ == "__main__":
                 state = env.reset()
                 rewards = []
                 for step in range(max_steps):
-                    if render and sample % 20 == 0:
+                    if render and sample % 10 == 0:
                         env.render()
                     state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state, j)
 
@@ -495,9 +503,10 @@ if __name__ == "__main__":
                     if isinstance(actor_policy, EpicSAC):
                         # particular MC actor
                         actor_policy.mc_actors[j].replay_buffer.push(state, action, reward, new_state, done)
+                        mc_metrics = actor_policy.update_mu_theta_for_default(meta_memories, meta_update_every, H = 1* (1 - gamma ** max_steps) / (1 - gamma))
                     elif isinstance(actor_policy, VanillaSAC):
                         actor_policy.replay_buffer.push(state, action, reward, new_state, done)
-                        actor_policy.update_mu_theta_for_default(meta_memories, None, None)
+                        mc_metrics = actor_policy.update_mu_theta_for_default(meta_memories, None, None)
                     state = new_state
 
                     if done or step == max_steps - 1:

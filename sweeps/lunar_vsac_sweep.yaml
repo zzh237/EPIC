@@ -36,7 +36,6 @@ parameters:
       - true
       - false
     
-
 command:
  - ${env}
  - ${interpreter}

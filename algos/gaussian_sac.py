@@ -634,7 +634,8 @@ class EpicSAC(nn.Module):
         out_metrics = {}
         for name, values in m_metrics.items():
             out_metrics.update({f"{name}.mean": np.mean(values), f"{name}.std": np.std(values)})
-        wandb.log(out_metrics, commit=False)
+       
+        return out_metrics
 
 
     def update_default_and_prior_policy(self):
