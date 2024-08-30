@@ -1,6 +1,6 @@
 [project]
 authors = []
-dependencies = ["gym==0.22.0", "mlflow>=2.15.1,<3", "wandb>=0.17.6,<0.18", "mujoco-py>=2.1.2.14,<3", "cython>=0.29.6,<0.30.0"]
+dependencies = ["gym==0.22.0", "mlflow>=2.15.1,<3", "wandb==0.17.5", "mujoco-py>=2.1.2.14,<3", "cython>=0.29.6,<0.30.0"]
 description = "epic PAC bound for lifetime learning"
 name = "epic"
 requires-python = "~= 3.8.0"
@@ -14,11 +14,11 @@ requires = ["hatchling"]
 
 [tool.pixi.project]
 channels = ["conda-forge", "pytorch"]
-platforms = ["linux-64"]
+platforms = ["linux-64", "osx-arm64"]
 
 [tool.pixi.system-requirements]
 libc = {family = "glibc", version = "2.27" }
-cuda = "11"
+# cuda = "11"
 
 [tool.pixi.pypi-dependencies]
 epic = { path = ".", editable = true }
@@ -29,12 +29,19 @@ epic = { path = ".", editable = true }
 
 [tool.pixi.target.linux-64.dependencies]
 # pytorch = "1.7.1.
-box2d-py = ">=2.3.8,<3"
-higher = ">=0.2.1,<0.3"
+# box2d-py = ">=2.3.8,<3"
+# higher = ">=0.2.1,<0.3"
 cudatoolkit = "11.0.*"
+# pytorch = "1.7.1.*"
+pytorch = { version = "2.4.0.*", channel = "pytorch" }
+
+# [tool.pixi.target.osx-arm64.dependencies]
+# pytorch = 
 
 [tool.pixi.dependencies]
-pytorch = "1.7.1.*"
+python = "3.8.*"
+box2d-py = ">=2.3.8,<3"
+higher = ">=0.2.1,<0.3"
 
 # these might be available in the environment in qsub, in which case it's better to not 
 # install another copy
