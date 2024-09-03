@@ -1,4 +1,8 @@
 from __future__ import annotations
+import math
+from typing import NamedTuple
+import typing
+import gym
 from torch import nn
 import torch
 import torch.nn.functional as F
@@ -6,8 +10,12 @@ import numpy as np
 from torch.autograd import Variable
 from torch.distributions import Distribution, Normal
 from torch import Tensor
-
+from torch.optim.optimizer import Optimizer
+from typing_extensions import Self
+from algos.logging import track_config
+from algos.memory import ReplayMemory
 from algos.types import EPICModel, Action
+from rlkit.torch.distributions import TanhNormal
 
 
 LOG_SIG_MAX = 2
@@ -15,12 +23,15 @@ LOG_SIG_MIN = -20
 
 
 class StochasticLinear(nn.Module):
-    def __init__(self, in_dim: int,
-                 out_dim: int, 
-                 use_bias: bool = True, 
-                 log_var_mean: float = -10.,
-                 log_var_std: float = 0.1,
-                 eps_std: float = 1.):
+    def __init__(
+        self,
+        in_dim: int,
+        out_dim: int,
+        use_bias: bool = True,
+        log_var_mean: float = -10.0,
+        log_var_std: float = 0.1,
+        eps_std: float = 1.0,
+    ):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
@@ -34,20 +45,22 @@ class StochasticLinear(nn.Module):
         self.eps_std = eps_std
 
         self.reset_layer()
-    
+
     def reset_layer(self):
         n = self.weights_mean.size(1)
         stdv = np.sqrt(1.0 / n)
-        self.weights_mean.data.uniform_(-stdv, stdv)
-        self.weights_log_var.data.normal_(self.log_var_mean, self.log_var_std)
 
-        if self.bias_mean is not None:
-            self.bias_mean.uniform_(-stdv, stdv)
-            self.bias_log_var.normal_(self.log_var_mean, self.log_var_std)
-        
+        with torch.no_grad():
+            self.weights_mean.data.uniform_(-stdv, stdv)
+            self.weights_log_var.data.normal_(self.log_var_mean, self.log_var_std)
+
+            if self.bias_mean is not None:
+                self.bias_mean.uniform_(-stdv, stdv)
+                self.bias_log_var.normal_(self.log_var_mean, self.log_var_std)
+
     def __str__(self):
         return f"StochasticLinear({self.in_dim} -> {self.out_dim})"
-    
+
     def forward(self, x: Tensor):
         bias_mean = bias_var = None
         if self.bias_mean is not None:
@@ -55,74 +68,17 @@ class StochasticLinear(nn.Module):
             bias_var = torch.exp(self.bias_log_var)
         out_mean = F.linear(x, self.weights_mean, bias_mean)
 
-        if self.eps_std == 0.:
+        if self.eps_std == 0.0:
             return out_mean
         else:
             weights_var = torch.exp(self.weights_log_var)
-            out_var = F.linear(x.pow(2.), weights_var, bias_var)
+            out_var = F.linear(x.pow(2.0), weights_var, bias_var)
             noise = out_mean.data.new(out_mean.size()).normal_(0, self.eps_std)
             noise = Variable(noise, requires_grad=False)
             out_var = F.relu(out_var)
             return out_mean + noise * torch.sqrt(out_var)
-        
-class TanhNormal(Distribution):
-    """
-    Represent distribution of X where
-        X ~ tanh(Z)
-        Z ~ N(mean, std)
 
-    Note: this is not very numerically stable.
-    """
 
-    def __init__(self, normal_mean, normal_std, epsilon=1e-6):
-        """
-        :param normal_mean: Mean of the normal distribution
-        :param normal_std: Std of the normal distribution
-        :param epsilon: Numerical stability epsilon when computing log-prob.
-        """
-        self.normal_mean = normal_mean
-        self.normal_std = normal_std
-        self.normal = Normal(normal_mean, normal_std)
-        self.epsilon = epsilon
-
-    def sample_n(self, n, return_pre_tanh_value=False):
-        z = self.normal.sample_n(n)
-        if return_pre_tanh_value:
-            return torch.tanh(z), z
-        else:
-            return torch.tanh(z)
-
-    def log_prob(self, value, pre_tanh_value=None):
-        """
-        :param value: some value, x
-        :param pre_tanh_value: arctanh(x)
-        :return:
-        """
-        if pre_tanh_value is None:
-            pre_tanh_value = torch.log((1 + value) / (1 - value)) / 2
-        return self.normal.log_prob(pre_tanh_value) - torch.log(1 - value * value + self.epsilon)
-
-    def sample(self, return_pretanh_value=False):
-        z = self.normal.sample()
-        z.requires_grad_(False) # do not try to differentiate sampling from the normal
-        if return_pretanh_value:
-            return torch.tanh(z), z
-        else:
-            return torch.tanh(z)
-
-    def rsample(self, return_pretanh_value=False):
-        z: Tensor = self.normal_mean + self.normal_std * Variable(
-            Normal(
-                self.normal_mean.new().zero_(),
-                self.normal_std.new().zero_(),
-            ).sample()
-        )
-        z.requires_grad_()
-        if return_pretanh_value:
-            return torch.tanh(z), z
-        else:
-            return torch.tanh(z)
-            
 class TanhGaussianPolicy(nn.Module):
     """
     A policy network that uses a series of stochasticLinear layers to predict the logstd
@@ -168,7 +124,9 @@ class TanhGaussianPolicy(nn.Module):
 
     @torch.no_grad()
     def get_actions(self, obs: torch.Tensor, deterministic=False):
-        action, _, _, log_prob, _, _, _, _ = self.forward(obs, deterministic=deterministic, reparameterize=True, return_log_prob=True)
+        action, _, _, log_prob, _, _, _, _ = self.forward(
+            obs, deterministic=deterministic, reparameterize=True, return_log_prob=True
+        )
         return obs, action.detach(), log_prob
 
     def forward(
@@ -196,20 +154,21 @@ class TanhGaussianPolicy(nn.Module):
             tanh_normal = TanhNormal(mean, std)
             if return_log_prob:
                 if reparameterize:
-                    action, pre_tanh_value = tanh_normal.rsample(return_pretanh_value=True)
+                    action, log_prob, pre_tanh_value = tanh_normal.rsample_logprob_and_pretanh()
                 else:
-                    action, pre_tanh_value = tanh_normal.sample(return_pretanh_value=True)
-                log_prob = tanh_normal.log_prob(action, pre_tanh_value=pre_tanh_value) # gradients can go through here
+                    raise ValueError("This is bad")
 
                 log_prob = log_prob.sum()
             else:
+                # no logprob
                 if reparameterize:
-                    action = tanh_normal.rsample()
+                    action, _ = tanh_normal.rsample()
                 else:
                     action = tanh_normal.sample()
 
         return (action, mean, log_std, log_prob, expected_log_prob, std, mean_action_log_prob, pre_tanh_value)  # type: ignore
-    
+
+
 class StochasticMlp(nn.Module):
     """A generic MLP using stochasticLinear layers."""
 
@@ -229,11 +188,12 @@ class StochasticMlp(nn.Module):
             hidden_act = fc(hidden_act)
         return self.last_fc(hidden_act)
 
+
 class FlattenStochasticMlp(StochasticMlp):
     def forward(self, *x):
-        flat = torch.cat(x, dim=1),
+        flat = (torch.cat(x, dim=1))
         return super().forward(flat)
-    
+
 
 def KL_div(mu1, sigma1, mu2, sigma2):
     term1 = torch.sum(torch.log(sigma2 / sigma1)) - len(sigma1)
@@ -242,7 +202,7 @@ def KL_div(mu1, sigma1, mu2, sigma2):
 
     return 0.5 * (term1 + term2 + term3)
 
-    
+
 def model_kl_div(default: nn.Module, prior: nn.Module):
     # calculate KL div between a default model and a prior
     kl = []
@@ -276,17 +236,219 @@ def kl_regularizer(kl, N, H, c=torch.tensor(1.5), delta=torch.tensor(0.01)):
     return reg
 
 
+def soft_update_from_to(source, target, tau):
+    for target_param, param in zip(target.parameters(), source.parameters()):
+        target_param.data.copy_(target_param.data * (1.0 - tau) + param.data * tau)
+
+
+class OptimizerFactory(typing.Protocol):
+    def __init__(self, params, lr): ...
+
+    def zero_grad(self): ...
+    def step(self): ...
+
+
+class Losses(NamedTuple):
+    qf1_loss: Tensor
+    qf2_loss: Tensor
+    policy_loss: Tensor
+
+
+class EpicSACMcActor(nn.Module):
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        replay_capacity: int,
+        sac_steps: int,
+        batch_size: int,
+        optimizer_class: type[OptimizerFactory],
+        policy_lr: float,
+        qf_lr: float,
+        tau: float,
+        target_update_period: int,
+        reward_scale: float,
+        discount: float,
+        device: str,
+        q_network_hiddens: tuple[int, ...] = (256, 256),
+        policy_hiddens: tuple[int, ...] = (256, 256),
+    ):
+        super().__init__()
+
+        self.sac_steps = sac_steps
+        self.batch_size = batch_size
+        self.target_update_period = target_update_period
+        self.tau = tau
+        self.reward_scale = reward_scale
+        self.discount = discount
+        self.device = device
+
+        self.qf1 = FlattenStochasticMlp(input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1)
+        self.qf2 = FlattenStochasticMlp(input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1)
+
+        self.target_qf1 = FlattenStochasticMlp(
+            input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1
+        )
+        self.target_qf2 = FlattenStochasticMlp(
+            input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1
+        )
+
+        self.policy = TanhGaussianPolicy(
+            hidden_sizes=policy_hiddens, obs_dim=state_dim, action_dim=action_dim, device=device
+        )
+
+        # TODO possibly share this between MC actors
+        self.replay_buffer = ReplayMemory(replay_capacity)
+
+        self.qf_criterion = nn.MSELoss()
+        self.qf1_optimizer = optimizer_class(self.qf1.parameters(), lr=qf_lr)
+        self.qf2_optimizer = optimizer_class(self.qf2.parameters(), lr=qf_lr)
+        self.policy_optimizer = optimizer_class(self.policy.parameters(), lr=policy_lr)
+
+    def act(self, state: Tensor | np.ndarray) -> Action:
+        if not isinstance(state, Tensor):
+            state = torch.from_numpy(state).to(torch.device(self.device))
+
+        if state.ndim < 2:
+            state = state.unsqueeze(0)
+
+        # (action, mean, log_std, log_prob, expected_log_prob, std, mean_action_log_prob, pre_tanh_value)
+        action, _, _, log_prob, *_ = self.policy(state, reparameterize=True, return_log_prob=True)
+
+        return Action(state=state, action=action.flatten(), log_prob=log_prob)
+
+    def push_sample(self, state, action, reward, new_state, done):
+        self.replay_buffer.push(state, action, reward, new_state, done)
+
+    def train_step(self):
+        state, action, reward, next_state, done = self.replay_buffer.sample(
+            batch_size=self.batch_size, device=self.device, as_tensors=True
+        )
+        losses = self.compute_loss(state, action, reward, next_state, done)
+
+        self.policy_optimizer.zero_grad()
+        losses.policy_loss.backward()
+        self.policy_optimizer.step()
+
+        self.qf1_optimizer.zero_grad()
+        losses.qf1_loss.backward()
+        self.qf1_optimizer.step()
+
+        self.qf2_optimizer.zero_grad()
+        losses.qf2_loss.backward()
+        self.qf2_optimizer.step()
+
+    def per_step(self, state, action, reward, new_state, done, meta_episode: int, step: int):
+        self.push_sample(state, action, reward, new_state, done)
+
+        for _ in range(self.sac_steps):
+            self.train_step()
+
+        if step % self.target_update_period == 0:
+            self.update_targets()
+
+    def update_targets(self):
+        soft_update_from_to(self.qf1, self.target_qf1, self.tau)
+        soft_update_from_to(self.qf2, self.target_qf2, self.tau)
+
+    def compute_loss(self, state, action, reward, new_state, done) -> Losses:
+        # policy
+        # (action, mean, log_std, log_prob, expected_log_prob, std, mean_action_log_prob, pre_tanh_value)
+        state_next_actions, _, _, log_prob, *_ = self.policy(state, reparameterize=True, return_log_prob=True)
+        q_new_actions = torch.min(self.qf1(state, state_next_actions), self.qf2(state, state_next_actions))
+        policy_loss = (log_prob - q_new_actions).mean()
+
+        # QF
+        q1_pred = self.qf1(state, action)
+        q2_pred = self.qf2(state, action)
+        new_state_next_actions, _, _, new_state_log_prob, *_ = self.policy(new_state, reparameterize=True, return_log_prob=True)
+        target_q_values = (
+            torch.min(
+                self.target_qf1(new_state, new_state_next_actions), self.target_qf2(new_state, new_state_next_actions)
+            )
+            - new_state_log_prob
+        )
+
+        q_target = self.reward_scale * reward + (1.0 - done) * self.discount * target_q_values
+        qf1_loss = self.qf_criterion(q1_pred, q_target.detach())
+        qf2_loss = self.qf_criterion(q2_pred, q_target.detach())
+
+        return Losses(qf1_loss=qf1_loss, qf2_loss=qf2_loss, policy_loss=policy_loss)
+
 
 class EpicSAC2(nn.Module, EPICModel):
-    def __init__(self, m: int):
+    @track_config
+    def __init__(
+        self,
+        m: int,
+        env: gym.Env,
+        replay_capacity: int,
+        batch_size: int,
+        sac_steps: int,
+        optimizer_class: type[OptimizerFactory],
+        policy_lr: float,
+        qf_lr: float,
+        tau: float,
+        qf_target_update_period: int,
+        reward_scale: float,
+        discount: float,
+        device: str,
+        q_network_hiddens: tuple[int, ...] = (256, 256),
+        policy_hiddens: tuple[int, ...] = (256, 256),
+    ):
+        super().__init__()
+
         self._m = m
-        self.mc_actors = 
+        self.batch_size = batch_size
+        self.sac_steps = sac_steps
+        self.device = device
+
+        # MC actor initialization
+        assert env.action_space.shape is not None
+        assert env.observation_space.shape is not None
+        state_dim = math.prod(env.observation_space.shape)
+        action_dim = math.prod(env.action_space.shape)
+        self.mc_actors = nn.ModuleList(
+            [
+                EpicSACMcActor(
+                    state_dim=state_dim,
+                    action_dim=action_dim,
+                    replay_capacity=replay_capacity,
+                    device=device,
+                    q_network_hiddens=q_network_hiddens,
+                    policy_hiddens=policy_hiddens,
+                    sac_steps=self.sac_steps,
+                    batch_size=self.batch_size,
+                    optimizer_class=optimizer_class,
+                    policy_lr=policy_lr,
+                    qf_lr=qf_lr,
+                    tau=tau,
+                    target_update_period=qf_target_update_period,
+                    reward_scale=reward_scale,
+                    discount=discount,
+                )
+                for _ in range(m)
+            ]
+        )
+
+        self.to(torch.device(device))
 
     @property
     def m(self):
         return self._m
 
     def act_m(self, m, state) -> Action:
-        
+        return self.mc_actors[m].act(state)
 
-    
+    def per_step_m(self, m: int, state, action, reward, new_state, done, meta_episode: int, step: int):
+        self.mc_actors[m].per_step(state, action, reward, new_state, done, meta_episode, step)
+
+
+    def post_episode(self) -> None:
+        pass
+
+    def update_prior(self) -> None:
+        pass
+
+    def update_default(self) -> None:
+        pass
