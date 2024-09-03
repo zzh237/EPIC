@@ -14,13 +14,15 @@ import random
 from argparse import ArgumentParser
 from functools import partial
 
+from torch.optim.adam import Adam
+import rlkit.torch.pytorch_util
+
 import wandb
 from algos.agents.sac_basic import VanillaSACv2
-from algos.gaussian_sac import EpicSAC2
+from algos.gaussian_sac2 import EpicSAC2
 from algos.types import EPICModel
 from envs import make_pendulum
 import polars as pl
-
 
 
 def parse_args():
@@ -28,7 +30,7 @@ def parse_args():
     parser.add_argument("--wandb-project", type=str, default="epic-test")
     parser.add_argument("--model", type=str, required=True)
     parser.add_argument("--device", type=str, required=True)
-    parser.add_argument("--env", type=str)
+    parser.add_argument("--env", type=str, required=True)
 
     # common parameters
     parser.add_argument("--render", action="store_true")
@@ -42,6 +44,14 @@ def parse_args():
     parser.add_argument("--meta-update-every", type=int, default=5)
 
     # SAC - style algorithms
+    parser.add_argument("--optimizer", type=str, default="adam")
+    parser.add_argument("--lr-qf", type=float)
+    parser.add_argument("--lr-policy", type=float)
+    parser.add_argument("--tau", type=float)
+    parser.add_argument("--qf-target-update-period", type=int)
+    parser.add_argument("--discount", type=float, default=0.99)
+    parser.add_argument("--sac-steps", type=int, default=1)
+    parser.add_argument("--reward-scale", type=float, default=1)
     parser.add_argument("--use-automatic-entropy-tuning", action="store_true")
     parser.add_argument("--replay-capacity", type=int, default=1_000)
 
@@ -49,7 +59,11 @@ def parse_args():
 
     parser.add_argument("--seed", type=int, default=10032)
 
-    return parser.parse_args()
+    ret = parser.parse_args()
+
+    rlkit.torch.pytorch_util.device = torch.device(ret.device)
+
+    return ret
 
 
 class EpicTrainer:
@@ -112,7 +126,9 @@ class EpicTrainer:
                 print(f" {episode_idx}", flush=True, end="")
             # average reward over all mc workers for this meta-episode
             meta_episode_reward = (
-                rewards.filter(pl.col("meta_episode") == meta_episode).group_by("meta_episode").agg(pl.col("reward").mean())
+                rewards.filter(pl.col("meta_episode") == meta_episode)
+                .group_by("meta_episode")
+                .agg(pl.col("reward").mean())
             ).item(row=0, column=1)
             print(f", reward: {meta_episode_reward}")
             wandb.log({"meta_episode_reward": meta_episode_reward, "meta_episode": meta_episode})
@@ -123,6 +139,11 @@ class EpicTrainer:
 
 
 def make_model(args, env) -> EPICModel:
+    if args.optimizer.lower() == "adam":
+        optimizer = Adam
+    else:
+        raise ValueError(f"Unrecognized optimizer {args.optimizer}")
+
     if args.model == "vsac":
         return VanillaSACv2(
             m=args.m,
@@ -135,23 +156,35 @@ def make_model(args, env) -> EPICModel:
         )
     elif args.model == "epic-sac":
         return EpicSAC2(
-
+            m=args.m,
+            env=env,
+            replay_capacity=args.replay_capacity,
+            batch_size=args.batch_size,
+            sac_steps=args.sac_steps,
+            optimizer_class=optimizer,
+            policy_lr=args.lr_policy,
+            qf_lr=args.lr_qf,
+            tau=args.tau,
+            qf_target_update_period=args.qf_target_update_period,
+            reward_scale=args.reward_scale,
+            discount=args.discount,
+            device=args.device,
         )
     else:
         raise ValueError(f"Unrecognized model type {args.model}")
 
 
-ENV_MAKERS: dict[str, Callable[[int], gym.Env]] = {"pendulum": make_pendulum,
-                                                   "pendulum-toy": partial(make_pendulum, toy=True)}
+ENV_MAKERS: dict[str, Callable[[int], gym.Env]] = {
+    "pendulum": make_pendulum,
+    "pendulum-toy": partial(make_pendulum, toy=True),
+}
 
 
 def main():
-    import rlkit.torch.pytorch_util
     args = parse_args()
     np.random.seed(args.seed)
     random.seed(args.seed)
     torch.manual_seed(args.seed)
-    rlkit.torch.pytorch_util.set_gpu_mode(True)
 
     wandb.init(project=args.wandb_project)
     # just for space dimensions
