@@ -138,9 +138,29 @@
             "program": "${workspaceFolder}/epic_mc_2.py",
             "args": [
                 "--model", "vsac",
-                "--device", "cuda",
+                "--device", "mps",
                 "--env", "pendulum",
                 "--max-steps", "10"
+            ],
+            "env": {
+                "WANDB_MODE": "disabled"
+            },
+            "justMyCode": false
+        },
+        {
+            "name": "epic2 epic-sac",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/epic_mc_2.py",
+            "args": [
+                "--model", "epic-sac",
+                "--device", "mps",
+                "--env", "pendulum",
+                "--max-steps", "10",
+                "--lr-qf=1e-3",
+                "--lr-policy=1e-3",
+                "--qf-target-update-period=1",
+                "--tau=1e-2"
             ],
             "env": {
                 "WANDB_MODE": "disabled"

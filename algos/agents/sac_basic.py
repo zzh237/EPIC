@@ -213,7 +213,6 @@ class VanillaSACv2(nn.Module, EPICModel):
 
     def post_episode(self):
         pass
-
     
     def update_default(self):
         pass
