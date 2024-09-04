@@ -377,7 +377,7 @@ class EpicSACMcActor(nn.Module):
 
 
 class EpicSAC2(nn.Module, EPICModel):
-    @track_config
+    @track_config(ignore=["env"])
     def __init__(
         self,
         m: int,
