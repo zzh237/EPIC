@@ -155,9 +155,9 @@
             "program": "${workspaceFolder}/epic_mc_2.py",
             "args": [
                 "--model", "epic-sac",
-                "--device", "mps",
+                "--device", "cpu",
                 "--env", "pendulum",
-                "--max-steps", "10",
+                "--max-steps", "200",
                 "--lr-qf=1e-3",
                 "--lr-policy=1e-3",
                 "--qf-target-update-period=1",
