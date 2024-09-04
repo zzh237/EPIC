@@ -3,27 +3,24 @@ Rewrite of epic_mc to simplify some logic.
 """
 
 from __future__ import annotations
-import tempfile
 
-import torch
-from typing import Callable
-
-
-import gym
-import numpy as np
 import random
 from argparse import ArgumentParser
 from functools import partial
+from typing import Callable
 
-from torch.optim.adam import Adam
+import gym
+import numpy as np
+import polars as pl
 import rlkit.torch.pytorch_util
+import torch
+from torch.optim.adam import Adam
 
 import wandb
 from algos.agents.sac_basic import VanillaSACv2
 from algos.gaussian_sac2 import EpicSAC2
 from algos.types import EPICModel
 from envs import make_pendulum
-import polars as pl
 
 
 def parse_args():
@@ -158,7 +155,7 @@ def make_model(args, env) -> EPICModel:
         wandb.watch(mdl)
         return mdl
     elif args.model == "epic-sac":
-         mdl = EpicSAC2(
+        mdl = EpicSAC2(
             m=args.m,
             env=env,
             replay_capacity=args.replay_capacity,
@@ -173,8 +170,8 @@ def make_model(args, env) -> EPICModel:
             discount=args.discount,
             device=args.device,
         )
-         wandb.watch(mdl)
-         return mdl
+        wandb.watch(mdl)
+        return mdl
     else:
         raise ValueError(f"Unrecognized model type {args.model}")
 
