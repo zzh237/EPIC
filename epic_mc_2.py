@@ -145,7 +145,7 @@ def make_model(args, env) -> EPICModel:
         raise ValueError(f"Unrecognized optimizer {args.optimizer}")
 
     if args.model == "vsac":
-        return VanillaSACv2(
+        mdl = VanillaSACv2(
             m=args.m,
             lr=args.lr,
             batch_size=args.batch_size,
@@ -154,8 +154,10 @@ def make_model(args, env) -> EPICModel:
             replay_capacity=args.replay_capacity,
             env=env,
         )
+        wandb.watch(mdl)
+        return mdl
     elif args.model == "epic-sac":
-        return EpicSAC2(
+         mdl = EpicSAC2(
             m=args.m,
             env=env,
             replay_capacity=args.replay_capacity,
@@ -170,6 +172,8 @@ def make_model(args, env) -> EPICModel:
             discount=args.discount,
             device=args.device,
         )
+         wandb.watch(mdl)
+         return mdl
     else:
         raise ValueError(f"Unrecognized model type {args.model}")
 
