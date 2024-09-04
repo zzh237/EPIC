@@ -1,0 +1,40 @@
+program: epic_mc_2.py
+name: epic-sac-2
+method: bayes
+metric:
+  goal: maximize
+  name: meta_episode_reward
+parameters:
+  # ---- fixed parameters
+  model:
+    value: epic-sac
+  env:
+    value: pendulum-toy
+  device:
+    value: cpu
+  max-steps:
+    value: 200
+  qf-target-update-period:
+    value: 1
+  # ---- non-fixed hyperparameters
+  batch-size:
+    values: [32, 64, 128, 256, 512, 1024]
+  replay-capacity:
+    values: [1_000, 10_000, 100_000]
+  lr-qf:
+    distribution: log_uniform_values
+    min: 0.00001
+    max: 0.001
+  lr-policy:
+    distribution: log_uniform_values
+    min: 0.00001
+    max: 0.001
+  tau:
+    distribution: log_uniform_values
+    min: 0.0001
+    max: 0.01
+command:
+ - ${env}
+ - ${interpreter}
+ - ${program}
+ - ${args_no_boolean_flags}
