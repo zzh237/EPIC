@@ -52,12 +52,3 @@ polars = ">=1.5.0,<2"
 numpy = ">=2.1.0,<3"
 openblas = ">=0.3.24,<0.4"
 pygame = ">=2.6.0,<3"
-
-
-
-# these might be available in the environment in qsub, in which case it's better to not 
-# install another copy
-# [tool.pixi.dependencies]
-# gcc = "~=12.0"
-# patchelf = ">=0.17.2,<0.18"
-# mesalib = ">=24.1.5,<25"

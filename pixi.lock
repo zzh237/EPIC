@@ -1182,7 +1182,7 @@ packages:
   name: epic
   version: 0.1.0
   path: .
-  sha256: 06725ded5f4538652f05de72518048d32d62bfd34870d81e4a8f26d3ccfb08eb
+  sha256: fe97403a219b7d8b5ca139702339ddbea9b3239a0d5748c0f8cff9a16ef47366
   requires_python: ~=3.10.0
   editable: true
 - kind: conda
