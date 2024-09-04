@@ -1,22 +1,20 @@
 from __future__ import annotations
+
 import math
-from typing import NamedTuple
 import typing
+from typing import NamedTuple
+
 import gym
-from torch import nn
+import numpy as np
 import torch
 import torch.nn.functional as F
-import numpy as np
+from rlkit.torch.distributions import TanhNormal
+from torch import Tensor, nn
 from torch.autograd import Variable
-from torch.distributions import Distribution, Normal
-from torch import Tensor
-from torch.optim.optimizer import Optimizer
-from typing_extensions import Self
+
 from algos.logging import track_config
 from algos.memory import ReplayMemory
-from algos.types import EPICModel, Action
-from rlkit.torch.distributions import TanhNormal
-
+from algos.types import Action, EPICModel
 
 LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20
@@ -191,7 +189,7 @@ class StochasticMlp(nn.Module):
 
 class FlattenStochasticMlp(StochasticMlp):
     def forward(self, *x):
-        flat = (torch.cat(x, dim=1))
+        flat = torch.cat(x, dim=1)
         return super().forward(flat)
 
 
@@ -339,6 +337,8 @@ class EpicSACMcActor(nn.Module):
         self.qf2_optimizer.step()
 
     def per_step(self, state, action, reward, new_state, done, meta_episode: int, step: int):
+        # every step, the MC actor adds a new sample and takes some number of trainsteps. then it may update its
+        # target networks
         self.push_sample(state, action, reward, new_state, done)
 
         for _ in range(self.sac_steps):
@@ -361,7 +361,9 @@ class EpicSACMcActor(nn.Module):
         # QF
         q1_pred = self.qf1(state, action)
         q2_pred = self.qf2(state, action)
-        new_state_next_actions, _, _, new_state_log_prob, *_ = self.policy(new_state, reparameterize=True, return_log_prob=True)
+        new_state_next_actions, _, _, new_state_log_prob, *_ = self.policy(
+            new_state, reparameterize=True, return_log_prob=True
+        )
         target_q_values = (
             torch.min(
                 self.target_qf1(new_state, new_state_next_actions), self.target_qf2(new_state, new_state_next_actions)
@@ -442,7 +444,6 @@ class EpicSAC2(nn.Module, EPICModel):
 
     def per_step_m(self, m: int, state, action, reward, new_state, done, meta_episode: int, step: int):
         self.mc_actors[m].per_step(state, action, reward, new_state, done, meta_episode, step)
-
 
     def post_episode(self) -> None:
         pass
