@@ -138,9 +138,10 @@
             "program": "${workspaceFolder}/epic_mc_2.py",
             "args": [
                 "--model", "vsac",
-                "--device", "mps",
-                "--env", "pendulum",
-                "--max-steps", "10"
+                "--device", "cpu",
+                "--env", "pendulum-toy",
+                "--max-steps", "10",
+                "--render"
             ],
             "env": {
                 "WANDB_MODE": "disabled"

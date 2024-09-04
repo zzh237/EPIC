@@ -1,4 +1,7 @@
-toy - converging the vanilla SAC on the simple pendulum environment
+# Pendulum - toy
+Note that the full-episode reward on a solved pendulum is like ~-1.8
+
+converging the vanilla SAC on the simple pendulum environment
 
 ```shell
 python ./epic_mc_2.py --model=vsac --device=cpu --env=pendulum-toy --max-steps=200
