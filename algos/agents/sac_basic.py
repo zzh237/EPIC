@@ -122,7 +122,7 @@ class VanillaSAC(nn.Module):
         """Don't do anything"""
 
 
-class VanillaSACv2(nn.Module, EPICModel):
+class VanillaSACv2(EPICModel):
 
     @track_config
     def __init__(self, m: int,

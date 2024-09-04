@@ -375,10 +375,16 @@ class EpicSACMcActor(nn.Module):
         qf1_loss = self.qf_criterion(q1_pred, q_target.detach())
         qf2_loss = self.qf_criterion(q2_pred, q_target.detach())
 
+        wandb.log({
+            "qf1_loss": qf1_loss.detach(),
+            "qf2_loss": qf2_loss.detach(),
+            "policy_loss": policy_loss.detach()
+        })
+
         return Losses(qf1_loss=qf1_loss, qf2_loss=qf2_loss, policy_loss=policy_loss)
 
 
-class EpicSAC2(nn.Module, EPICModel):
+class EpicSAC2(EPICModel):
     @track_config(ignore=["env"])
     def __init__(
         self,

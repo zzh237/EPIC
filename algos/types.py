@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import TypedDict
 
 from torch import Tensor
+from torch import nn
 
 
 class Action(TypedDict):
@@ -10,7 +11,7 @@ class Action(TypedDict):
     log_prob: Tensor
 
 
-class EPICModel(ABC):
+class EPICModel(ABC, nn.Module):
 
     @property
     @abstractmethod
