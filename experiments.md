@@ -8,7 +8,7 @@ python ./epic_mc_2.py --model=vsac --device=cpu --env=pendulum-toy --max-steps=2
 ```
 
 toy - converging stochastic SAC on the simple pendulum environment
-(this doesn't converge yet...)
+(kinda unstable, but converges)
 
 ```shell
 python ./epic_mc_2.py \
@@ -16,8 +16,8 @@ python ./epic_mc_2.py \
 --device=cpu \
 --env=pendulum-toy \
 --max-steps=200 \
---lr-qf=1e-3 \
---lr-policy=1e-3 \
+--lr-qf=4e-3 \
+--lr-policy=4e-3 \
 --qf-target-update-period=1 \
 --replay-capacity=1000 \
 --batch-size=32 \
