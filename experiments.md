@@ -19,5 +19,7 @@ python ./epic_mc_2.py \
 --lr-qf=1e-3 \
 --lr-policy=1e-3 \
 --qf-target-update-period=1 \
---tau=1e-2
+--replay-capacity=1000 \
+--batch-size=32 \
+--tau=1e-2 --render
 ```

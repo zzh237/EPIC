@@ -3,6 +3,7 @@ Rewrite of epic_mc to simplify some logic.
 """
 
 from __future__ import annotations
+import tempfile
 
 import torch
 from typing import Callable
