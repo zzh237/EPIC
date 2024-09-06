@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import typing
+from typing_extensions import Self
 from typing import NamedTuple
 
 import gym
@@ -13,6 +14,7 @@ from torch import Tensor, nn
 from torch.autograd import Variable
 
 import wandb
+from algos.epic_util import ModuleWithKlDivergence, PriorWrapper
 from algos.logging import track_config
 from algos.memory import ReplayMemory
 from algos.types import Action, EPICModel
@@ -186,18 +188,13 @@ class StochasticMlp(nn.Module):
         return self.layers(x)
 
 
-class FlattenStochasticMlp(StochasticMlp):
+class FlattenStochasticMlp(StochasticMlp, ModuleWithKlDivergence):
     def forward(self, *x):
         flat = torch.cat(x, dim=1)
         return super().forward(flat)
-
-
-def KL_div(mu1, sigma1, mu2, sigma2):
-    term1 = torch.sum(torch.log(sigma2 / sigma1)) - len(sigma1)
-    term2 = torch.sum(sigma1 / sigma2)
-    term3 = torch.sum((mu2 - mu1).pow(2) / sigma2)
-
-    return 0.5 * (term1 + term2 + term3)
+    
+    def kl_divergence(self, other: Self) -> Tensor:
+        return model_kl_div(self, other)
 
 
 def model_kl_div(default: nn.Module, prior: nn.Module):
@@ -233,7 +230,15 @@ def kl_regularizer(kl, N, H, c=torch.tensor(1.5), delta=torch.tensor(0.01)):
     return reg
 
 
-def soft_update_from_to(source, target, tau):
+def KL_div(mu1, sigma1, mu2, sigma2):
+    term1 = torch.sum(torch.log(sigma2 / sigma1)) - len(sigma1)
+    term2 = torch.sum(sigma1 / sigma2)
+    term3 = torch.sum((mu2 - mu1).pow(2) / sigma2)
+
+    return 0.5 * (term1 + term2 + term3)
+
+
+def soft_update_from_to(source: nn.Module, target: nn.Module, tau: float):
     for target_param, param in zip(target.parameters(), source.parameters()):
         target_param.data.copy_(target_param.data * (1.0 - tau) + param.data * tau)
 
@@ -266,7 +271,12 @@ class EpicSACMcActor(nn.Module):
         target_update_period: int,
         reward_scale: float,
         discount: float,
+        prior_update_every: int,
+        gamma: float,
+        max_steps: int,
         device: str,
+        c: float,
+        delta: float,
         q_network_hiddens: tuple[int, ...] = (256, 256),
         policy_hiddens: tuple[int, ...] = (256, 256),
     ):
@@ -280,15 +290,51 @@ class EpicSACMcActor(nn.Module):
         self.discount = discount
         self.device = device
 
-        self.qf1 = FlattenStochasticMlp(input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1)
-        self.qf2 = FlattenStochasticMlp(input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1)
+        def make_qf():
+            return FlattenStochasticMlp(input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1)
 
-        self.target_qf1 = FlattenStochasticMlp(
-            input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1
+        # self.qf1 = FlattenStochasticMlp(input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1)
+        self.qf1 = PriorWrapper(
+            make_qf,
+            prior_update_every=prior_update_every,
+            gamma=gamma,
+            max_steps=max_steps,
+            c=c,
+            delta=delta
         )
-        self.target_qf2 = FlattenStochasticMlp(
-            input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1
+        self.qf2 =  PriorWrapper(
+            make_qf,
+            prior_update_every=prior_update_every,
+            gamma=gamma,
+            max_steps=max_steps,
+            c=c,
+            delta=delta
         )
+
+        self.target_qf1 = PriorWrapper(
+            make_qf,
+            prior_update_every=prior_update_every,
+            gamma=gamma,
+            max_steps=max_steps,
+            c=c,
+            delta=delta
+        )
+
+        self.target_qf2 = PriorWrapper(
+            make_qf,
+            prior_update_every=prior_update_every,
+            gamma=gamma,
+            max_steps=max_steps,
+            c=c,
+            delta=delta
+        )
+
+        # self.target_qf1 = FlattenStochasticMlp(
+        #     input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1
+        # )
+        # self.target_qf2 = FlattenStochasticMlp(
+        #     input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1
+        # )
 
         self.policy = StochasticTanhGaussianPolicy(
             hidden_sizes=policy_hiddens, obs_dim=state_dim, action_dim=action_dim, device=device
@@ -298,8 +344,8 @@ class EpicSACMcActor(nn.Module):
         self.replay_buffer = ReplayMemory(replay_capacity)
 
         self.qf_criterion = nn.MSELoss()
-        self.qf1_optimizer = optimizer_class(self.qf1.parameters(), lr=qf_lr)
-        self.qf2_optimizer = optimizer_class(self.qf2.parameters(), lr=qf_lr)
+        self.qf1_optimizer = optimizer_class(self.qf1.default.parameters(), lr=qf_lr)
+        self.qf2_optimizer = optimizer_class(self.qf2.default.parameters(), lr=qf_lr)
         self.policy_optimizer = optimizer_class(self.policy.parameters(), lr=policy_lr)
 
     def act(self, state: Tensor | np.ndarray) -> Action:
@@ -365,8 +411,8 @@ class EpicSACMcActor(nn.Module):
             self.update_targets()
 
     def update_targets(self):
-        soft_update_from_to(self.qf1, self.target_qf1, self.tau)
-        soft_update_from_to(self.qf2, self.target_qf2, self.tau)
+        soft_update_from_to(self.qf1.default, self.target_qf1.default, self.tau)
+        soft_update_from_to(self.qf2.default, self.target_qf2.default, self.tau)
 
     def compute_loss(self, state, action, reward, new_state, done) -> Losses:
         # policy
@@ -374,12 +420,13 @@ class EpicSACMcActor(nn.Module):
         state_next_actions, _, _, log_prob, *_ = self.policy(state, reparameterize=True, return_log_prob=True)
         log_prob = log_prob.unsqueeze(-1)
 
-        q_new_actions = torch.min(self.qf1(state, state_next_actions), self.qf2(state, state_next_actions))
+        q_new_actions = torch.min(self.qf1.call_default(state, state_next_actions), 
+                                  self.qf2.call_default(state, state_next_actions))
         policy_loss = (log_prob - q_new_actions).mean()
 
         # QF
-        q1_pred = self.qf1(state, action)
-        q2_pred = self.qf2(state, action)
+        q1_pred = self.qf1.call_default(state, action)
+        q2_pred = self.qf2.call_default(state, action)
         new_state_next_actions, _, _, new_state_log_prob, *_ = self.policy(
             new_state, reparameterize=True, return_log_prob=True
         )
@@ -387,7 +434,8 @@ class EpicSACMcActor(nn.Module):
 
         target_q_values = (
             torch.min(
-                self.target_qf1(new_state, new_state_next_actions), self.target_qf2(new_state, new_state_next_actions)
+                self.target_qf1.call_default(new_state, new_state_next_actions), 
+                self.target_qf2.call_default(new_state, new_state_next_actions)
             )
             - new_state_log_prob
         )
@@ -418,6 +466,11 @@ class EpicSAC2(EPICModel):
         reward_scale: float,
         discount: float,
         device: str,
+        prior_update_every: int,
+        gamma: float, # TODO does this need to be equal to the discount.
+        max_steps: int,
+        c: float,
+        delta: float,
         q_network_hiddens: tuple[int, ...] = (256, 256),
         policy_hiddens: tuple[int, ...] = (256, 256),
     ):
@@ -451,6 +504,11 @@ class EpicSAC2(EPICModel):
                     target_update_period=qf_target_update_period,
                     reward_scale=reward_scale,
                     discount=discount,
+                    prior_update_every=prior_update_every,
+                    gamma = gamma,
+                    max_steps=max_steps,
+                    c=c,
+                    delta=delta
                 )
                 for _ in range(m)
             ]

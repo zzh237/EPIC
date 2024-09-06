@@ -16,8 +16,8 @@ python ./epic_mc_2.py \
 --device=cpu \
 --env=pendulum-toy \
 --max-steps=200 \
---lr-qf=4e-3 \
---lr-policy=4e-3 \
+--lr-qf=5e-3 \
+--lr-policy=5e-3 \
 --qf-target-update-period=1 \
 --replay-capacity=1000 \
 --batch-size=32 \

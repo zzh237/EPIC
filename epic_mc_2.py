@@ -37,9 +37,14 @@ def parse_args():
     parser.add_argument("--num-episodes", type=int, default=10)
     parser.add_argument("--max-steps", type=int, default=200)
 
-    # metalearning
+    # "metalearning"
     parser.add_argument("--meta-episodes", type=int, default=10)
     parser.add_argument("--meta-update-every", type=int, default=5)
+
+    # EPIC regularizer params
+    parser.add_argument("--gamma", type=float, default=0.99)
+    parser.add_argument("--c", type=float, default=1.5)
+    parser.add_argument("--delta", type=float, default=0.01)
 
     # SAC - style algorithms
     parser.add_argument("--optimizer", type=str, default="adam")
@@ -169,6 +174,11 @@ def make_model(args, env) -> EPICModel:
             reward_scale=args.reward_scale,
             discount=args.discount,
             device=args.device,
+            prior_update_every=args.meta_update_every,
+            max_steps=args.max_steps,
+            gamma=args.gamma,
+            c = args.c,
+            delta=args.delta
         )
         wandb.watch(mdl)
         return mdl
