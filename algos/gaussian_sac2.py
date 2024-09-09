@@ -373,31 +373,18 @@ class EpicSACMcActor(nn.Module):
         )
         losses = self.compute_loss(state, action, reward, next_state, done)
 
-        # get_dot = register_hooks(z)
-        # z.backward()
-        # dot = get_dot()
-        # dot.save('tmp.dot')
-
-        # get_dot = register_hooks(losses.policy_loss)
         self.policy_optimizer.zero_grad()
         losses.policy_loss.backward()
         self.policy_optimizer.step()
 
-        # get_dot().save("policy_grad.dot")
-
-        # get_dot = register_hooks(losses.qf1_loss)
         self.qf1_optimizer.zero_grad()
         losses.qf1_loss.backward()
         self.qf1_optimizer.step()
-        # get_dot().save("qf1_grad.dot")
 
-        # get_dot = register_hooks(losses.qf2_loss)
         self.qf2_optimizer.zero_grad()
         losses.qf2_loss.backward()
         self.qf2_optimizer.step()
-        # get_dot().save("qf2_grad.dot")
 
-        # raise ValueError("debug hello")
 
     def per_step(self, state, action, reward, new_state, done, meta_episode: int, step: int):
         # every step, the MC actor adds a new sample and takes some number of trainsteps. then it may update its
