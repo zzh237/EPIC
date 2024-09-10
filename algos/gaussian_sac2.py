@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import math
+import functools
 import typing
 from typing_extensions import Self
-from typing import NamedTuple
+from typing import NamedTuple, TypedDict, cast
+from math import log, sqrt, prod
 
 import gym
 import numpy as np
@@ -14,7 +15,7 @@ from torch import Tensor, nn
 from torch.autograd import Variable
 
 import wandb
-from algos.epic_util import ModuleWithKlDivergence, PriorWrapper
+from algos.epic_util import ModuleWithKlDivergence, PriorWrapper, soft_update_from_to
 from algos.logging import track_config
 from algos.memory import ReplayMemory
 from algos.types import Action, EPICModel
@@ -188,13 +189,10 @@ class StochasticMlp(nn.Module):
         return self.layers(x)
 
 
-class FlattenStochasticMlp(StochasticMlp, ModuleWithKlDivergence):
+class FlattenStochasticMlp(StochasticMlp):
     def forward(self, *x):
         flat = torch.cat(x, dim=1)
         return super().forward(flat)
-    
-    def kl_divergence(self, other: Self) -> Tensor:
-        return model_kl_div(self, other)
 
 
 def model_kl_div(default: nn.Module, prior: nn.Module):
@@ -206,27 +204,33 @@ def model_kl_div(default: nn.Module, prior: nn.Module):
     ):
         kl.append(
             KL_div(
-                mu1=default_layer.w_mu,
-                sigma1=default_layer.w_log_var,
-                mu2=prior_layer.w_mu,
-                sigma2=prior_layer.w_log_var,
+                mu1=default_layer.weights_mean,
+                sigma1=default_layer.weights_log_var,
+                mu2=prior_layer.weights_mean,
+                sigma2=prior_layer.weights_log_var,
             )
         )
         kl.append(
             KL_div(
-                mu1=default_layer.b_mu,
-                sigma1=default_layer.b_log_var,
-                mu2=prior_layer.b_mu,
-                sigma2=prior_layer.b_log_var,
+                mu1=default_layer.bias_mean,
+                sigma1=default_layer.bias_log_var,
+                mu2=prior_layer.bias_mean,
+                sigma2=prior_layer.bias_log_var,
             )
         )
 
     return torch.stack(kl).sum()
 
 
-def kl_regularizer(kl, N, H, c=torch.tensor(1.5), delta=torch.tensor(0.01)):
-    epsilon = torch.log(torch.tensor(2.0)) / (2 * torch.log(c)) * (1 + torch.log(kl / torch.log(2.0 / delta)))
-    reg = (1 + c) / 2 * torch.sqrt(torch.tensor(2.0)) * torch.sqrt((kl + torch.log(2.0 / delta) + epsilon) * N * H**2)
+def kl_regularizer(kl, prior_update_every, gamma, max_steps, 
+                c = 1.5,
+                delta = 0.01
+                   ):
+    N = prior_update_every
+    H = 1. * (1. - gamma ** max_steps) / (1. - gamma)
+    
+    epsilon = log(2.) / (2. * log(c)) * (1. + torch.log(kl / log(2. / delta)))
+    reg = (1. + c ) / 2. * sqrt(2.) * torch.sqrt((kl + log(2. / delta) + epsilon) * N * H ** 2.)
     return reg
 
 
@@ -238,12 +242,7 @@ def KL_div(mu1, sigma1, mu2, sigma2):
     return 0.5 * (term1 + term2 + term3)
 
 
-def soft_update_from_to(source: nn.Module, target: nn.Module, tau: float):
-    for target_param, param in zip(target.parameters(), source.parameters()):
-        target_param.data.copy_(target_param.data * (1.0 - tau) + param.data * tau)
-
-
-class OptimizerFactory(typing.Protocol):
+class OptimizerFactory(typing.Protocol): # type: ignore
     def __init__(self, params, lr): ...
 
     def zero_grad(self): ...
@@ -254,6 +253,11 @@ class Losses(NamedTuple):
     qf1_loss: Tensor
     qf2_loss: Tensor
     policy_loss: Tensor
+
+class EpicRegularizers(TypedDict):
+    qf1: Tensor
+    qf2: Tensor
+    policy: Tensor
 
 
 class EpicSACMcActor(nn.Module):
@@ -277,6 +281,7 @@ class EpicSACMcActor(nn.Module):
         device: str,
         c: float,
         delta: float,
+        enable_epic_regularization: bool,
         q_network_hiddens: tuple[int, ...] = (256, 256),
         policy_hiddens: tuple[int, ...] = (256, 256),
     ):
@@ -289,52 +294,13 @@ class EpicSACMcActor(nn.Module):
         self.reward_scale = reward_scale
         self.discount = discount
         self.device = device
+        self.enable_epic_regularization = enable_epic_regularization
 
-        def make_qf():
-            return FlattenStochasticMlp(input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1)
+        self.qf1 = FlattenStochasticMlp(input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1)
+        self.qf2 = FlattenStochasticMlp(input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1)
 
-        # self.qf1 = FlattenStochasticMlp(input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1)
-        self.qf1 = PriorWrapper(
-            make_qf,
-            prior_update_every=prior_update_every,
-            gamma=gamma,
-            max_steps=max_steps,
-            c=c,
-            delta=delta
-        )
-        self.qf2 =  PriorWrapper(
-            make_qf,
-            prior_update_every=prior_update_every,
-            gamma=gamma,
-            max_steps=max_steps,
-            c=c,
-            delta=delta
-        )
-
-        self.target_qf1 = PriorWrapper(
-            make_qf,
-            prior_update_every=prior_update_every,
-            gamma=gamma,
-            max_steps=max_steps,
-            c=c,
-            delta=delta
-        )
-
-        self.target_qf2 = PriorWrapper(
-            make_qf,
-            prior_update_every=prior_update_every,
-            gamma=gamma,
-            max_steps=max_steps,
-            c=c,
-            delta=delta
-        )
-
-        # self.target_qf1 = FlattenStochasticMlp(
-        #     input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1
-        # )
-        # self.target_qf2 = FlattenStochasticMlp(
-        #     input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1
-        # )
+        self.target_qf1 = FlattenStochasticMlp(input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1)
+        self.target_qf2 = FlattenStochasticMlp(input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1)
 
         self.policy = StochasticTanhGaussianPolicy(
             hidden_sizes=policy_hiddens, obs_dim=state_dim, action_dim=action_dim, device=device
@@ -344,8 +310,8 @@ class EpicSACMcActor(nn.Module):
         self.replay_buffer = ReplayMemory(replay_capacity)
 
         self.qf_criterion = nn.MSELoss()
-        self.qf1_optimizer = optimizer_class(self.qf1.default.parameters(), lr=qf_lr)
-        self.qf2_optimizer = optimizer_class(self.qf2.default.parameters(), lr=qf_lr)
+        self.qf1_optimizer = optimizer_class(self.qf1.parameters(), lr=qf_lr)
+        self.qf2_optimizer = optimizer_class(self.qf2.parameters(), lr=qf_lr)
         self.policy_optimizer = optimizer_class(self.policy.parameters(), lr=policy_lr)
 
     def act(self, state: Tensor | np.ndarray) -> Action:
@@ -357,21 +323,19 @@ class EpicSACMcActor(nn.Module):
 
         # (action, mean, log_std, log_prob, expected_log_prob, std, mean_action_log_prob, pre_tanh_value)
         action, _, _, log_prob, *_ = self.policy(state, reparameterize=True, return_log_prob=True)
-        # dist = self.policy(state)
-        # action, log_prob = dist.rsample_and_logprob()
 
         return Action(state=state, action=action.flatten(), log_prob=log_prob)
 
     def push_sample(self, state, action, reward, new_state, done):
         self.replay_buffer.push(state, action, reward, new_state, done)
 
-    def train_step(self):
+    def train_step(self, kl_divergences: EpicRegularizers):
         if self.replay_buffer.size() < self.batch_size:
             return
         state, action, reward, next_state, done = self.replay_buffer.sample(
             batch_size=self.batch_size, device=self.device, as_tensors=True
         )
-        losses = self.compute_loss(state, action, reward, next_state, done)
+        losses = self.compute_loss(state, action, reward, next_state, done, kl_divergences)
 
         self.policy_optimizer.zero_grad()
         losses.policy_loss.backward()
@@ -385,35 +349,33 @@ class EpicSACMcActor(nn.Module):
         losses.qf2_loss.backward()
         self.qf2_optimizer.step()
 
-
-    def per_step(self, state, action, reward, new_state, done, meta_episode: int, step: int):
+    def per_step(self, state, action, reward, new_state, done, meta_episode: int, step: int, kl_divergences: EpicRegularizers):
         # every step, the MC actor adds a new sample and takes some number of trainsteps. then it may update its
         # target networks
         self.push_sample(state, action, reward, new_state, done)
 
         for _ in range(self.sac_steps):
-            self.train_step()
+            self.train_step(kl_divergences)
 
         if step % self.target_update_period == 0:
             self.update_targets()
 
     def update_targets(self):
-        soft_update_from_to(self.qf1.default, self.target_qf1.default, self.tau)
-        soft_update_from_to(self.qf2.default, self.target_qf2.default, self.tau)
+        soft_update_from_to(self.qf1, self.target_qf1, self.tau)
+        soft_update_from_to(self.qf2, self.target_qf2, self.tau)
 
-    def compute_loss(self, state, action, reward, new_state, done) -> Losses:
-        # policy
+    def compute_loss(self, state, action, reward, new_state, done, kl_divergences: EpicRegularizers) -> Losses:
         # (action, mean, log_std, log_prob, expected_log_prob, std, mean_action_log_prob, pre_tanh_value)
         state_next_actions, _, _, log_prob, *_ = self.policy(state, reparameterize=True, return_log_prob=True)
         log_prob = log_prob.unsqueeze(-1)
 
-        q_new_actions = torch.min(self.qf1.call_default(state, state_next_actions), 
-                                  self.qf2.call_default(state, state_next_actions))
+        q_new_actions = torch.min(self.qf1(state, state_next_actions), 
+                                  self.qf2(state, state_next_actions))
         policy_loss = (log_prob - q_new_actions).mean()
 
         # QF
-        q1_pred = self.qf1.call_default(state, action)
-        q2_pred = self.qf2.call_default(state, action)
+        q1_pred = self.qf1(state, action)
+        q2_pred = self.qf2(state, action)
         new_state_next_actions, _, _, new_state_log_prob, *_ = self.policy(
             new_state, reparameterize=True, return_log_prob=True
         )
@@ -421,8 +383,8 @@ class EpicSACMcActor(nn.Module):
 
         target_q_values = (
             torch.min(
-                self.target_qf1.call_default(new_state, new_state_next_actions), 
-                self.target_qf2.call_default(new_state, new_state_next_actions)
+                self.target_qf1(new_state, new_state_next_actions), 
+                self.target_qf2(new_state, new_state_next_actions)
             )
             - new_state_log_prob
         )
@@ -431,7 +393,17 @@ class EpicSACMcActor(nn.Module):
         qf1_loss = self.qf_criterion(q1_pred, q_target.detach())
         qf2_loss = self.qf_criterion(q2_pred, q_target.detach())
 
-        wandb.log({"qf1_loss": qf1_loss.detach(), "qf2_loss": qf2_loss.detach(), "policy_loss": policy_loss.detach()})
+        stats = {"qf1_loss": qf1_loss.detach(), "qf2_loss": qf2_loss.detach(), "policy_loss": policy_loss.detach()}
+
+        if self.enable_epic_regularization:
+            policy_loss = policy_loss + kl_divergences["policy"]
+            qf1_loss = qf1_loss + kl_divergences["qf1"]
+            qf2_loss = qf2_loss + kl_divergences["qf2"]
+
+            stats.update({"policy_kl_loss": kl_divergences["policy"].detach(), "qf1_kl_loss": kl_divergences["qf1"].detach(),
+                          "qf2_kl_loss": kl_divergences["qf2"].detach()})
+
+        wandb.log(stats)
 
         return Losses(qf1_loss=qf1_loss, qf2_loss=qf2_loss, policy_loss=policy_loss)
 
@@ -458,6 +430,9 @@ class EpicSAC2(EPICModel):
         max_steps: int,
         c: float,
         delta: float,
+        enable_epic_regularization: bool,
+        prior_lambda: float,
+        prior_lambda_decay: float,
         q_network_hiddens: tuple[int, ...] = (256, 256),
         policy_hiddens: tuple[int, ...] = (256, 256),
     ):
@@ -466,16 +441,23 @@ class EpicSAC2(EPICModel):
         self._m = m
         self.batch_size = batch_size
         self.sac_steps = sac_steps
+        self.prior_lambda = prior_lambda
+        self.prior_lambda_decay = prior_lambda_decay
         self.device = device
+        self.prior_update_every = prior_update_every
+        self.gamma = gamma
+        self.max_steps = max_steps
+        self.c = c
+        self.delta = delta
 
         # MC actor initialization
         assert env.action_space.shape is not None
         assert env.observation_space.shape is not None
-        state_dim = math.prod(env.observation_space.shape)
-        action_dim = math.prod(env.action_space.shape)
-        self.mc_actors = nn.ModuleList(
-            [
-                EpicSACMcActor(
+        state_dim = prod(env.observation_space.shape)
+        action_dim = prod(env.action_space.shape)
+
+        def make_actor():
+            return EpicSACMcActor(
                     state_dim=state_dim,
                     action_dim=action_dim,
                     replay_capacity=replay_capacity,
@@ -495,31 +477,70 @@ class EpicSAC2(EPICModel):
                     gamma = gamma,
                     max_steps=max_steps,
                     c=c,
-                    delta=delta
+                    delta=delta,
+                    enable_epic_regularization=enable_epic_regularization
                 )
+
+        self.mc_actors = nn.ModuleList(
+            [
+                make_actor()
                 for _ in range(m)
             ]
         )
+
+        self.actor_pair = PriorWrapper(make_actor, 
+                                          prior_update_every=prior_update_every,
+                                          gamma=gamma,
+                                          max_steps=max_steps,
+                                          c=c,
+                                          delta=delta,
+                                          tau=tau)
 
         self.to(torch.device(device))
 
     @property
     def m(self):
         return self._m
+    
+    def _get_epic_regularizer(self, default, prior) -> Tensor:
+        return kl_regularizer(model_kl_div(default, prior), self.prior_update_every, 
+                              self.gamma, self.max_steps, self.c, self.delta)
+    
+    def get_epic_regularizers(self) -> EpicRegularizers:
+        """Return the divergence between the default and prior actor."""
+        default = self.actor_pair.default
+        prior = self.actor_pair.prior
+
+        qf1_reg = self._get_epic_regularizer(default.qf1, prior.qf1)
+        qf2_reg = self._get_epic_regularizer(default.qf2, prior.qf2)
+        policy_reg = self._get_epic_regularizer(default.policy, prior.policy)
+
+        return {
+            "qf1": qf1_reg,
+            "qf2": qf2_reg,
+            "policy": policy_reg
+        }
+
 
     def act_m(self, m, state) -> Action:
         return self.mc_actors[m].act(state)
 
     def per_step_m(self, m: int, state, action, reward, new_state, done, meta_episode: int, step: int):
-        self.mc_actors[m].per_step(state, action, reward, new_state, done, meta_episode, step)
+        actor = cast(EpicSACMcActor, self.mc_actors[m])  
+        actor.per_step(state, action, reward, new_state, done, meta_episode, step, kl_divergences=self.get_epic_regularizers())
 
     def post_episode(self) -> None:
-        # not needed
+        # not needed.
         pass
 
     def update_prior(self) -> None:
-        # update the prior by
-        pass
+        # update the prior by doing a polyak update from the current default.
+        self.actor_pair.update_prior()
 
     def update_default(self) -> None:
-        pass
+        # update the default from the MC copies
+        # in the 1-worker case, don't do anything
+        if self.m == 1:
+            return
+        else:
+            raise NotImplementedError("Didn't implement this yet")
