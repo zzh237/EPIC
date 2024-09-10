@@ -449,6 +449,7 @@ class EpicSAC2(EPICModel):
         self.max_steps = max_steps
         self.c = c
         self.delta = delta
+        self.enable_epic_regularization = enable_epic_regularization
 
         # MC actor initialization
         assert env.action_space.shape is not None
@@ -535,12 +536,23 @@ class EpicSAC2(EPICModel):
 
     def update_prior(self) -> None:
         # update the prior by doing a polyak update from the current default.
-        self.actor_pair.update_prior()
+        if self.enable_epic_regularization:
+            self.actor_pair.update_prior()
+
+    def pre_meta_episode(self):
+        # update the MC workers from the default
+        if self.enable_epic_regularization:
+            for actor in self.mc_actors:
+                with torch.no_grad():
+                    soft_update_from_to(self.actor_pair.default, actor, 1.0)
+            
 
     def update_default(self) -> None:
         # update the default from the MC copies
-        # in the 1-worker case, don't do anything
+        # in the 1-worker case, just copy worker 0 into the default
         if self.m == 1:
-            return
+            if self.enable_epic_regularization:
+                with torch.no_grad():
+                    soft_update_from_to(self.mc_actors[0], self.actor_pair.default, 1.0)
         else:
             raise NotImplementedError("Didn't implement this yet")
