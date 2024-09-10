@@ -237,7 +237,7 @@ def kl_regularizer(kl, prior_update_every, gamma, max_steps,
 def KL_div(mu1, sigma1, mu2, sigma2):
     term1 = torch.sum(torch.log(sigma2 / sigma1)) - len(sigma1)
     term2 = torch.sum(sigma1 / sigma2)
-    term3 = torch.sum((mu2 - mu1).pow(2) / sigma2)
+    term3 = torch.sum((mu2 - mu1).pow(2.) / sigma2)
 
     return 0.5 * (term1 + term2 + term3)
 
@@ -507,14 +507,14 @@ class EpicSAC2(EPICModel):
         return kl_regularizer(model_kl_div(default, prior), self.prior_update_every, 
                               self.gamma, self.max_steps, self.c, self.delta)
     
-    def get_epic_regularizers(self) -> EpicRegularizers:
-        """Return the divergence between the default and prior actor."""
-        default = self.actor_pair.default
+    def get_epic_regularizers(self, actor: EpicSACMcActor) -> EpicRegularizers:
+        """Return the divergence between some actor and the prior actor."""
+        # default = self.actor_pair.default
         prior = self.actor_pair.prior
 
-        qf1_reg = self._get_epic_regularizer(default.qf1, prior.qf1)
-        qf2_reg = self._get_epic_regularizer(default.qf2, prior.qf2)
-        policy_reg = self._get_epic_regularizer(default.policy, prior.policy)
+        qf1_reg = self._get_epic_regularizer(actor.qf1, prior.qf1)
+        qf2_reg = self._get_epic_regularizer(actor.qf2, prior.qf2)
+        policy_reg = self._get_epic_regularizer(actor.policy, prior.policy)
 
         return {
             "qf1": qf1_reg,
@@ -528,7 +528,7 @@ class EpicSAC2(EPICModel):
 
     def per_step_m(self, m: int, state, action, reward, new_state, done, meta_episode: int, step: int):
         actor = cast(EpicSACMcActor, self.mc_actors[m])  
-        actor.per_step(state, action, reward, new_state, done, meta_episode, step, kl_divergences=self.get_epic_regularizers())
+        actor.per_step(state, action, reward, new_state, done, meta_episode, step, kl_divergences=self.get_epic_regularizers(actor))
 
     def post_episode(self) -> None:
         # not needed.
