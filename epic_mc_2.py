@@ -99,7 +99,7 @@ class EpicTrainer:
         for meta_episode in range(self.meta_episodes):
             print(f"meta-episode: {meta_episode}, episodes:", end="")
             env = self.env_maker(meta_episode)
-
+            self.model.pre_meta_episode()
             for episode_idx in range(self.num_episodes):
                 for m_idx in range(self.model.m):
                     state = env.reset()

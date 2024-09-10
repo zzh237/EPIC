@@ -50,3 +50,10 @@ class EPICModel(ABC, nn.Module):
         Update the default model by drawing from the prior.
         """
         ...
+
+    @abstractmethod
+    def pre_meta_episode(self):
+        """
+        Do anything that you need to do before beginning a new meta-episode.
+        """
+        ...
