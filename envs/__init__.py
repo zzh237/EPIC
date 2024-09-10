@@ -2,6 +2,7 @@ import numpy as np
 import gym
 
 class TorqueConvert(gym.Wrapper):
+    # this makes the environment renderable
     def __init__(self, env):
         super().__init__(env)
 
@@ -14,6 +15,8 @@ def make_pendulum(seed, toy=False):
         gravity = 10.0
     else:
         gravity = np.random.uniform(1.0, 20.0)
+
+    print(f"pendulum gravity: {gravity}", flush=True)
 
     env = TorqueConvert(gym.make("Pendulum-v1", g=gravity))
     env.seed(seed)

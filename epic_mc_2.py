@@ -97,8 +97,8 @@ class EpicTrainer:
             schema={"meta_episode": int, "episode": int, "mc_worker": int, "step": int, "reward": pl.Float64}
         )
         for meta_episode in range(self.meta_episodes):
-            print(f"meta-episode: {meta_episode}, episodes:", end="")
             env = self.env_maker(meta_episode)
+            print(f"meta-episode: {meta_episode}, episodes:", end="")
             self.model.pre_meta_episode()
             for episode_idx in range(self.num_episodes):
                 for m_idx in range(self.model.m):
