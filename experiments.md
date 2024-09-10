@@ -21,5 +21,6 @@ python ./epic_mc_2.py \
 --qf-target-update-period=1 \
 --replay-capacity=1000 \
 --batch-size=32 \
+--enable-epic-regularization \
 --tau=1e-2 --render
 ```
