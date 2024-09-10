@@ -42,9 +42,12 @@ def parse_args():
     parser.add_argument("--meta-update-every", type=int, default=5)
 
     # EPIC regularizer params
+    parser.add_argument("--enable-epic-regularization", action="store_true")
     parser.add_argument("--gamma", type=float, default=0.99)
     parser.add_argument("--c", type=float, default=1.5)
     parser.add_argument("--delta", type=float, default=0.01)
+    parser.add_argument("--prior-lambda", type=float, default=0.9)
+    parser.add_argument("--prior-lambda-decay", type=float, default=0.999)
 
     # SAC - style algorithms
     parser.add_argument("--optimizer", type=str, default="adam")
@@ -178,7 +181,10 @@ def make_model(args, env) -> EPICModel:
             max_steps=args.max_steps,
             gamma=args.gamma,
             c = args.c,
-            delta=args.delta
+            delta=args.delta,
+            enable_epic_regularization=args.enable_epic_regularization,
+            prior_lambda=args.prior_lambda,
+            prior_lambda_decay=args.prior_lambda_decay
         )
         wandb.watch(mdl)
         return mdl
