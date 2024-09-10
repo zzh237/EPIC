@@ -161,7 +161,8 @@
                 "--lr-qf=1e-3",
                 "--lr-policy=1e-3",
                 "--qf-target-update-period=1",
-                "--tau=1e-2"
+                "--tau=1e-2",
+                "--enable-epic-regularization"
             ],
             "env": {
                 "WANDB_MODE": "disabled"
