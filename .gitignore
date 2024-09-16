@@ -1,3 +1,7 @@
+.envrc
+wandb/
+.pixi/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -160,3 +164,4 @@ cython_debug/
 .idea/
 .DS_Store
 __pycache__/
+mujoco-py/
