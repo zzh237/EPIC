@@ -24,3 +24,20 @@ python ./epic_mc_2.py \
 --enable-epic-regularization \
 --tau=1e-2 --render
 ```
+
+Smallest example of the epic regularizer still working (?)
+```shell
+python ./epic_mc_2.py \
+--model=epic-sac \
+--device=cpu \
+--env=pendulum \
+--max-steps=200 \
+--lr-qf=1e-3 \
+--lr-policy=1e-3 \
+--qf-target-update-period=1 \
+--replay-capacity=1000 \
+--batch-size=32 \
+--enable-epic-regularization \
+--meta-update-every 1 \
+--tau=1e-2 --render
+```

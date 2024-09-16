@@ -496,6 +496,11 @@ class EpicSAC2(EPICModel):
                                           c=c,
                                           delta=delta,
                                           tau=tau)
+        
+        # initialize all networks to be the same so the divergence starts small
+        with torch.no_grad():
+            for target in self.mc_actors + [self.actor_pair.default]:
+                soft_update_from_to(self.actor_pair.prior, target, 1.0)
 
         self.to(torch.device(device))
 
