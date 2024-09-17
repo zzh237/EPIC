@@ -21,6 +21,7 @@ from envs.new_lunar_lander import NewLunarLander
 #from envs.new_ant import AntDirection, AntForwardBackward
 from envs.new_halfcheetah import HalfCheetahForwardBackward
 from envs.new_humanoid import HumanoidDirection, HumanoidForwardBackward
+from envs.jellybean import make_jbw
 
 
 import logging
@@ -177,10 +178,7 @@ def make_swimmer_env(env):
     return env
 
 def make_jbw_env(seed, env):
-   import jbw  # noqa: F401
-   env = gym.make("JBW-render-v1", render=render)
-   
-   return FlattenObservation(env)
+   return make_jbw(render=render)
 
 # def make_mujoco_env(env="Swimmer"):
 #     if env == "Swimmer":
