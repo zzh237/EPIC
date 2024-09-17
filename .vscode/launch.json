@@ -12,6 +12,19 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": false
+        },
+        {
+            "name": "jbw",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/epic_mc.py",
+            "args": [
+                "--run=1", "--env=jbw",
+                "--device=cpu",
+                "--meta_update_every=25",
+                "--steps=100", "--render"
+            ],
+            "justMyCode": false
         }
     ]
 }

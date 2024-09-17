@@ -11,6 +11,7 @@ import numpy as np
 from gym.spaces import Box, Discrete
 import setup
 from algos.memory import Memory, ReplayMemory
+from gym.wrappers import FlattenObservation
 from algos.agents.gaussian_vpg_mc import GaussianVPGMC
 from algos.agents.gaussian_ppo import GaussianPPO
 
@@ -37,6 +38,7 @@ parser = argparse.ArgumentParser()
 # change cpu to cuda if running on server
 parser.add_argument('--device', type=str, default="cpu")
 parser.add_argument('--run', type=int, default=0)
+parser.add_argument('--render', action='store_true')
 # env settings
 # Swimmer for majuco environment
 parser.add_argument('--env', type=str, default="CartPole-v0",
@@ -174,6 +176,12 @@ def make_swimmer_env(env):
     # env = SwimmerEnv()
     return env
 
+def make_jbw_env(seed, env):
+   import jbw  # noqa: F401
+   env = gym.make("JBW-render-v1", render=render)
+   
+   return FlattenObservation(env)
+
 # def make_mujoco_env(env="Swimmer"):
 #     if env == "Swimmer":
 #         # goal = np.random.uniform(0.1, 0.2)
@@ -229,6 +237,7 @@ envs = {'LunarLander-v2': make_lunar_env,
         'HumanoidDirection': make_humanoiddirection,
         'HumanoidForwardBackward': make_humanoidforwardbackward,
         'Swimmer':make_swimmer_env,
+        'jbw': make_jbw_env,
         }
 
 if __name__ == '__main__':
@@ -254,7 +263,7 @@ if __name__ == '__main__':
     lam_decay = args.lam_decay
     ############ For All #########################
     gamma = 0.99                # discount factor
-    render = False
+    render = args.render
     save_every = 100
     if args.hiddens:
         hidden_sizes = tuple(args.hiddens) # need to tune
@@ -366,7 +375,10 @@ if __name__ == '__main__':
               rewards = []
               for steps in range(max_steps):
                   if render:
-                      env.render()
+                      if args.env == "jbw":
+                         env.render(mode="matplotlib")
+                      else:
+                        env.render()
                   state_tensor, action_tensor, log_prob_tensor = actor_policy.act_policy_m(state, j)
 
                   if isinstance(env.action_space, Discrete):
