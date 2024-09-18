@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 import concurrent
 
-PARALLELISM = 1
+PARALLELISM = 5
 PREFIX = Path("./results/montecarlo")
 ENV = "jbw"
 DEVICE = "cpu"
@@ -21,7 +21,7 @@ GRID = {
 ALL_PARAMS = [dict(zip(GRID.keys(), point)) for point in product(*GRID.values())]
 
 def calculate_run_prefix(point: dict):
-    resdir = PREFIX / f"n{point['meta_update_every']}_s{point['steps']}_m{point['m']}"
+    resdir = PREFIX / ENV / f"n{point['meta_update_every']}_s{point['steps']}_m{point['m']}"
     return resdir
 
 # to support restarting, we calculate the full grid of files that would be produced
