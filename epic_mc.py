@@ -178,7 +178,9 @@ def make_swimmer_env(env):
     return env
 
 def make_jbw_env(seed, env):
-   return make_jbw(render=render)
+   # every max_steps, change the objective of the agent
+   # with proper_reset = False, the agent will eat everything in some area and wander around with low reward
+   return make_jbw(render=render, period=max_steps, proper_reset=True)
 
 # def make_mujoco_env(env="Swimmer"):
 #     if env == "Swimmer":

@@ -7,6 +7,7 @@ import numpy as np
 from typing import Any
 from itertools import cycle
 from gym.spaces import Discrete
+from jbw.environments import SimulatorConfig
 
 def collect_jellybean_reward(prev_items, items):
     """
@@ -39,12 +40,13 @@ def collect_onion_reward(prev_items, items):
 
 
 class CyclingJbwWrapper(gym.Wrapper):
-    def __init__(self, env: gym.Env, cycle_period: int = 2):
+    def __init__(self, env: gym.Env, proper_reset: bool, cycle_period: int = 100):
         super().__init__(env)
         self._step_idx = 0
         self._reward_functions = cycle([collect_jellybean_reward, collect_onion_reward])
         self._target_items = cycle(["jellybean", "onion"])
         self.target_item = "jellybean" # the env starts in jellybean mode
+        self.proper_reset = proper_reset
         self._cycle_period = cycle_period
         self._last_obs = None
 
@@ -62,13 +64,13 @@ class CyclingJbwWrapper(gym.Wrapper):
     def reset(self, **kwargs) -> Any | Tuple[Any | dict]:
         # embed a lifetime learning environment in an episodic framework by not resetting
         # reset needs to return the last observation
-        if self._last_obs is None: 
+        if self._last_obs is None or self.proper_reset: 
             # first reset is a real reset
             reset_result = super().reset(**kwargs)
         else:
-            # first reset will be a real reset
+            # subsequent resets keep the agent where it is and just return the last observation
             reset_result = self._last_obs
-            
+
         self._add_target_item(reset_result)
         return reset_result
     
@@ -84,11 +86,15 @@ class CyclingJbwWrapper(gym.Wrapper):
 
         obs, reward, done, info = super().step(action)
         self._add_target_item(obs)
+        self._last_obs = obs
 
         return obs, reward, done, info
     
         
-def make_jbw(render: bool):
+def make_jbw(render: bool, period: int, proper_reset: bool):
+    if render:
+        env_name = "JBW-render-v1"
+    else:
+        env_name = "JBW-v1"
     # a version of JBW that cycles between collect jellybean & collect onion
-    return FlattenObservation(CyclingJbwWrapper(gym.make("JBW-render-v1", render=render)))
-   
+    return FlattenObservation(CyclingJbwWrapper(gym.make(env_name), cycle_period=period, proper_reset=proper_reset))
