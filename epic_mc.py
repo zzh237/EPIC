@@ -401,10 +401,10 @@ if __name__ == '__main__':
             mc_rewards = np.append(mc_rewards, epi_reward) 
             # meta_memory.clear_memory()
 
-        meta_rew_file.write("sample: {}, mc_sample: {}, mean reward: {}, std reward: {}, kl: {}\n".format(
-                        sample, m, np.round(np.mean(mc_rewards), decimals=7), \
-                          np.round(np.std(mc_rewards), decimals=7), \
-                            np.round(KL,decimals=7)))
+        meta_rew_file.write("sample: {:.5f}, mc_sample: {:.5f}, mean reward: {:.5f}, std reward: {:.5f}, kl: {:.5f}\n".format(
+                        sample, m, np.mean(mc_rewards), \
+                          np.std(mc_rewards), \
+                            KL))
         meta_rew_file.flush()
         actor_policy.update_mu_theta_for_default(meta_memories, meta_update_every, H=1*(1-gamma**max_steps)/(1-gamma))
         KL = actor_policy.KL.data.cpu().numpy()
