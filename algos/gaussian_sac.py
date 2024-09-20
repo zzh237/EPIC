@@ -4,26 +4,28 @@ An SAC agent that uses StochasticLinear gaussian-parameterized layers.
 
 from __future__ import annotations
 
-from collections import defaultdict
 import copy
-import math
-from torch.optim.optimizer import Optimizer
-from typing import List, Sequence, TypedDict, Generic, TypeVar, Optional, Iterable, cast
-from torch.optim.adam import Adam
-import wandb
+import inspect
 import itertools
-
+import math
+from collections import defaultdict
 from functools import wraps
+from typing import List, Sequence, TypedDict
+
 import numpy as np
 import torch
-from torch import Tensor
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn.parameter import Parameter
+from torch import Tensor
 from torch.autograd import Variable
 from torch.distributions import Distribution, Normal
-import inspect
+from torch.nn.parameter import Parameter
+from torch.optim.adam import Adam
+from torch.optim.optimizer import Optimizer
+
+import wandb
 from algos.memory import Memory, ReplayMemory
+from algos.types import Action, EPICModel
 
 LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20
@@ -361,7 +363,7 @@ class KlRegularizationSettings(TypedDict):
     policy: bool
 
 
-class UpdateMetrics(TypedDict, total=False):
+class UpdateMetrics(TypedDict):
     q_loss: float
     q_epic_reg: float
     v_loss: float
@@ -418,7 +420,7 @@ class EpicSACActor(nn.Module):
         self.policy_default = TanhGaussianPolicy(
             hidden_sizes=policy_hidden_sizes, obs_dim=obs_dim, action_dim=action_dim, device=device
         )
-       
+
         self.optimizers["policy"] = optimizer_class(self.policy_default.parameters(), lr=policy_lr)
 
         # q networks
@@ -455,7 +457,7 @@ class EpicSACActor(nn.Module):
         """
         Perform 1 SAC update on this actor.
         """
-        ## Unpack 
+        ## Unpack
         metrics = UpdateMetrics()
 
         states, actions, rewards, succ_states, dones = self.replay_buffer.sample(
@@ -495,7 +497,7 @@ class EpicSACActor(nn.Module):
                 q_kl_sum += kl_regularizer(model_kl_div(q_default, q_prior), N, H)
             q_loss += q_kl_sum
             metrics["q_epic_reg"] = q_kl_sum.cpu().detach()
-        
+
         q_loss.backward()
         for o in self.optimizers["q_networks"]:
             o.step()
@@ -506,16 +508,16 @@ class EpicSACActor(nn.Module):
         if self.total_steps % self.target_update_period == 0:
             for q, q_target in zip(self.q_networks, self.target_q_networks):
                 soft_update_from_to(q, q_target, self.soft_target_tau)
-                
+
 
         return metrics
-    
+
     def forward(self, obs):
         return self.act(obs)
-    
+
     def copy(self):
         return copy.deepcopy(self)
-    
+
     def load_from(self, other: "EpicSACActor"):
         self.load_state_dict(other.state_dict())
 
@@ -566,7 +568,7 @@ class EpicSAC(nn.Module):
         # this isn't used for anything
         self.KL = torch.tensor(0.)
 
-        
+
         self.prior_actor = EpicSACActor(
             obs_dim=obs_dim,
             action_dim=action_dim,
@@ -634,7 +636,7 @@ class EpicSAC(nn.Module):
         out_metrics = {}
         for name, values in m_metrics.items():
             out_metrics.update({f"{name}.mean": np.mean(values), f"{name}.std": np.std(values)})
-       
+
         return out_metrics
 
 
@@ -645,7 +647,7 @@ class EpicSAC(nn.Module):
         # TODO not sure if this will mess up stepping
         wandb.log({"lambda": self.lam}, commit=False)
 
-        for prior_param, new_default_param in zip(self.prior_actor.parameters(), 
+        for prior_param, new_default_param in zip(self.prior_actor.parameters(),
                                                   self.new_actor.parameters()):
             prior_param.data.copy_((1-self.lam) * new_default_param.data + self.lam * prior_param.data)
 
