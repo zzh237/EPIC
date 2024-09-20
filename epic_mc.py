@@ -15,9 +15,12 @@ import gym
 
 # os.environ['OPENBLAS_NUM_THREADS'] = '1'
 import numpy as np
-import torch
-import torch.nn as nn
-from gym.spaces import Discrete
+from gym.spaces import Box, Discrete
+import setup
+from algos.memory import Memory, ReplayMemory
+from gym.wrappers import FlattenObservation
+from algos.agents.gaussian_vpg_mc import GaussianVPGMC
+from algos.agents.gaussian_ppo import GaussianPPO
 
 import wandb
 from algos.agents.gaussian_ppo import GaussianPPO
@@ -28,10 +31,7 @@ from envs.new_ant import AntDirection, AntForwardBackward
 from envs.new_cartpole import NewCartPoleEnv
 from envs.new_halfcheetah import HalfCheetahForwardBackward
 from envs.new_humanoid import HumanoidDirection, HumanoidForwardBackward
-from envs.new_lunar_lander import NewLunarLander
-from envs.new_swimmer import new_Swimmer
-from algos.agents.sac_basic import VanillaSAC
-import rlkit.torch.pytorch_util
+from envs.jellybean import make_jbw
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:1024"
 
@@ -43,8 +43,9 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:1024"
 
 parser = argparse.ArgumentParser()
 # change cpu to cuda if running on server
-parser.add_argument("--device", type=str, default="cpu")
-parser.add_argument("--run", type=int, default=0)
+parser.add_argument('--device', type=str, default="cpu")
+parser.add_argument('--run', type=int, default=0)
+parser.add_argument('--render', action='store_true')
 # env settings
 # Swimmer for majuco environment
 parser.add_argument(
@@ -198,6 +199,10 @@ def make_swimmer_env(env):
     # env = SwimmerEnv()
     return env
 
+def make_jbw_env(seed, env):
+   # every max_steps, change the objective of the agent
+   # with proper_reset = False, the agent will eat everything in some area and wander around with low reward
+   return make_jbw(render=render, period=max_steps, proper_reset=True)
 
 # def make_mujoco_env(env="Swimmer"):
 #     if env == "Swimmer":
@@ -269,7 +274,8 @@ envs: Dict[str, Callable[..., gym.Env]] = {
     "HumanoidDirection": make_humanoiddirection,
     "HumanoidForwardBackward": make_humanoidforwardbackward,
     "Swimmer": make_swimmer_env,
-    "Pendulum": make_pendulum
+    "Pendulum": make_pendulum,
+    "jbw": make_jbw_env,
 }
 
 if __name__ == "__main__":
