@@ -17,10 +17,12 @@ import torch
 from torch.optim.adam import Adam
 
 import wandb
+from algos.agents.gaussian_ppo_2 import GaussianPPO2
 from algos.agents.sac_basic import VanillaSACv2
 from algos.gaussian_sac2 import EpicSAC2
 from algos.types import EPICModel
 from envs import make_pendulum
+from envs.jellybean import make_jbw
 
 
 def parse_args():
@@ -122,7 +124,7 @@ class EpicTrainer:
                             )
                         )
 
-                        self.model.per_step_m(m_idx, state, action, reward.item(), new_state, done, episode_idx, step)
+                        self.model.per_step_m(m_idx, meta_episode, step, action_out, reward, new_state, done)
 
                         state = new_state
 
@@ -188,14 +190,19 @@ def make_model(args, env) -> EPICModel:
         )
         wandb.watch(mdl)
         return mdl
+    elif args.model == "gaussian-ppo":
+        mdl = GaussianPPO2(
+            state_space=env.observation_space,
+            action_space=env.action_space,
+            meta_update_every=args.meta_update_every,
+            device=args.device
+        )
+        wandb.watch(mdl)
+        return mdl
     else:
         raise ValueError(f"Unrecognized model type {args.model}")
 
 
-ENV_MAKERS: dict[str, Callable[[int], gym.Env]] = {
-    "pendulum": make_pendulum,
-    "pendulum-toy": partial(make_pendulum, toy=True),
-}
 
 
 def main():
@@ -203,6 +210,13 @@ def main():
     np.random.seed(args.seed)
     random.seed(args.seed)
     torch.manual_seed(args.seed)
+
+    ENV_MAKERS: dict[str, Callable[[int], gym.Env]] = {
+    "pendulum": partial(make_pendulum, toy=False),
+    "pendulum-toy": partial(make_pendulum, toy=True),
+    "jbw": partial(make_jbw, render=args.render, period=args.max_steps, proper_reset=True)
+}
+
 
     wandb.init(project=args.wandb_project)
     # just for space dimensions

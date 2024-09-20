@@ -211,6 +211,9 @@ class VanillaSACv2(EPICModel):
         eval_stats["meta_episode"] = meta_episode
         wandb.log(eval_stats)
 
+    def pre_meta_episode(self):
+        pass
+
     def post_episode(self):
         pass
     

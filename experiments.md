@@ -41,3 +41,13 @@ python ./epic_mc_2.py \
 --meta-update-every 1 \
 --tau=1e-2 --render
 ```
+
+
+PPO v2
+```shell
+python ./epic_mc_2.py \
+--model=gaussian-ppo \
+--device=cpu \
+--env=pendulum \
+--max-steps=200
+```

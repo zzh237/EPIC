@@ -181,6 +181,19 @@
                 "--steps=100", "--render"
             ],
             "justMyCode": false
-        }
+        },
+        {
+            "name": "ppo2",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/epic_mc_2.py",
+            "args": [
+                "--model=gaussian-ppo",
+                "--device=cpu",
+                "--env=pendulum",
+                "--render"
+            ],
+            "justMyCode": false
+        },
     ]
 }

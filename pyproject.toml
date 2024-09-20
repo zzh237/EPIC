@@ -36,7 +36,7 @@ jbw = { git = "https://github.com/ckchow/jelly-bean-world.git", subdirectory="ap
 
 [tool.pixi.target.linux-64.dependencies]
 # cudatoolkit = "*"
-# torchvision = "*"
+torchvision = "*"
 pytorch-cuda = { version = "*", channel = "pytorch" }
 # cuda = { version = "*", channel = "nvidia" }
 pytorch = "2.4.0.*"

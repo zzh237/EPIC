@@ -91,7 +91,7 @@ class CyclingJbwWrapper(gym.Wrapper):
         return obs, reward, done, info
     
         
-def make_jbw(render: bool, period: int, proper_reset: bool):
+def make_jbw(seed: bool, render: bool, period: int, proper_reset: bool):
     if render:
         env_name = "JBW-render-v1"
     else:

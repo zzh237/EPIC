@@ -24,8 +24,7 @@ class EPICModel(ABC, nn.Module):
         """
 
     @abstractmethod
-    def per_step_m(self, m: int, state, action, reward, new_state, done, meta_episode,
-                   step):
+    def per_step_m(self, m: int, meta_episode, step, action_dict: Action, reward, new_state, done):
         """
         Do something per environment step.
         """
