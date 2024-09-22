@@ -46,7 +46,7 @@ class EPICModel(ABC, nn.Module):
     @abstractmethod
     def update_default(self) -> None:
         """
-        Update the default model by drawing from the prior.
+        Update the default model.
         """
         ...
 

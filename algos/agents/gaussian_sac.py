@@ -183,7 +183,7 @@ class TanhGaussianPolicy(nn.Module):
         super().__init__()
         self.device = device
         if isinstance(hidden_sizes, int):
-            hidden_sizes = tuple(hidden_sizes)
+            hidden_sizes = (hidden_sizes, )
         # init fc layers
         in_size = obs_dim
         self.fcs = nn.ModuleList()
