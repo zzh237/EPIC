@@ -195,5 +195,19 @@
             ],
             "justMyCode": false
         },
+        {
+            "name": "vpg2",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/epic_mc_2.py",
+            "args": [
+                "--model=gaussian-vpg",
+                "--device=cpu",
+                "--env=pendulum",
+                "--render",
+                "--meta-update-every=1"
+            ],
+            "justMyCode": false
+        },
     ]
 }
