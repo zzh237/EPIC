@@ -44,10 +44,23 @@ python ./epic_mc_2.py \
 
 
 PPO v2
+(no convergence)
 ```shell
 python ./epic_mc_2.py \
 --model=gaussian-ppo \
 --device=cpu \
 --env=pendulum \
---max-steps=200
+--max-steps=200 \
+--lr=1e-3 \
+--meta-update-every
+```
+
+vpg v2
+```shell
+python ./epic_mc_2.py \
+--model=gaussian-vpg \
+--device=cpu \
+--env=pendulum \
+--max-steps=200 \
+--lr=1e-3
 ```

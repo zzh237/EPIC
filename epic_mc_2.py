@@ -18,6 +18,7 @@ from torch.optim.adam import Adam
 
 import wandb
 from algos.agents.gaussian_ppo_2 import GaussianPPO2
+from algos.agents.gaussian_vpg_2 import GaussianVPGMC2
 from algos.agents.sac_basic import VanillaSACv2
 from algos.gaussian_sac2 import EpicSAC2
 from algos.types import EPICModel
@@ -132,6 +133,10 @@ class EpicTrainer:
                             break
                 self.model.post_episode()
                 print(f" {episode_idx}", flush=True, end="")
+            
+            # TODO let policy gradient models hook into the end of the meta-episode so they can consume all
+            # the trajectories without triggering a default / prior update
+
             # average reward over all mc workers for this meta-episode
             meta_episode_reward = (
                 rewards.filter(pl.col("meta_episode") == meta_episode)
@@ -195,7 +200,28 @@ def make_model(args, env) -> EPICModel:
             state_space=env.observation_space,
             action_space=env.action_space,
             meta_update_every=args.meta_update_every,
-            device=args.device
+            device=args.device,
+            learning_rate=args.lr
+        )
+        wandb.watch(mdl)
+        return mdl
+    elif args.model == "gaussian-vpg":
+        mdl = GaussianVPGMC2(
+            m=args.m,
+            env=env,
+            hidden_sizes=(256, 256),
+            device=args.device,
+            action_std=0.5,
+            prior_update_every=args.meta_update_every,
+            gamma=args.gamma,
+            max_steps=args.max_steps,
+            c=args.c,
+            delta=args.delta,
+            tau=args.tau,
+            lr=args.lr,
+            c1=1.6,
+            lam=args.prior_lambda,
+            lam_decay=args.prior_lambda_decay
         )
         wandb.watch(mdl)
         return mdl
