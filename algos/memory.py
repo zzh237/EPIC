@@ -14,6 +14,8 @@ class ReplayMemory:
         self.position = 0
 
     def push(self, state, action, reward, next_state, done):
+        # if isinstance(state, np.ndarray):
+            # state = torch.from_numpy(state).detach()
         if len(self.buffer) < self.capacity:
             self.buffer.append(None)
         self.buffer[self.position] = (state, action, reward, next_state, done)
@@ -23,11 +25,13 @@ class ReplayMemory:
         if batch_size > self.capacity:
             batch_size = self.capacity
         batch = random.sample(self.buffer, min(batch_size, self.size()))
+
+        # state, action, reward, next_state, done = map(torch.stack, zip(*batch))
         state, action, reward, next_state, done = map(np.stack, zip(*batch))
         if as_tensors:
             # stacks of scalars need to be column style
             return (
-                _totorch(state, device),
+                _totorch(state, device).squeeze(),
                 _totorch(action, device),
                 _totorch(reward, device).unsqueeze(-1),
                 _totorch(next_state, device),
