@@ -48,7 +48,7 @@ def kl_regularizer(
 T = TypeVar("T", bound=nn.Module)
 
 # class PriorWrapper[T: nn.Module]:
-class PriorWrapper(Generic[T]):
+class PriorWrapper(Generic[T], nn.Module):
     def __init__(
         self,
         module_factory: Callable[[], T],
