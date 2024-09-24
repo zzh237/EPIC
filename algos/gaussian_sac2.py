@@ -19,6 +19,7 @@ from algos.epic_util import ModuleWithKlDivergence, PriorWrapper, soft_update_fr
 from algos.logging import track_config
 from algos.memory import ReplayMemory
 from algos.types import Action, EPICModel
+from torchrl.data import ReplayBuffer, LazyTensorStorage
 
 LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20
@@ -307,7 +308,11 @@ class EpicSACMcActor(nn.Module):
         )
 
         # TODO possibly share this between MC actors
-        self.replay_buffer = ReplayMemory(replay_capacity)
+        # self.replay_buffer = ReplayMemory(replay_capacity)
+        self.replay_buffer = ReplayBuffer(
+            storage=LazyTensorStorage(max_size=replay_capacity, device=torch.device(device)),
+            batch_size=batch_size
+        )
 
         self.qf_criterion = nn.MSELoss()
         self.qf1_optimizer = optimizer_class(self.qf1.parameters(), lr=qf_lr)
@@ -327,14 +332,35 @@ class EpicSACMcActor(nn.Module):
         return Action(state=state, action=action.flatten(), log_prob=log_prob)
 
     def push_sample(self, state, action, reward, new_state, done):
-        self.replay_buffer.push(state, action, reward, new_state, done)
+        # self.replay_buffer.push(state, action, reward, new_state, done)
+        
+        if not isinstance(state, Tensor):
+            state = torch.from_numpy(state)
+        if not isinstance(action, Tensor):
+            action = torch.from_numpy(action)
+        if not isinstance(new_state, Tensor):
+            new_state = torch.from_numpy(new_state)
+
+        state = state.squeeze().type(torch.float32).detach()
+        action = torch.atleast_1d(action.squeeze()).detach()
+        new_state = new_state.squeeze().type(torch.float32).detach()
+        done = torch.atleast_1d(torch.tensor(done)).type(torch.int8).detach()
+        reward = torch.atleast_1d(torch.tensor(reward)).type(torch.float32).detach()
+
+        self.replay_buffer.add((state, action, reward, new_state, done))
 
     def train_step(self, kl_divergences: EpicRegularizers):
-        if self.replay_buffer.size() < self.batch_size:
+        # if self.replay_buffer.size() < self.batch_size:
+        #     return
+
+        if len(self.replay_buffer) < self.batch_size:
             return
-        state, action, reward, next_state, done = self.replay_buffer.sample(
-            batch_size=self.batch_size, device=self.device, as_tensors=True
-        )
+        
+        # state, action, reward, next_state, done = self.replay_buffer.sample(
+        #     batch_size=self.batch_size, device=self.device, as_tensors=True
+        # )
+
+        state, action, reward, next_state, done = self.replay_buffer.sample()
         losses = self.compute_loss(state, action, reward, next_state, done, kl_divergences)
 
         self.policy_optimizer.zero_grad()
@@ -352,6 +378,8 @@ class EpicSACMcActor(nn.Module):
     def per_step(self, state, action, reward, new_state, done, meta_episode: int, step: int, kl_divergences: EpicRegularizers):
         # every step, the MC actor adds a new sample and takes some number of trainsteps. then it may update its
         # target networks
+        if isinstance(action, Tensor):
+            action = action.detach()
         self.push_sample(state, action, reward, new_state, done)
 
         for _ in range(self.sac_steps):
@@ -531,9 +559,9 @@ class EpicSAC2(EPICModel):
     def act_m(self, m, state) -> Action:
         return self.mc_actors[m].act(state)
 
-    def per_step_m(self, m: int, state, action, reward, new_state, done, meta_episode: int, step: int):
+    def per_step_m(self, m: int, meta_episode, step, action_dict: Action, reward, new_state, done):
         actor = cast(EpicSACMcActor, self.mc_actors[m])  
-        actor.per_step(state, action, reward, new_state, done, meta_episode, step, kl_divergences=self.get_epic_regularizers(actor))
+        actor.per_step(action_dict["state"], action_dict["action"], reward, new_state, done, meta_episode, step, kl_divergences=self.get_epic_regularizers(actor))
 
     def post_episode(self) -> None:
         # not needed.
