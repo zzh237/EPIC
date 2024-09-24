@@ -311,7 +311,9 @@ class EpicSACMcActor(nn.Module):
         # self.replay_buffer = ReplayMemory(replay_capacity)
         self.replay_buffer = ReplayBuffer(
             storage=LazyTensorStorage(max_size=replay_capacity, device=torch.device(device)),
-            batch_size=batch_size
+            batch_size=batch_size,
+            pin_memory=True,
+            prefetch=2
         )
 
         self.qf_criterion = nn.MSELoss()
