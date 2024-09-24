@@ -4,6 +4,7 @@ description = "epic PAC bound for lifetime learning"
 name = "epic"
 requires-python = "~= 3.10.0"
 version = "0.1.0"
+dependencies = ["scalene>=1.5.42.2,<2", "torchvision>=0.19.1,<0.20", "torchrl>=0.5.0,<0.6", "gtimer>=1.0.0b5,<2"]
 
 [build-system]
 # build-backend = "setuptools"
@@ -28,7 +29,6 @@ wandb = "==0.17.5"
 mujoco-py = ">=2.1.2.14,<3"
 cython = ">=0.29.6,<0.30.0"
 rlkit = { git = "https://github.com/rail-berkeley/rlkit" }
-gtimer = ">=1.0.0b5,<2"
 jbw = { git = "https://github.com/ckchow/jelly-bean-world.git", subdirectory="api/python", branch="cchow/install-pep-compliance" }
 
 [tool.pixi.tasks]
@@ -36,15 +36,14 @@ jbw = { git = "https://github.com/ckchow/jelly-bean-world.git", subdirectory="ap
 
 [tool.pixi.target.linux-64.dependencies]
 # cudatoolkit = "*"
-torchvision = "*"
+# torchvision = "*"
 pytorch-cuda = { version = "*", channel = "pytorch" }
-# cuda = { version = "*", channel = "nvidia" }
-pytorch = "2.4.0.*"
+pytorch = { version = "2.4.1.*", channel = "pytorch" }
 
 [tool.pixi.target.osx-arm64.dependencies]
 # pytorch = {}
-pytorch = { version = "2.4.0.*", channel = "pytorch" }
-torchvision = { version = "*", channel = "pytorch" }
+pytorch = { version = "2.4.1.*", channel = "pytorch" }
+# torchvision = { version = "*", channel = "pytorch" }
 
 [tool.pixi.dependencies]
 python = "3.10.*"
