@@ -24,6 +24,7 @@ from algos.gaussian_sac2 import EpicSAC2
 from algos.types import EPICModel
 from envs import make_pendulum
 from envs.jellybean import make_jbw
+# import gtimer as gt
 
 
 def parse_args():
@@ -94,25 +95,36 @@ class EpicTrainer:
         self.render = render
         self.meta_update_every = meta_update_every  # update the prior every this many meta-episodes
 
+
     def train_and_evaluate(self):
         # [(meta-episode / life episode) -> episode -> mcworker -> step]
         rewards = pl.DataFrame(
             schema={"meta_episode": int, "episode": int, "mc_worker": int, "step": int, "reward": pl.Float64}
         )
+        # for meta_episode in gt.timed_for(range(self.meta_episodes), name="meta-episodes"):
         for meta_episode in range(self.meta_episodes):
             env = self.env_maker(meta_episode)
+            # gt.stamp("make-env")
             print(f"meta-episode: {meta_episode}, episodes:", end="")
             self.model.pre_meta_episode()
-            for episode_idx in range(self.num_episodes):
+            # gt.stamp("pre-meta-episode")
+            # for episode_idx in gt.timed_for(range(self.num_episodes), name="episodes"):
+            for episode_idx in (range(self.num_episodes)):
+                # for m_idx in gt.timed_for(range(self.model.m), name="mc-workers"):
                 for m_idx in range(self.model.m):
                     state = env.reset()
+                    # with gt.timed_for(range(self.max_steps), name="steps") as step_loop:
+                        # for step in step_loop:
                     for step in range(self.max_steps):
                         if self.render:
                             env.render()
+                            # gt.stamp("env-render")
 
                         action_out = self.model.act_m(m_idx, state)
+                        # gt.stamp("model-act")
                         action = action_out["action"].detach().cpu().numpy()
                         new_state, reward, done, _ = env.step(action)
+                        # gt.stamp("env-step")
                         rewards.extend(
                             pl.DataFrame(
                                 {
@@ -126,13 +138,17 @@ class EpicTrainer:
                         )
 
                         self.model.per_step_m(m_idx, meta_episode, step, action_out, reward, new_state, done)
+                        # gt.stamp("model-per-step")
 
                         state = new_state
-
+                        # gt.stamp("step")
                         if done or step == (self.max_steps - 1):
+                            # step_loop.exit()
                             break
+                    # gt.stamp("mc-worker")
                 self.model.post_episode()
                 print(f" {episode_idx}", flush=True, end="")
+                # gt.stamp("episode")
             
             # TODO let policy gradient models hook into the end of the meta-episode so they can consume all
             # the trajectories without triggering a default / prior update
@@ -149,6 +165,7 @@ class EpicTrainer:
             if (meta_episode + 1) % self.meta_update_every == 0:
                 self.model.update_default()
                 self.model.update_prior()
+            # gt.stamp("meta-episode")
 
 
 def make_model(args, env) -> EPICModel:
@@ -229,8 +246,7 @@ def make_model(args, env) -> EPICModel:
         raise ValueError(f"Unrecognized model type {args.model}")
 
 
-
-
+# @gt.wrap
 def main():
     args = parse_args()
     np.random.seed(args.seed)
@@ -242,11 +258,11 @@ def main():
     "pendulum-toy": partial(make_pendulum, toy=True),
     "jbw": partial(make_jbw, render=args.render, period=args.max_steps, proper_reset=True)
 }
-
-
     wandb.init(project=args.wandb_project)
-    # just for space dimensions
+    # env instantiation is just for space dimension
     model = make_model(args, env=ENV_MAKERS[args.env](0))
+
+    # gt.start()
 
     trainer = EpicTrainer(
         model,
@@ -259,6 +275,9 @@ def main():
     )
 
     trainer.train_and_evaluate()
+    # gt.stamp("train-and-evaluate")
+
+    # print(gt.report())
 
 
 if __name__ == "__main__":
