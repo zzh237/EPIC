@@ -24,6 +24,8 @@ from algos.gaussian_sac2 import EpicSAC2
 from algos.types import EPICModel
 from envs import make_pendulum
 from envs.jellybean import make_jbw
+from envs.swimmer_epic_2 import make_swimmer
+from epic_mc import make_lunar_env
 # import gtimer as gt
 
 
@@ -246,7 +248,6 @@ def make_model(args, env) -> EPICModel:
         raise ValueError(f"Unrecognized model type {args.model}")
 
 
-# @gt.wrap
 def main():
     args = parse_args()
     np.random.seed(args.seed)
@@ -256,7 +257,9 @@ def main():
     ENV_MAKERS: dict[str, Callable[[int], gym.Env]] = {
     "pendulum": partial(make_pendulum, toy=False),
     "pendulum-toy": partial(make_pendulum, toy=True),
-    "jbw": partial(make_jbw, render=args.render, period=args.max_steps, proper_reset=True)
+    "jbw": partial(make_jbw, render=args.render, period=args.max_steps, proper_reset=True),
+    "swimmer": make_swimmer,
+    "lunar-cont": partial(make_lunar_env, continuous=True)
 }
     wandb.init(project=args.wandb_project)
     # env instantiation is just for space dimension

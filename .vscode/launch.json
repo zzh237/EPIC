@@ -10,7 +10,10 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "justMyCode": false
+            "justMyCode": false,
+             "env": {
+                "LD_LIBRARY_PATH": "$LD_LIBRARY_PATH:$HOME/.mujoco/mujoco210/bin",
+             }
         },
         {
             "name": "Python SAC (lunar)",
