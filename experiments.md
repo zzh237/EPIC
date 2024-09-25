@@ -52,7 +52,7 @@ python ./epic_mc_2.py \
 --env=pendulum \
 --max-steps=200 \
 --lr=1e-3 \
---meta-update-every
+--meta-update-every 1
 ```
 
 vpg v2
