@@ -1217,7 +1217,7 @@ packages:
   name: epic
   version: 0.1.0
   path: .
-  sha256: 103e4cc1c307080d2e6d210949c95423b820eafa175a3d42ac53f6470d5f5fc0
+  sha256: 711518b39d2a0a842012453dfceb6e2384c58d936821ece25ae34a78aa7b718e
   requires_dist:
   - scalene>=1.5.42.2,<2
   - torchvision>=0.19.1,<0.20
