@@ -206,7 +206,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/24/70/96f6027cdfc9bb89fc07627b615cb43fb1c443c93498412beaeaf157e9f1/graphene-3.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d1/33/cc72c4c658c6316f188a60bc4e5a91cd4ceaaa8c3e7e691ac9297e4e72c7/graphql_core-3.2.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/74/16/a4cf06adbc711bd364a73ce043b0b08d8fa5aae3df11b6ee4248bcdad2e0/graphql_relay-3.2.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/cf/69/79e4d63b9387b48939096e25115b8af7cd8a90397a304f92436bcb21f5b2/greenlet-3.1.1-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/fb/2f/3850b867a9af519794784a7eeed1dd5bc68ffbcc5b28cef703711025fd0a/greenlet-3.1.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/03/fb/dcaaf7b85aed9adb3b01f63cd5a5c779cc6216073e57395ec231fd45e083/gtimer-1.0.0b5.tar.gz
       - pypi: https://files.pythonhosted.org/packages/cb/7d/6dac2a6e1eba33ee43f318edbed4ff29151a49b5d37f080aad1e6469bca4/gunicorn-23.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/01/ef/09b53c076943c3722bac91a274825ece90985c1b3686d8426608fd741e30/gym-0.22.0.tar.gz
@@ -249,7 +249,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/b0/11/dadb85e2bd6b1f1ae56669c3e1f0410797f9605d752d68fb47b77f525b31/rich-13.8.1-py3-none-any.whl
       - pypi: git+https://github.com/rail-berkeley/rlkit@ac45a9db24b89d97369bef302487273bcc3e3d84
       - pypi: https://files.pythonhosted.org/packages/49/97/fa78e3d2f65c02c8e1268b9aba606569fe97f6c8f7c2d74394553347c145/rsa-4.9-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/f5/fd/8e1807c26ccda0ca7a0924cafa654aebaad9e4be857350bf40dedeb3de6b/scalene-1.5.42.2-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/3a/97/0b01d85d81311ce25b3e67299915414cd073bf8edc087de7278c5534068b/scalene-1.5.42.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/4c/1e/a7c7357e704459c7d56a18df4a0bf08669442d1f8878cc0864beccd6306a/scikit_learn-1.5.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/47/78/b0c2c23880dd1e99e938ad49ccfb011ae353758a2dc5ed7ee59baff684c3/scipy-1.14.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/40/de/956ce1d71459fa1af0486ca141fc605ac16f7c8855750668ff663e2b436a/sentry_sdk-2.14.0-py2.py3-none-any.whl
@@ -1215,7 +1215,7 @@ packages:
   name: epic
   version: 0.1.0
   path: .
-  sha256: bad3e06626210ad4e934b3a2a331b0a882bb8d9f11074d17573f31c7df9b5a12
+  sha256: 6a1bbee81894622583383d6f37e174b76aae833b2b8397ff081291f0396eee42
   requires_dist:
   - scalene>=1.5.42.2,<2
   - torchvision>=0.19.1,<0.20
@@ -2007,8 +2007,8 @@ packages:
 - kind: pypi
   name: greenlet
   version: 3.1.1
-  url: https://files.pythonhosted.org/packages/cf/69/79e4d63b9387b48939096e25115b8af7cd8a90397a304f92436bcb21f5b2/greenlet-3.1.1-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl
-  sha256: da7a9bff22ce038e19bf62c4dd1ec8391062878710ded0a845bcf47cc0200617
+  url: https://files.pythonhosted.org/packages/fb/2f/3850b867a9af519794784a7eeed1dd5bc68ffbcc5b28cef703711025fd0a/greenlet-3.1.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+  sha256: 93147c513fac16385d1036b7e5b102c7fbbdb163d556b791f0f11eada7ba65dc
   requires_dist:
   - sphinx ; extra == 'docs'
   - furo ; extra == 'docs'
@@ -2134,22 +2134,22 @@ packages:
   - importlib-metadata>=4.10.0 ; python_full_version < '3.10'
   - autorom[accept-rom-license]~=0.4.2 ; extra == 'accept-rom-license'
   - ale-py~=0.7.4 ; extra == 'all'
-  - mujoco-py<2.0,>=1.50 ; extra == 'all'
-  - pygame==2.1.0 ; extra == 'all'
-  - scipy>=1.4.1 ; extra == 'all'
   - lz4>=3.1.0 ; extra == 'all'
   - opencv-python>=3.0 ; extra == 'all'
+  - pygame==2.1.0 ; extra == 'all'
+  - scipy>=1.4.1 ; extra == 'all'
   - box2d-py==2.3.5 ; extra == 'all'
+  - mujoco-py<2.0,>=1.50 ; extra == 'all'
   - ale-py~=0.7.4 ; extra == 'atari'
   - box2d-py==2.3.5 ; extra == 'box2d'
   - pygame==2.1.0 ; extra == 'box2d'
   - pygame==2.1.0 ; extra == 'classic-control'
   - mujoco-py<2.0,>=1.50 ; extra == 'mujoco'
+  - box2d-py==2.3.5 ; extra == 'nomujoco'
+  - pygame==2.1.0 ; extra == 'nomujoco'
   - lz4>=3.1.0 ; extra == 'nomujoco'
   - opencv-python>=3.0 ; extra == 'nomujoco'
-  - pygame==2.1.0 ; extra == 'nomujoco'
   - scipy>=1.4.1 ; extra == 'nomujoco'
-  - box2d-py==2.3.5 ; extra == 'nomujoco'
   - lz4>=3.1.0 ; extra == 'other'
   - opencv-python>=3.0 ; extra == 'other'
   - pygame==2.1.0 ; extra == 'toy-text'
@@ -5938,8 +5938,8 @@ packages:
 - kind: pypi
   name: scalene
   version: 1.5.42.2
-  url: https://files.pythonhosted.org/packages/60/f0/4d3702b9566b2b8766f61c0e16a3207012ea9f47c600ac28660f9ca058c1/scalene-1.5.42.2-cp310-cp310-macosx_13_0_universal2.whl
-  sha256: a03cdf1d9692ebd94f7fe6e3ab378f9ce96ec32bd7782838d7a9e872dd635a6e
+  url: https://files.pythonhosted.org/packages/3a/97/0b01d85d81311ce25b3e67299915414cd073bf8edc087de7278c5534068b/scalene-1.5.42.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+  sha256: 69d52e6f095890b04a99a80768b3d7499b23f84988d14b3e29e1449ba2198f6d
   requires_dist:
   - wheel>=0.36.1
   - rich>=10.7.0
@@ -5953,8 +5953,8 @@ packages:
 - kind: pypi
   name: scalene
   version: 1.5.42.2
-  url: https://files.pythonhosted.org/packages/f5/fd/8e1807c26ccda0ca7a0924cafa654aebaad9e4be857350bf40dedeb3de6b/scalene-1.5.42.2-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl
-  sha256: 0d5b6cfe0a3cac78e959861c6b264318886c7d8854842d673e94bf8bc52431f2
+  url: https://files.pythonhosted.org/packages/60/f0/4d3702b9566b2b8766f61c0e16a3207012ea9f47c600ac28660f9ca058c1/scalene-1.5.42.2-cp310-cp310-macosx_13_0_universal2.whl
+  sha256: a03cdf1d9692ebd94f7fe6e3ab378f9ce96ec32bd7782838d7a9e872dd635a6e
   requires_dist:
   - wheel>=0.36.1
   - rich>=10.7.0
