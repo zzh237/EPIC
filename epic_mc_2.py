@@ -25,7 +25,7 @@ from algos.types import EPICModel
 from envs import make_pendulum
 from envs.jellybean import make_jbw
 from envs.swimmer_epic_2 import make_swimmer
-from epic_mc import make_lunar_env
+from envs.lunar_epic_2 import make_lunar_env
 # import gtimer as gt
 
 
