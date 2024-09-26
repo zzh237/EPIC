@@ -214,7 +214,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/1e/b7/02adac4e42a691008b5cfb31db98c190e1fc348d1521b9be4429f9454ed1/imageio-2.35.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/a0/d9/a1e041c5e7caa9a05c925f4bdbdfb7f006d1f74996af53467bc394c97be7/importlib_metadata-8.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/04/96/92447566d16df59b2a776c0fb82dbc4d9e07cd95062562af01e408583fc4/itsdangerous-2.2.0-py3-none-any.whl
-      - pypi: git+https://github.com/ckchow/jelly-bean-world.git@2a4829971b4cade794e9a5492c5068414c0d0908#subdirectory=api/python
+      - pypi: git+ssh://git@github.com/ckchow/jelly-bean-world.git@2a4829971b4cade794e9a5492c5068414c0d0908#subdirectory=api/python
       - pypi: https://files.pythonhosted.org/packages/91/29/df4b9b42f2be0b623cbd5e2140cafcaa2bef0759a00b7b70104dcfe2fb51/joblib-1.4.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/55/91/0a57ce324caf2ff5403edab71c508dd8f648094b18cfbb4c8cc0fde4a6ac/kiwisolver-1.4.7-cp310-cp310-manylinux_2_12_x86_64.manylinux2010_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/03/62/70f5a0c2dd208f9f3f2f9afd103aec42ee4d9ad2401d78342f75e9b8da36/Mako-1.3.5-py3-none-any.whl
@@ -248,7 +248,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/11/c3/005fcca25ce078d2cc29fd559379817424e94885510568bc1bc53d7d5846/pytz-2024.2-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/f9/9b/335f9764261e915ed497fcdeb11df5dfd6f7bf257d4a6a2a686d80da4d54/requests-2.32.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b0/11/dadb85e2bd6b1f1ae56669c3e1f0410797f9605d752d68fb47b77f525b31/rich-13.8.1-py3-none-any.whl
-      - pypi: git+https://github.com/rail-berkeley/rlkit@ac45a9db24b89d97369bef302487273bcc3e3d84
+      - pypi: git+ssh://git@github.com/rail-berkeley/rlkit.git@ac45a9db24b89d97369bef302487273bcc3e3d84
       - pypi: https://files.pythonhosted.org/packages/49/97/fa78e3d2f65c02c8e1268b9aba606569fe97f6c8f7c2d74394553347c145/rsa-4.9-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/3a/97/0b01d85d81311ce25b3e67299915414cd073bf8edc087de7278c5534068b/scalene-1.5.42.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/4c/1e/a7c7357e704459c7d56a18df4a0bf08669442d1f8878cc0864beccd6306a/scikit_learn-1.5.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
@@ -416,7 +416,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/1e/b7/02adac4e42a691008b5cfb31db98c190e1fc348d1521b9be4429f9454ed1/imageio-2.35.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/a0/d9/a1e041c5e7caa9a05c925f4bdbdfb7f006d1f74996af53467bc394c97be7/importlib_metadata-8.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/04/96/92447566d16df59b2a776c0fb82dbc4d9e07cd95062562af01e408583fc4/itsdangerous-2.2.0-py3-none-any.whl
-      - pypi: git+https://github.com/ckchow/jelly-bean-world.git@2a4829971b4cade794e9a5492c5068414c0d0908#subdirectory=api/python
+      - pypi: git+ssh://git@github.com/ckchow/jelly-bean-world.git@2a4829971b4cade794e9a5492c5068414c0d0908#subdirectory=api/python
       - pypi: https://files.pythonhosted.org/packages/91/29/df4b9b42f2be0b623cbd5e2140cafcaa2bef0759a00b7b70104dcfe2fb51/joblib-1.4.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ef/fa/65de49c85838681fc9cb05de2a68067a683717321e01ddafb5b8024286f0/kiwisolver-1.4.7-cp310-cp310-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/03/62/70f5a0c2dd208f9f3f2f9afd103aec42ee4d9ad2401d78342f75e9b8da36/Mako-1.3.5-py3-none-any.whl
@@ -450,7 +450,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/11/c3/005fcca25ce078d2cc29fd559379817424e94885510568bc1bc53d7d5846/pytz-2024.2-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/f9/9b/335f9764261e915ed497fcdeb11df5dfd6f7bf257d4a6a2a686d80da4d54/requests-2.32.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b0/11/dadb85e2bd6b1f1ae56669c3e1f0410797f9605d752d68fb47b77f525b31/rich-13.8.1-py3-none-any.whl
-      - pypi: git+https://github.com/rail-berkeley/rlkit@ac45a9db24b89d97369bef302487273bcc3e3d84
+      - pypi: git+ssh://git@github.com/rail-berkeley/rlkit.git@ac45a9db24b89d97369bef302487273bcc3e3d84
       - pypi: https://files.pythonhosted.org/packages/49/97/fa78e3d2f65c02c8e1268b9aba606569fe97f6c8f7c2d74394553347c145/rsa-4.9-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/f0/4d3702b9566b2b8766f61c0e16a3207012ea9f47c600ac28660f9ca058c1/scalene-1.5.42.2-cp310-cp310-macosx_13_0_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/bf/e0/3b6d777d375f3b685f433c93384cdb724fb078e1dc8f8ff0950467e56c30/scikit_learn-1.5.2-cp310-cp310-macosx_12_0_arm64.whl
@@ -1217,7 +1217,7 @@ packages:
   name: epic
   version: 0.1.0
   path: .
-  sha256: 711518b39d2a0a842012453dfceb6e2384c58d936821ece25ae34a78aa7b718e
+  sha256: 01f9a5e2759a017366e4db25cff1d875593053375d0121af9ca9af29e88cf982
   requires_dist:
   - scalene>=1.5.42.2,<2
   - torchvision>=0.19.1,<0.20
@@ -2387,7 +2387,7 @@ packages:
 - kind: pypi
   name: jbw
   version: '1.0'
-  url: git+https://github.com/ckchow/jelly-bean-world.git@2a4829971b4cade794e9a5492c5068414c0d0908#subdirectory=api/python
+  url: git+ssh://git@github.com/ckchow/jelly-bean-world.git@2a4829971b4cade794e9a5492c5068414c0d0908#subdirectory=api/python
   requires_dist:
   - enum34
 - kind: conda
@@ -5975,7 +5975,7 @@ packages:
 - kind: pypi
   name: rlkit
   version: 0.2.1.dev0
-  url: git+https://github.com/rail-berkeley/rlkit@ac45a9db24b89d97369bef302487273bcc3e3d84
+  url: git+ssh://git@github.com/rail-berkeley/rlkit.git@ac45a9db24b89d97369bef302487273bcc3e3d84
 - kind: pypi
   name: rsa
   version: '4.9'
