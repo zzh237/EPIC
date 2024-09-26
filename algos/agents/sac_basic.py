@@ -3,9 +3,10 @@ Basic SAC agent without gaussian parameterization.
 """
 
 from __future__ import annotations
+from operator import itemgetter
 
 import torch
-from torch import nn
+from torch import Tensor, nn
 from rlkit.torch.sac.sac import SACTrainer
 from rlkit.torch.sac.policies import TanhGaussianPolicy
 from rlkit.torch.distributions import TanhNormal
@@ -18,6 +19,7 @@ from rlkit.torch.networks import ConcatMlp
 from copy import deepcopy
 import gym
 import wandb
+from torchrl.data import ReplayBuffer, LazyTensorStorage
 
 
 class FlattenMlp(nn.Module):
@@ -47,9 +49,16 @@ class FlattenMlp(nn.Module):
 
 
 class VanillaSAC(nn.Module):
-    def __init__(self, env: gym.Env, device: str, lr: float, 
-                 use_automatic_entropy_tuning: bool,
-                 sac_steps: int = 1, batch_size: int = 512, capacity: int = 100_000):
+    def __init__(
+        self,
+        env: gym.Env,
+        device: str,
+        lr: float,
+        use_automatic_entropy_tuning: bool,
+        sac_steps: int = 1,
+        batch_size: int = 512,
+        capacity: int = 100_000,
+    ):
         super().__init__()
         self.batch_size = batch_size
         self.sac_steps = sac_steps
@@ -77,7 +86,15 @@ class VanillaSAC(nn.Module):
             use_automatic_entropy_tuning=use_automatic_entropy_tuning,
         )
 
-        self.replay_buffer = ReplayMemory(capacity=capacity)
+        # self.replay_buffer = ReplayMemory(capacity=capacity)
+        self.replay_buffer = ReplayBuffer(
+            storage=LazyTensorStorage(
+                max_size=capacity,
+            ),
+            batch_size=batch_size,
+            pin_memory=True,
+            prefetch=2
+        )
         self.to(torch.device(device))
 
     def initialize_policy_m(self):
@@ -99,13 +116,15 @@ class VanillaSAC(nn.Module):
 
     def update_mu_theta_for_default(self, meta_memories, meta_update_every, H):
         """Do one step of updating. hello"""
-        if self.replay_buffer.size() < self.batch_size:
+        # if self.replay_buffer.size() < self.batch_size:
+        if len(self.replay_buffer) < self.batch_size:
             return
 
         for _ in range(self.sac_steps):
-            state, action, reward, next_state, done = self.replay_buffer.sample(
-                batch_size=self.batch_size, device=self.device, as_tensors=True
-            )
+            # state, action, reward, next_state, done = self.replay_buffer.sample(
+            #     batch_size=self.batch_size, device=self.device, as_tensors=True
+            # )
+            state, action, reward, next_state, done = self.replay_buffer.sample()
             self.trainer.train_from_torch(
                 {
                     "rewards": reward,
@@ -123,25 +142,26 @@ class VanillaSAC(nn.Module):
 
 
 class VanillaSACv2(EPICModel):
-
     @track_config
-    def __init__(self, m: int,
-                 batch_size: int,
-                 device: str,
-                 env: gym.Env,
-                 lr: float,
-                 use_automatic_entropy_tuning: bool,
-                 replay_capacity: int ,
-                 sac_steps: int = 1,
-                 ):
+    def __init__(
+        self,
+        m: int,
+        batch_size: int,
+        device: str,
+        env: gym.Env,
+        lr: float,
+        use_automatic_entropy_tuning: bool,
+        replay_capacity: int,
+        sac_steps: int = 1,
+    ):
         super().__init__()
-        self._m = m # number of MC workers
+        self._m = m  # number of MC workers
         self.batch_size = batch_size
         self.sac_steps = sac_steps
         self.device = device
         self.lr = lr
-        state_dim = env.observation_space.shape[0] # type: ignore
-        action_dim = env.action_space.shape[0] # type: ignore
+        state_dim = env.observation_space.shape[0]  # type: ignore
+        action_dim = env.action_space.shape[0]  # type: ignore
 
         self.qf1 = ConcatMlp(input_size=state_dim + action_dim, hidden_sizes=(256, 256), output_size=1)
         self.qf2 = ConcatMlp(input_size=state_dim + action_dim, hidden_sizes=(256, 256), output_size=1)
@@ -162,14 +182,19 @@ class VanillaSACv2(EPICModel):
             use_automatic_entropy_tuning=use_automatic_entropy_tuning,
         )
 
-        self.replay_buffer = ReplayMemory(capacity=replay_capacity)
+        # self.replay_buffer = ReplayMemory(capacity=replay_capacity)
+        self.replay_buffer = ReplayBuffer(
+            storage=LazyTensorStorage(max_size=replay_capacity),
+            batch_size=batch_size,
+            pin_memory=True,
+            prefetch=2
+        )
         self.to(torch.device(device))
-        
-    
+
     @property
     def m(self) -> int:
         return self._m
-    
+
     def act_m(self, m, state) -> Action:
         """
         Since we only maintain a single copy of the policy, just act with the policy itself.
@@ -182,21 +207,37 @@ class VanillaSACv2(EPICModel):
 
         dist: TanhNormal = self.policy(state.to(torch.device(self.device)))
         value, logprob = dist.rsample_and_logprob()
-        return Action(
-            state=state,
-            action=value.flatten(),
-            log_prob=logprob
-        )
+        return Action(state=state, action=value.flatten(), log_prob=logprob)
     
-    def per_step_m(self, m: int, state, action, reward, new_state, done, meta_episode, step: int):
-        self.replay_buffer.push(state, action, reward, new_state, done)
-        if self.replay_buffer.size() < self.batch_size:
+    def add_sample(self, state, action, reward, new_state, done):
+        if not isinstance(state, Tensor):
+            state = torch.from_numpy(state)
+        if not isinstance(action, Tensor):
+            action = torch.from_numpy(action)
+        if not isinstance(new_state, Tensor):
+            new_state = torch.from_numpy(new_state)
+
+        state = state.squeeze().type(torch.float32).detach()
+        action = torch.atleast_1d(action.squeeze()).detach()
+        new_state = new_state.squeeze().type(torch.float32).detach()
+        done = torch.atleast_1d(torch.tensor(done)).type(torch.int8).detach()
+        reward = torch.atleast_1d(torch.tensor(reward)).type(torch.float32).detach()
+
+        self.replay_buffer.add((state, action, reward, new_state, done))
+
+    def per_step_m(self, m: int, meta_episode, step, action_dict, reward, new_state, done):
+        state, action = itemgetter("state", "action")(action_dict)
+        self.add_sample(state, action, reward, new_state, done)
+        # self.replay_buffer.push(state, action, reward, new_state, done)
+        # if self.replay_buffer.size() < self.batch_size:
+        if len(self.replay_buffer) < self.batch_size:
             return
 
         for _ in range(self.sac_steps):
-            state, action, reward, next_state, done = self.replay_buffer.sample(
-                batch_size=self.batch_size, device=self.device, as_tensors=True
-            )
+            # state, action, reward, next_state, done = self.replay_buffer.sample(
+            #     batch_size=self.batch_size, device=self.device, as_tensors=True
+            # )
+            state, action, reward, next_state, done = self.replay_buffer.sample()
             self.trainer.train_from_torch(
                 {
                     "rewards": reward,
@@ -216,11 +257,9 @@ class VanillaSACv2(EPICModel):
 
     def post_episode(self):
         pass
-    
+
     def update_default(self):
         pass
 
     def update_prior(self):
         pass
-        
-    

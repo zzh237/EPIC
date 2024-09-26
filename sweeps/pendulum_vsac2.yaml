@@ -1,5 +1,5 @@
 program: epic_mc_2.py
-name: epic-sac-2-pendulum
+name: vsac-2-pendulum
 method: bayes
 metric:
   goal: maximize
@@ -7,32 +7,22 @@ metric:
 parameters:
   # ---- fixed parameters
   model:
-    value: epic-sac
+    value: vsac
   env:
     value: pendulum
   device:
     value: cpu
   max-steps:
     value: 200
-  qf-target-update-period:
-    value: 1
   # ---- non-fixed hyperparameters
   batch-size:
     values: [32, 64, 128, 256, 512, 1024]
   replay-capacity:
     values: [1_000, 10_000, 100_000]
-  lr-qf:
+  lr:
     distribution: log_uniform_values
     min: 0.00001
     max: 0.01
-  lr-policy:
-    distribution: log_uniform_values
-    min: 0.00001
-    max: 0.01
-  tau:
-    distribution: log_uniform_values
-    min: 0.1
-    max: 0.99
 early_terminate:
   type: hyperband
   min_iter: 9
