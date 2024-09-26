@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -cwd
-#$ -o joblog.$JOB_ID
+#$ -o qsub_log/joblog.$JOB_ID
 #$ -j y
 ## Edit the line below as needed:
 #$ -l h_rt=5:00:00,h_data=16G
