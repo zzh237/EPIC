@@ -1,5 +1,5 @@
 program: epic_mc_2.py
-name: epic-sac-2-pendulum-epic-enabled-v2
+name: bayesian-sac-2-pendulum
 method: bayes
 metric:
   goal: maximize
@@ -16,8 +16,9 @@ parameters:
     value: 200
   qf-target-update-period:
     value: 1
-  enable-epic-regularization:
-    value: true
+  # NOTE WARNING WARNING KL regularization disabled
+  # enable-epic-regularization
+  #   value: true
   # ---- non-fixed hyperparameters
   meta-update-every:
     min: 1

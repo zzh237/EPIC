@@ -152,6 +152,7 @@ class VanillaSACv2(EPICModel):
         lr: float,
         use_automatic_entropy_tuning: bool,
         replay_capacity: int,
+        optimizer_class,
         sac_steps: int = 1,
     ):
         super().__init__()
@@ -180,6 +181,7 @@ class VanillaSACv2(EPICModel):
             policy_lr=lr,
             qf_lr=lr,
             use_automatic_entropy_tuning=use_automatic_entropy_tuning,
+            optimizer_class=optimizer_class
         )
 
         # self.replay_buffer = ReplayMemory(capacity=replay_capacity)

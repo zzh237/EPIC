@@ -230,7 +230,8 @@ def kl_regularizer(kl, prior_update_every, gamma, max_steps,
 class GaussianVPGMC2(EPICModel):
     def __init__(self, m: int, env: Env, hidden_sizes: tuple[int, ...], device, action_std: float,
                  prior_update_every: int, gamma: float, max_steps: int, c: float, delta: float, tau: float,
-                 lr: float, c1: float, lam: float, lam_decay: float
+                 lr: float, c1: float, lam: float, lam_decay: float, enable_epic_regularization: bool,
+                 optimizer
             ):
         super().__init__()
         self.gamma = gamma
@@ -241,6 +242,7 @@ class GaussianVPGMC2(EPICModel):
         self.lam_decay = lam_decay
         self._m = m
         self.device = device
+        self.enable_epic_regularization = enable_epic_regularization
 
         assert env.action_space.shape is not None
         assert env.observation_space.shape is not None
@@ -262,7 +264,7 @@ class GaussianVPGMC2(EPICModel):
         self.policies = nn.ModuleList(
             [make_actor() for _ in range(m)]
         )
-        self.optimizers = [torch.optim.Adam(p.parameters(), lr=lr) for p in self.policies]
+        self.optimizers = [optimizer(p.parameters(), lr=lr) for p in self.policies]
 
         self.actor_pair = PriorWrapper(make_actor,
                                        prior_update_every=prior_update_every,
@@ -327,8 +329,10 @@ class GaussianVPGMC2(EPICModel):
         for m_idx in range(self.m):
             policy_m = self.policies[m_idx]
             policy_m_before = copy.deepcopy(policy_m.state_dict())
-            # TODO double backwards here
-            loss = self.policy_loss(self.memories[m_idx]) + self.get_epic_regularizer(policy_m, self.actor_pair.prior)
+            loss = self.policy_loss(self.memories[m_idx])
+            if self.enable_epic_regularization:
+                loss = loss + self.get_epic_regularizer(policy_m, self.actor_pair.prior)
+
             self.optimizers[m_idx].zero_grad()
             loss.backward()
             self.optimizers[m_idx].step()
