@@ -1,0 +1,33 @@
+program: epic_mc_2.py
+name: vsac-2-swimmer
+method: bayes
+metric:
+  goal: maximize
+  name: meta_episode_reward
+parameters:
+  # ---- fixed parameters
+  model:
+    value: vsac
+  env:
+    value: swimmer
+  device:
+    value: cpu
+  max-steps:
+    value: 1000
+  # ---- non-fixed hyperparameters
+  batch-size:
+    values: [32, 64, 128, 256, 512, 1024]
+  replay-capacity:
+    values: [1_000, 10_000, 100_000]
+  lr:
+    distribution: log_uniform_values
+    min: 0.00001
+    max: 0.01
+early_terminate:
+  type: hyperband
+  min_iter: 9
+command:
+ - ${env}
+ - ${interpreter}
+ - ${program}
+ - ${args_no_boolean_flags}

@@ -1,0 +1,65 @@
+program: epic_mc_2.py
+name: bayesian-sac-2-swimmer
+method: bayes
+metric:
+  goal: maximize
+  name: meta_episode_reward
+parameters:
+  # ---- fixed parameters
+  model:
+    value: epic-sac
+  env:
+    value: swimmer
+  device:
+    value: cpu
+  max-steps:
+    value: 1000
+  qf-target-update-period:
+    value: 1
+  # NOTE WARNING WARNING KL regularization disabled
+  # enable-epic-regularization
+  #   value: true
+  # ---- non-fixed hyperparameters
+  meta-update-every:
+    min: 1
+    max: 50
+  gamma:
+    distribution: log_uniform_values
+    min: 0.1
+    max: 0.99
+  delta:
+    distribution: log_uniform_values
+    min: 0.1
+    max: 0.99
+  prior-lambda:
+    distribution: log_uniform_values
+    min: 0.001
+    max: 0.9
+  prior-lambda-decay:
+    distribution: log_uniform_values
+    min: 0.001
+    max: 0.999
+  batch-size:
+    values: [32, 64, 128, 256, 512, 1024]
+  replay-capacity:
+    values: [1_000, 10_000, 100_000]
+  lr-qf:
+    distribution: log_uniform_values
+    min: 0.00001
+    max: 0.01
+  lr-policy:
+    distribution: log_uniform_values
+    min: 0.00001
+    max: 0.01
+  tau:
+    distribution: log_uniform_values
+    min: 0.1
+    max: 0.99
+early_terminate:
+  type: hyperband
+  min_iter: 9
+command:
+ - ${env}
+ - ${interpreter}
+ - ${program}
+ - ${args_no_boolean_flags}
