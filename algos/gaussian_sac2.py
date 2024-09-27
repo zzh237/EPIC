@@ -238,6 +238,7 @@ def kl_regularizer(kl, prior_update_every, gamma, max_steps, c=1.5, delta=0.01):
     return reg
 
 
+@torch.compile
 def KL_div(mu1, sigma1, mu2, sigma2):
     term1 = torch.sum(torch.log(sigma2 / sigma1)) - len(sigma1)
     term2 = torch.sum(sigma1 / sigma2)
