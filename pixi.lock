@@ -1217,7 +1217,7 @@ packages:
   name: epic
   version: 0.1.0
   path: .
-  sha256: 37d7f5e3d6aadc3dc9cce6b11a678d572e04cc168548c4ba987ef2762ba1f5ed
+  sha256: 28405cd802dd5b64d1afaed5acd7e75d823eeccae24d9a6376413c4aeef9bb37
   requires_dist:
   - scalene>=1.5.42.2,<2
   - torchvision>=0.19.1,<0.20
@@ -2136,22 +2136,22 @@ packages:
   - importlib-metadata>=4.10.0 ; python_full_version < '3.10'
   - autorom[accept-rom-license]~=0.4.2 ; extra == 'accept-rom-license'
   - ale-py~=0.7.4 ; extra == 'all'
-  - lz4>=3.1.0 ; extra == 'all'
-  - opencv-python>=3.0 ; extra == 'all'
+  - mujoco-py<2.0,>=1.50 ; extra == 'all'
   - pygame==2.1.0 ; extra == 'all'
   - scipy>=1.4.1 ; extra == 'all'
+  - lz4>=3.1.0 ; extra == 'all'
+  - opencv-python>=3.0 ; extra == 'all'
   - box2d-py==2.3.5 ; extra == 'all'
-  - mujoco-py<2.0,>=1.50 ; extra == 'all'
   - ale-py~=0.7.4 ; extra == 'atari'
   - box2d-py==2.3.5 ; extra == 'box2d'
   - pygame==2.1.0 ; extra == 'box2d'
   - pygame==2.1.0 ; extra == 'classic-control'
   - mujoco-py<2.0,>=1.50 ; extra == 'mujoco'
-  - box2d-py==2.3.5 ; extra == 'nomujoco'
-  - pygame==2.1.0 ; extra == 'nomujoco'
   - lz4>=3.1.0 ; extra == 'nomujoco'
   - opencv-python>=3.0 ; extra == 'nomujoco'
+  - pygame==2.1.0 ; extra == 'nomujoco'
   - scipy>=1.4.1 ; extra == 'nomujoco'
+  - box2d-py==2.3.5 ; extra == 'nomujoco'
   - lz4>=3.1.0 ; extra == 'other'
   - opencv-python>=3.0 ; extra == 'other'
   - pygame==2.1.0 ; extra == 'toy-text'
