@@ -17,7 +17,14 @@ echo " "
 
 source /u/local/Modules/default/init/modules.sh
 module load gcc/11.3.0
+# module load cuda/12.3
 
 source ~/.bashrc
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/.mujoco/mujoco210/bin
-WANDB_MODE=online pixi run wandb agent $1 --count $2
+source ./activate_pixi.sh
+# too hard to install the whole openGL sdk needed for mujoco nvidia support
+# we can't render on these workers anyways, so disable GPU utilization
+export MUJOCO_PY_FORCE_CPU=1
+# adding /usr/lib/nvidia doesn't do anything on the cluster (load cuda above sets all of that), but 
+# mujoco expects its presence anyways
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/.mujoco/mujoco210/bin:/usr/lib/nvidia
+WANDB_MODE=online wandb agent $1 --count $2
