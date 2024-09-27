@@ -90,6 +90,7 @@ class EpicTrainer:
         max_steps: int,
         render: bool,
         meta_update_every: int,
+        seed: int
     ):
         self.model = model
         self.env_maker = env_maker
@@ -98,6 +99,7 @@ class EpicTrainer:
         self.max_steps = max_steps  # max steps per episode
         self.render = render
         self.meta_update_every = meta_update_every  # update the prior every this many meta-episodes
+        self.seed = seed
 
 
     def train_and_evaluate(self):
@@ -106,7 +108,7 @@ class EpicTrainer:
             schema={"meta_episode": int, "episode": int, "mc_worker": int, "step": int, "reward": pl.Float64}
         )
         for meta_episode in range(self.meta_episodes):
-            env = self.env_maker(meta_episode)
+            env = self.env_maker(meta_episode + self.seed)
             print(f"meta-episode: {meta_episode}, episodes:", end="")
             self.model.pre_meta_episode()
             for episode_idx in (range(self.num_episodes)):
@@ -176,6 +178,7 @@ def make_model(args, env) -> EPICModel:
             use_automatic_entropy_tuning=args.use_automatic_entropy_tuning,
             replay_capacity=args.replay_capacity,
             env=env,
+            optimizer_class=optimizer
         )
         wandb.watch(mdl)
         return mdl
@@ -268,13 +271,10 @@ def main():
         max_steps=args.max_steps,
         render=args.render,
         meta_update_every=args.meta_update_every,
+        seed=args.seed
     )
 
     trainer.train_and_evaluate()
-    # gt.stamp("train-and-evaluate")
-
-    # print(gt.report())
-
 
 if __name__ == "__main__":
     main()
