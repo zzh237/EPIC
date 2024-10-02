@@ -143,6 +143,8 @@ class EpicTrainer:
             
             # TODO let policy gradient models hook into the end of the meta-episode so they can consume all
             # the trajectories without triggering a default / prior update
+            if hasattr(self.model, "post_meta_episode"):
+                self.model.post_meta_episode()
 
             # average reward over all mc workers for this meta-episode
             meta_episode_reward = (
@@ -156,7 +158,6 @@ class EpicTrainer:
             if (meta_episode + 1) % self.meta_update_every == 0:
                 self.model.update_default()
                 self.model.update_prior()
-            # gt.stamp("meta-episode")
 
 
 def make_model(args, env) -> EPICModel:

@@ -319,11 +319,10 @@ class GaussianVPGMC2(EPICModel):
     def get_epic_regularizer(self, default, prior):
         return kl_regularizer(model_kl_div(default, prior), self.prior_update_every, self.gamma, self.max_steps)
 
-
     def post_episode(self) -> None:
         pass
 
-    def update_default(self) -> None:
+    def post_meta_episode(self):
         # accumulate default's update by averaging MC policies
         v = dict()
         for m_idx in range(self.m):
@@ -348,6 +347,13 @@ class GaussianVPGMC2(EPICModel):
         for k, parameter in zip(v, self.actor_pair.default.parameters()):
             with torch.no_grad():
                 parameter.data.copy_(parameter.data + self.c1 * v[k] / self.m)
+        
+
+    def update_default(self) -> None:
+        # we actually need to update the default every meta-episode, so this
+        # method is not called frequently enough
+        pass
+        
 
     def update_prior(self) -> None:
         # update prior from default
