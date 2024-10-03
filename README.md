@@ -42,3 +42,9 @@ Code
 
 # micromamba prep for sweep
 `micromamba create -n epic -f ./environment.yml`
+
+
+# Installation notes
+Mujoco-py needs gcc-12 (strictly speaking, &lt;gcc-14) in order to build its extensions. A simple way to do
+this is with `CC=gcc-12 python -m mujoco_py`. You will need to redo this if you remove
+the environment.
