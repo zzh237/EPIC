@@ -124,11 +124,11 @@ class EpicTrainer:
                         rewards.extend(
                             pl.DataFrame(
                                 {
-                                    "meta_episode": meta_episode,
-                                    "episode": episode_idx,
-                                    "mc_worker": m_idx,
-                                    "step": step,
-                                    "reward": reward,
+                                    "meta_episode": int(meta_episode),
+                                    "episode": int(episode_idx),
+                                    "mc_worker": int(m_idx),
+                                    "step": int(step),
+                                    "reward": float(reward),
                                 }
                             )
                         )
