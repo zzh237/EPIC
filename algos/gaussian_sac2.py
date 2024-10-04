@@ -115,7 +115,7 @@ class StochasticTanhGaussianPolicy(nn.Module):
             self.last_fc_log_std = StochasticLinear(last_hidden_size, action_dim)
         else:
             self.log_std = np.log(std)
-        self.compile(mode="reduce-overhead")
+        # self.compile(mode="reduce-overhead")
 
     def load_from(self, other: "StochasticTanhGaussianPolicy"):
         """Reload own parameters with those from another network."""
@@ -186,7 +186,7 @@ class StochasticMlp(nn.Module):
 
         self.last_fc = StochasticLinear(current_dim, output_size)
         self.layers.append(self.last_fc)
-        self.compile(mode="reduce-overhead")
+        # self.compile(mode="reduce-overhead")
 
     def forward(self, x):
         return self.layers(x)
@@ -195,13 +195,13 @@ class StochasticMlp(nn.Module):
 class FlattenStochasticMlp(StochasticMlp):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.compile()
+        # self.compile()
 
     def forward(self, *x):
         flat = torch.cat(x, dim=1)
         return super().forward(flat)
 
-@torch.compile
+# @torch.compile
 def model_kl_div(default: nn.Module, prior: nn.Module):
     # calculate KL div between a default model and a prior
     kl = []
@@ -228,7 +228,7 @@ def model_kl_div(default: nn.Module, prior: nn.Module):
 
     return torch.stack(kl).sum()
 
-@torch.compile
+# @torch.compile
 def kl_regularizer(kl, prior_update_every, gamma, max_steps, c=1.5, delta=0.01):
     N = prior_update_every
     H = 1.0 * (1.0 - gamma**max_steps) / (1.0 - gamma)
@@ -238,7 +238,7 @@ def kl_regularizer(kl, prior_update_every, gamma, max_steps, c=1.5, delta=0.01):
     return reg
 
 
-@torch.compile
+# @torch.compile
 def KL_div(mu1, sigma1, mu2, sigma2):
     term1 = torch.sum(torch.log(sigma2 / sigma1)) - len(sigma1)
     term2 = torch.sum(sigma1 / sigma2)
