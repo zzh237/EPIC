@@ -28,8 +28,6 @@ from envs import make_pendulum
 from envs.jellybean import make_jbw
 from envs.swimmer_epic_2 import make_swimmer
 from envs.lunar_epic_2 import make_lunar_env
-# import gtimer as gt
-
 
 def parse_args():
     parser = ArgumentParser("epic_2")
@@ -100,7 +98,6 @@ class EpicTrainer:
         self.render = render
         self.meta_update_every = meta_update_every  # update the prior every this many meta-episodes
         self.seed = seed
-
 
     def train_and_evaluate(self):
         # [(meta-episode / life episode) -> episode -> mcworker -> step]
