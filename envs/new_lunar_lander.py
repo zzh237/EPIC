@@ -226,7 +226,7 @@ class NewLunarLander(gym.Env, EzPickle):
 
     def _create_particle(self, mass, x, y, ttl):
         p = self.world.CreateDynamicBody(
-            position = (x, y),
+            position = (float(x), float(y)),
             angle=0.0,
             fixtures = fixtureDef(
                 shape=circleShape(radius=2/SCALE, pos=(0, 0)),
@@ -260,7 +260,7 @@ class NewLunarLander(gym.Env, EzPickle):
         if (self.continuous and action[0] > 0.0) or (not self.continuous and action == 2):
             # Main engine
             if self.continuous:
-                m_power = (np.clip(action[0], 0.0,1.0) + 1.0)*0.5   # 0.5..1.0
+                m_power = float((np.clip(action[0], 0.0,1.0)) + 1.0)*0.5   # 0.5..1.0
                 assert m_power >= 0.5 and m_power <= 1.0
             else:
                 m_power = 1.0
@@ -283,8 +283,8 @@ class NewLunarLander(gym.Env, EzPickle):
         if (self.continuous and np.abs(action[1]) > 0.5) or (not self.continuous and action in [1, 3]):
             # Orientation engines
             if self.continuous:
-                direction = np.sign(action[1])
-                s_power = np.clip(np.abs(action[1]), 0.5, 1.0)
+                direction = float(np.sign(action[1]))
+                s_power = float(np.clip(np.abs(action[1]), 0.5, 1.0))
                 assert s_power >= 0.5 and s_power <= 1.0
             else:
                 direction = action-2
