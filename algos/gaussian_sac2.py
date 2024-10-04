@@ -115,7 +115,7 @@ class StochasticTanhGaussianPolicy(nn.Module):
             self.last_fc_log_std = StochasticLinear(last_hidden_size, action_dim)
         else:
             self.log_std = np.log(std)
-        self.compile()
+        self.compile(mode="reduce-overhead")
 
     def load_from(self, other: "StochasticTanhGaussianPolicy"):
         """Reload own parameters with those from another network."""
@@ -186,7 +186,7 @@ class StochasticMlp(nn.Module):
 
         self.last_fc = StochasticLinear(current_dim, output_size)
         self.layers.append(self.last_fc)
-        self.compile()
+        self.compile(mode="reduce-overhead")
 
     def forward(self, x):
         return self.layers(x)
@@ -321,8 +321,7 @@ class EpicSACMcActor(nn.Module):
         self.replay_buffer = ReplayBuffer(
             storage=LazyTensorStorage(max_size=replay_capacity, device=torch.device(device)),
             batch_size=batch_size,
-            pin_memory=True,
-            prefetch=2,
+            prefetch=3,
         )
 
         # self.qf_criterion = nn.MSELoss()

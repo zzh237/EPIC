@@ -157,8 +157,8 @@
             "program": "${workspaceFolder}/epic_mc_2.py",
             "args": [
                 "--model", "epic-sac",
-                "--device", "cuda",
-                "--env", "pendulum",
+                "--device", "cpu",
+                "--env", "lunar-cont",
                 "--max-steps", "200",
                 "--lr-qf=1e-3",
                 "--lr-policy=1e-3",
