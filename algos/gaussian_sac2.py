@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import typing
+import gym.spaces
 from typing_extensions import Self
 from typing import NamedTuple, TypedDict, cast
 from math import log, sqrt, prod
@@ -20,6 +21,7 @@ from algos.logging import track_config
 from algos.memory import ReplayMemory
 from algos.types import Action, EPICModel
 from torchrl.data import ReplayBuffer, LazyTensorStorage
+from torch.distributions import Categorical
 
 LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20
@@ -81,6 +83,44 @@ class StochasticLinear(nn.Module):
             out_var = F.relu(out_var)
             return out_mean + noise * torch.sqrt(out_var)
 
+class StochasticCategoricalPolicy(nn.Module):
+    """
+    Policy network with a categorical distribution head.
+    """
+    def __init__(self, hidden_sizes: tuple[int, ...], obs_dim: int, action_dim: int, device: str):
+        super().__init__()
+        self.device = device
+        if isinstance(hidden_sizes, int):
+            hidden_sizes = (hidden_sizes,)
+        in_size = obs_dim
+        self.hidden_layers = nn.Sequential()
+        for next_size in hidden_sizes:
+            self.hidden_layers.append(StochasticLinear(in_size, next_size))
+            self.hidden_layers.append(nn.ReLU())
+            in_size = next_size
+        # output of this is logits
+        self.last_fc = StochasticLinear(in_size, action_dim)
+
+    def forward(self, x, reparameterize=None, deterministic=None, return_log_prob=None):
+        # (action, mean, log_std, log_prob, expected_log_prob, std, mean_action_log_prob, pre_tanh_value)
+        x = torch.as_tensor(x, device=self.device, dtype=torch.float32)
+        x = self.hidden_layers(x)
+        logits = self.last_fc(x)
+
+        policy_dist = Categorical(logits=logits)
+        # this sample is OK for some reason
+        action = torch.atleast_2d(policy_dist.sample())
+        # obs, action.detach(), log_prob
+        log_prob = F.log_softmax(logits, dim=1)
+
+        return action, None, None, log_prob, None, None, None, None
+
+    @torch.no_grad()
+    def get_actions(self, obs: torch.Tensor, deterministic=None):
+        action, _, _, log_prob, *_ = self.forward(obs)
+
+        return obs, action.detach(), log_prob
+    
 
 class StochasticTanhGaussianPolicy(nn.Module):
     """
@@ -269,8 +309,9 @@ class EpicRegularizers(TypedDict):
 class EpicSACMcActor(nn.Module):
     def __init__(
         self,
-        state_dim: int,
-        action_dim: int,
+        # state_dim: int,
+        # action_dim: int,
+        env: gym.Env,
         replay_capacity: int,
         sac_steps: int,
         batch_size: int,
@@ -292,6 +333,10 @@ class EpicSACMcActor(nn.Module):
         policy_hiddens: tuple[int, ...] = (256, 256),
     ):
         super().__init__()
+        assert env.action_space.shape is not None
+        assert env.observation_space.shape is not None
+        state_dim = prod(env.observation_space.shape)
+        action_dim = prod(env.action_space.shape)
 
         self.sac_steps = sac_steps
         self.batch_size = batch_size
@@ -311,10 +356,16 @@ class EpicSACMcActor(nn.Module):
         self.target_qf2 = FlattenStochasticMlp(
             input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1
         )
-
-        self.policy = StochasticTanhGaussianPolicy(
-            hidden_sizes=policy_hiddens, obs_dim=state_dim, action_dim=action_dim, device=device
-        )
+        
+        if isinstance(env.action_space, gym.spaces.Box):
+            self.policy = StochasticTanhGaussianPolicy(
+                hidden_sizes=policy_hiddens, obs_dim=state_dim, action_dim=action_dim, device=device
+            )
+        elif isinstance(env.action_space, gym.spaces.Discrete):
+            self.policy = StochasticCategoricalPolicy(
+                hidden_sizes=policy_hiddens, obs_dim=state_dim, action_dim=action_dim,
+                device=device
+            )
 
         # TODO possibly share this between MC actors
         # self.replay_buffer = ReplayMemory(replay_capacity)
@@ -331,11 +382,13 @@ class EpicSACMcActor(nn.Module):
         self.policy_optimizer = optimizer_class(self.policy.parameters(), lr=policy_lr)
 
     def act(self, state: Tensor | np.ndarray) -> Action:
-        if not isinstance(state, Tensor):
-            state = torch.from_numpy(state).to(torch.device(self.device))
+        # if not isinstance(state, Tensor):
+        #     state = torch.from_numpy(state).to(torch.device(self.device))
 
-        if state.ndim < 2:
-            state = state.unsqueeze(0)
+        # if state.ndim < 2:
+        #     state = state.unsqueeze(0)
+
+        state = torch.atleast_2d(torch.as_tensor(state, device=self.device, dtype=torch.float32))
 
         # (action, mean, log_std, log_prob, expected_log_prob, std, mean_action_log_prob, pre_tanh_value)
         action, _, _, log_prob, *_ = self.policy(state, reparameterize=True, return_log_prob=True)
@@ -343,17 +396,8 @@ class EpicSACMcActor(nn.Module):
         return Action(state=state, action=action.flatten(), log_prob=log_prob)
 
     def push_sample(self, state, action, reward, new_state, done):
-        # self.replay_buffer.push(state, action, reward, new_state, done)
-
-        # if not isinstance(state, Tensor):
-        #     state = torch.from_numpy(state)
-        # if not isinstance(action, Tensor):
-        #     action = torch.from_numpy(action)
-        # if not isinstance(new_state, Tensor):
-        #     new_state = torch.from_numpy(new_state)
-
         state = torch.as_tensor(state).squeeze().type(torch.float32).detach()
-        action = torch.atleast_1d(torch.as_tensor(action).squeeze()).detach()
+        action = torch.atleast_1d(torch.as_tensor(action).squeeze().type(torch.float32)).detach()
         new_state = torch.as_tensor(new_state).squeeze().type(torch.float32).detach()
         done = torch.atleast_1d(torch.tensor(done)).type(torch.int8).detach()
         reward = torch.atleast_1d(torch.tensor(reward)).type(torch.float32).detach()
@@ -492,15 +536,10 @@ class EpicSAC2(EPICModel):
         self.enable_epic_regularization = enable_epic_regularization
 
         # MC actor initialization
-        assert env.action_space.shape is not None
-        assert env.observation_space.shape is not None
-        state_dim = prod(env.observation_space.shape)
-        action_dim = prod(env.action_space.shape)
-
+    
         def make_actor():
             return EpicSACMcActor(
-                state_dim=state_dim,
-                action_dim=action_dim,
+                env=env,
                 replay_capacity=replay_capacity,
                 device=device,
                 q_network_hiddens=q_network_hiddens,
