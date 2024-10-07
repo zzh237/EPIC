@@ -185,6 +185,27 @@
             "justMyCode": false
         },
         {
+            "name": "jbw sac",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/epic_mc_2.py",
+            "args": [
+                "--model", "epic-sac",
+                "--device", "cpu",
+                "--env", "jbw",
+                "--max-steps", "200",
+                "--lr-qf=1e-3",
+                "--lr-policy=1e-3",
+                "--qf-target-update-period=1",
+                "--tau=1e-2",
+                "--enable-epic-regularization"
+            ],
+            "env": {
+                "WANDB_MODE": "disabled"
+            },
+            "justMyCode": false
+        },
+        {
             "name": "ppo2",
             "type": "debugpy",
             "request": "launch",

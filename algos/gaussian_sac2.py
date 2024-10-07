@@ -109,7 +109,8 @@ class StochasticCategoricalPolicy(nn.Module):
 
         policy_dist = Categorical(logits=logits)
         # this sample is OK for some reason
-        action = torch.atleast_2d(policy_dist.sample())
+        # action = torch.atleast_2d(policy_dist.sample())
+        action = policy_dist.sample().unsqueeze(-1)
         # obs, action.detach(), log_prob
         log_prob = F.log_softmax(logits, dim=1)
 
@@ -405,15 +406,8 @@ class EpicSACMcActor(nn.Module):
         self.replay_buffer.add((state, action, reward, new_state, done))
 
     def train_step(self, kl_divergences: EpicRegularizers):
-        # if self.replay_buffer.size() < self.batch_size:
-        #     return
-
         if len(self.replay_buffer) < self.batch_size:
             return
-
-        # state, action, reward, next_state, done = self.replay_buffer.sample(
-        #     batch_size=self.batch_size, device=self.device, as_tensors=True
-        # )
 
         state, action, reward, next_state, done = self.replay_buffer.sample()
         losses = self.compute_loss(state, action, reward, next_state, done, kl_divergences)

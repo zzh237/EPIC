@@ -51,10 +51,11 @@ class CyclingJbwWrapper(gym.Wrapper):
         self._last_obs = None
 
         # create a copy of the underlying obs space with an extra dim for the target item
-        self.observation_space = self.env.observation_space
-        self.observation_space["target_item"] = Discrete(2)
+        # self.observation_space = self.env.observation_space
+        # self.observation_space["target_item"] = Discrete(2)
 
     def _add_target_item(self, obs: dict):
+        # don't do this
         if self.target_item == "jellybean":
             obs["target_item"] = 0
         else:
@@ -71,7 +72,7 @@ class CyclingJbwWrapper(gym.Wrapper):
             # subsequent resets keep the agent where it is and just return the last observation
             reset_result = self._last_obs
 
-        self._add_target_item(reset_result)
+        # self._add_target_item(reset_result)
         return reset_result
     
     def render(self, mode="matplotlib", **kwargs):
@@ -85,7 +86,7 @@ class CyclingJbwWrapper(gym.Wrapper):
         self._step_idx += 1
 
         obs, reward, done, info = super().step(action)
-        self._add_target_item(obs)
+        # self._add_target_item(obs)
         self._last_obs = obs
 
         return obs, reward, done, info
