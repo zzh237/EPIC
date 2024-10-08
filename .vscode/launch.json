@@ -226,8 +226,8 @@
             "args": [
                 "--model=gaussian-vpg",
                 "--device=cpu",
-                "--env=pendulum",
-                "--render",
+                "--env=jbw",
+                // "--render",
                 "--meta-update-every=1"
             ],
             "justMyCode": false

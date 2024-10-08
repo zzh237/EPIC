@@ -63,7 +63,7 @@ class StochasticLinear(nn.Module):
                 self.bias_mean.uniform_(-stdv, stdv)
                 self.bias_log_var.normal_(self.log_var_mean, self.log_var_std)
 
-    def __str__(self):
+    def __repr__(self):
         return f"StochasticLinear({self.in_dim} -> {self.out_dim})"
 
     def forward(self, x: Tensor):
@@ -336,8 +336,7 @@ class EpicSACMcActor(nn.Module):
         super().__init__()
         assert env.action_space.shape is not None
         assert env.observation_space.shape is not None
-        state_dim = prod(env.observation_space.shape)
-        action_dim = prod(env.action_space.shape)
+        state_dim = env.observation_space.shape[0]
 
         self.sac_steps = sac_steps
         self.batch_size = batch_size
@@ -348,26 +347,39 @@ class EpicSACMcActor(nn.Module):
         self.device = device
         self.enable_epic_regularization = enable_epic_regularization
 
-        self.qf1 = FlattenStochasticMlp(input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1)
-        self.qf2 = FlattenStochasticMlp(input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1)
-
-        self.target_qf1 = FlattenStochasticMlp(
-            input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1
-        )
-        self.target_qf2 = FlattenStochasticMlp(
-            input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1
-        )
-        
         if isinstance(env.action_space, gym.spaces.Box):
+            self.discrete = False
+            action_dim = env.action_space.shape[0]
             self.policy = StochasticTanhGaussianPolicy(
                 hidden_sizes=policy_hiddens, obs_dim=state_dim, action_dim=action_dim, device=device
             )
-        elif isinstance(env.action_space, gym.spaces.Discrete):
-            self.policy = StochasticCategoricalPolicy(
-                hidden_sizes=policy_hiddens, obs_dim=state_dim, action_dim=action_dim,
-                device=device
-            )
+            self.qf1 = FlattenStochasticMlp(input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1)
+            self.qf2 = FlattenStochasticMlp(input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1)
 
+            self.target_qf1 = FlattenStochasticMlp(
+                input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1
+            )
+            self.target_qf2 = FlattenStochasticMlp(
+                input_size=state_dim + action_dim, hidden_dims=q_network_hiddens, output_size=1
+            )
+        elif isinstance(env.action_space, gym.spaces.Discrete):
+            self.discrete = True
+            # the stochasticcategoricalpolicy expects the real action_dim
+            action_dim = env.action_space.n
+            self.policy = StochasticCategoricalPolicy(
+                hidden_sizes=policy_hiddens, obs_dim=state_dim, action_dim=action_dim, device=device
+            )
+            # since we're in a discrete space, our Q functions can be evaluated on the whole codomain
+            self.qf1 = FlattenStochasticMlp(input_size=state_dim, hidden_dims=q_network_hiddens, output_size=action_dim)
+            self.qf2 = FlattenStochasticMlp(input_size=state_dim, hidden_dims=q_network_hiddens, output_size=action_dim)
+
+            self.target_qf1 = FlattenStochasticMlp(
+                input_size=state_dim, hidden_dims=q_network_hiddens, output_size=action_dim
+            )
+            self.target_qf2 = FlattenStochasticMlp(
+                input_size=state_dim, hidden_dims=q_network_hiddens, output_size=action_dim
+            )        
+        
         # TODO possibly share this between MC actors
         # self.replay_buffer = ReplayMemory(replay_capacity)
         self.replay_buffer = ReplayBuffer(
@@ -383,12 +395,6 @@ class EpicSACMcActor(nn.Module):
         self.policy_optimizer = optimizer_class(self.policy.parameters(), lr=policy_lr)
 
     def act(self, state: Tensor | np.ndarray) -> Action:
-        # if not isinstance(state, Tensor):
-        #     state = torch.from_numpy(state).to(torch.device(self.device))
-
-        # if state.ndim < 2:
-        #     state = state.unsqueeze(0)
-
         state = torch.atleast_2d(torch.as_tensor(state, device=self.device, dtype=torch.float32))
 
         # (action, mean, log_std, log_prob, expected_log_prob, std, mean_action_log_prob, pre_tanh_value)
@@ -397,11 +403,11 @@ class EpicSACMcActor(nn.Module):
         return Action(state=state, action=action.flatten(), log_prob=log_prob)
 
     def push_sample(self, state, action, reward, new_state, done):
-        state = torch.as_tensor(state).squeeze().type(torch.float32).detach()
-        action = torch.atleast_1d(torch.as_tensor(action).squeeze().type(torch.float32)).detach()
-        new_state = torch.as_tensor(new_state).squeeze().type(torch.float32).detach()
-        done = torch.atleast_1d(torch.tensor(done)).type(torch.int8).detach()
-        reward = torch.atleast_1d(torch.tensor(reward)).type(torch.float32).detach()
+        state = torch.as_tensor(state, dtype=torch.float32).squeeze().detach()
+        action = torch.atleast_1d(torch.as_tensor(action, dtype=torch.float32).squeeze()).detach()
+        new_state = torch.as_tensor(new_state, dtype=torch.float32).squeeze().detach()
+        done = torch.atleast_1d(torch.as_tensor(done, dtype=torch.int8)).detach()
+        reward = torch.atleast_1d(torch.as_tensor(reward, dtype=torch.float32)).detach()
 
         self.replay_buffer.add((state, action, reward, new_state, done))
 
@@ -442,13 +448,53 @@ class EpicSACMcActor(nn.Module):
         soft_update_from_to(self.qf2, self.target_qf2, self.tau)
 
     def compute_loss(self, state, action, reward, new_state, done, kl_divergences: EpicRegularizers) -> Losses:
+        if self.discrete:
+            return self.discrete_loss(state, action, reward, new_state, done, kl_divergences)
+        else:
+            return self.continuous_loss(state, action, reward, new_state, done, kl_divergences)
+
+    def discrete_loss(self, state, action, reward, new_state, done, kl_divergences: EpicRegularizers) -> Losses:
+        # q-functions
+        with torch.no_grad():
+            _, _, _, new_state_log_prob, *_ = self.policy(new_state, reparameterize=False, return_log_prob=True)
+            new_state_action_prob = torch.exp(new_state_log_prob)
+            qf1_next_target = self.target_qf1(new_state)
+            qf2_next_target = self.target_qf2(new_state)
+
+            min_qf_next_target = new_state_action_prob * (torch.min(qf1_next_target, qf2_next_target) - new_state_log_prob)
+            min_qf_next_target = min_qf_next_target.sum(dim=1)
+            next_q_value = reward.flatten() + (1 - done.flatten()) * self.discount * (min_qf_next_target)
+        
+        qf1_values = self.qf1(state)
+        qf2_values = self.qf2(state)
+        qf1_a_values = qf1_values.gather(1, action.long()).view(-1)
+        qf2_a_values = qf2_values.gather(1, action.long()).view(-1)
+        qf1_loss = self.qf_criterion(qf1_a_values, next_q_value)
+        qf2_loss = self.qf_criterion(qf2_a_values, next_q_value)
+
+        # policy
+        _, _, _, state_log_prob, *_ = self.policy(state)
+        state_action_prob = torch.exp(state_log_prob)
+        with torch.no_grad():
+            qf1_values = self.qf1(state)
+            qf2_values = self.qf2(state)
+            min_qf_values = torch.min(qf1_values, qf2_values)
+
+        # again you can use the probs directly
+        policy_loss = (state_action_prob * (state_log_prob - min_qf_values)).mean()
+
+        # TODO add the kl regularization
+
+        return Losses(qf1_loss=qf1_loss, qf2_loss=qf2_loss, policy_loss=policy_loss)
+        
+    def continuous_loss(self, state, action, reward, new_state, done, kl_divergences) -> Losses:
         # (action, mean, log_std, log_prob, expected_log_prob, std, mean_action_log_prob, pre_tanh_value)
         state_next_actions, _, _, log_prob, *_ = self.policy(state, reparameterize=True, return_log_prob=True)
         log_prob = log_prob.unsqueeze(-1)
-
         # Policy loss
         q_new_actions = torch.min(self.qf1(state, state_next_actions), 
                                   self.qf2(state, state_next_actions))
+        
         policy_loss = (log_prob - q_new_actions).mean()
 
         # QF
@@ -457,7 +503,9 @@ class EpicSACMcActor(nn.Module):
         new_state_next_actions, _, _, new_state_log_prob, *_ = self.policy(
             new_state, reparameterize=True, return_log_prob=True
         )
-        new_state_log_prob = new_state_log_prob.unsqueeze(-1)
+        # the logprob may already be unsqueezed
+        if new_state_log_prob.shape[-1] != 1:
+            new_state_log_prob = new_state_log_prob.unsqueeze(-1)
 
         target_q_values = (
             torch.min(

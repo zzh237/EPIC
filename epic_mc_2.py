@@ -149,7 +149,7 @@ class EpicTrainer:
                 .group_by("meta_episode")
                 .agg(pl.col("reward").mean())
             ).item(row=0, column=1)
-            print(f", reward: {meta_episode_reward}")
+            print(f", reward: {meta_episode_reward:.4f}")
             wandb.log({"meta_episode_reward": meta_episode_reward, "meta_episode": meta_episode})
 
             if (meta_episode + 1) % self.meta_update_every == 0:
