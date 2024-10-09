@@ -4,7 +4,7 @@ description = "epic PAC bound for lifetime learning"
 name = "epic"
 requires-python = "~= 3.10.0"
 version = "0.1.0"
-dependencies = ["torchvision>=0.19.1,<0.20", "torchrl>=0.5.0,<0.6", "gtimer>=1.0.0b5,<2"]
+dependencies = ["torchvision>=0.19.1,<0.20", "torchrl>=0.5.0,<0.6", "gtimer>=1.0.0b5,<2", "polars"]
 
 [build-system]
 # build-backend = "setuptools"
@@ -60,5 +60,4 @@ python-graphviz = ">=0.20.3,<0.21"
 pip = ">=24.2,<25"
 setuptools = ">=67"
 patchelf = ">=0.17.2,<0.19"
-polars = ">=1.8.2,<2"
 pynvml = ">=11.5.3,<12"
