@@ -44,6 +44,10 @@ def parse_args():
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--num-episodes", type=int, default=10)
     parser.add_argument("--max-steps", type=int, default=200)
+    parser.add_argument("--action-std", type=float)
+
+    # MC - related parameters
+    parser.add_argument("--beta", type=float)
 
     # "metalearning"
     parser.add_argument("--meta-episodes", type=int, default=10)
@@ -224,7 +228,7 @@ def make_model(args, env) -> EPICModel:
             env=env,
             hidden_sizes=(256, 256),
             device=args.device,
-            action_std=0.5,
+            action_std=args.action_std,
             prior_update_every=args.meta_update_every,
             gamma=args.gamma,
             max_steps=args.max_steps,
@@ -244,14 +248,18 @@ def make_model(args, env) -> EPICModel:
         mdl = VPG2(
         m=args.m,
            env=env,
-           lr=args.lr, 
+           lr=args.lr,
+           hidden_sizes=(64, 64),
+            beta=args.beta,
+            discount=args.discount,
+            action_std=args.action_std
         )
         wandb.watch(mdl)
         return mdl
     elif args.model == "ppo":
         mdl = PPO2(
             m=args.m,
-            env=env
+            env=env,
         )
         wandb.watch(mdl)
         return mdl
