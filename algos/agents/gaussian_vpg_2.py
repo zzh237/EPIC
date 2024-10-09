@@ -354,7 +354,8 @@ class GaussianVPGMC2(EPICModel):
 
     def update_default(self) -> None:
         # we actually need to update the default every meta-episode, so this
-        # method is not called frequently enough
+        # method is not called frequently enough, the update is done instead in 
+        # post-meta-episode
         pass
         
 
