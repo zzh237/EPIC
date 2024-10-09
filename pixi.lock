@@ -1229,11 +1229,12 @@ packages:
   name: epic
   version: 0.1.0
   path: .
-  sha256: 4eb2d1336fe0f4b6639767876e8775fd45c53212f9a2a90a67c887a325a7b4bf
+  sha256: 4e701a1054ef39e5b2b4ed3ab8592abdeb0b4edd07d0154f1a331b5025c8183f
   requires_dist:
   - torchvision>=0.19.1,<0.20
   - torchrl>=0.5.0,<0.6
   - gtimer>=1.0.0b5,<2
+  - polars
   requires_python: ~=3.10.0
   editable: true
 - kind: conda
@@ -2146,23 +2147,23 @@ packages:
   - gym-notices>=0.0.4
   - importlib-metadata>=4.10.0 ; python_full_version < '3.10'
   - autorom[accept-rom-license]~=0.4.2 ; extra == 'accept-rom-license'
-  - mujoco-py<2.0,>=1.50 ; extra == 'all'
-  - pygame==2.1.0 ; extra == 'all'
-  - scipy>=1.4.1 ; extra == 'all'
+  - ale-py~=0.7.4 ; extra == 'all'
   - lz4>=3.1.0 ; extra == 'all'
   - opencv-python>=3.0 ; extra == 'all'
+  - pygame==2.1.0 ; extra == 'all'
+  - scipy>=1.4.1 ; extra == 'all'
   - box2d-py==2.3.5 ; extra == 'all'
-  - ale-py~=0.7.4 ; extra == 'all'
+  - mujoco-py<2.0,>=1.50 ; extra == 'all'
   - ale-py~=0.7.4 ; extra == 'atari'
   - box2d-py==2.3.5 ; extra == 'box2d'
   - pygame==2.1.0 ; extra == 'box2d'
   - pygame==2.1.0 ; extra == 'classic-control'
   - mujoco-py<2.0,>=1.50 ; extra == 'mujoco'
+  - box2d-py==2.3.5 ; extra == 'nomujoco'
   - pygame==2.1.0 ; extra == 'nomujoco'
-  - scipy>=1.4.1 ; extra == 'nomujoco'
   - lz4>=3.1.0 ; extra == 'nomujoco'
   - opencv-python>=3.0 ; extra == 'nomujoco'
-  - box2d-py==2.3.5 ; extra == 'nomujoco'
+  - scipy>=1.4.1 ; extra == 'nomujoco'
   - lz4>=3.1.0 ; extra == 'other'
   - opencv-python>=3.0 ; extra == 'other'
   - pygame==2.1.0 ; extra == 'toy-text'
