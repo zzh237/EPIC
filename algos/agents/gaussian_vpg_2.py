@@ -150,8 +150,9 @@ class GaussianActor(nn.Module):
         if isinstance(state, np.ndarray):
             state = torch.from_numpy(state).float().to(self.device)
         action_probs = self.layers(state)
-        dist = Categorical(action_probs)
-        action = dist.rsample()
+        dist = Categorical(probs=action_probs)
+        # rsample throws a notimplemented on categorical
+        action = dist.sample()
         log_prob = dist.log_prob(action)
         
         return Action(state=state, action=action.detach(), log_prob=log_prob)
@@ -248,13 +249,14 @@ class GaussianVPGMC2(EPICModel):
         assert env.observation_space.shape is not None
 
         state_dim = env.observation_space.shape[0]
-        action_dim = env.action_space.shape[0]
 
         def make_actor():
             if isinstance(env.action_space, Discrete):
+                action_dim = env.action_space.n
                 return GaussianActor(state_dim=state_dim, action_dim=action_dim, hidden_sizes=hidden_sizes,
                                      activation=nn.ReLU, device=device)
             elif isinstance(env.action_space, Box):
+                action_dim = env.action_space.shape[0]
                 return GaussianContActor(state_dim=state_dim, action_dim=action_dim, hidden_sizes=hidden_sizes,
                                          action_std=action_std,
                                          activation=nn.ReLU, device=device)
@@ -283,8 +285,9 @@ class GaussianVPGMC2(EPICModel):
         return self._m
 
     def act_m(self, m: int, state) -> Action:
-        if isinstance(state, np.ndarray):
-            state = torch.from_numpy(state)
+        # if isinstance(state, np.ndarray):
+        #     state = torch.from_numpy(state)
+        state = torch.as_tensor(state, dtype=torch.float32, device=self.device)
 
         state = state.to(self.device)
         return self.policies[m].act(state)
@@ -351,7 +354,8 @@ class GaussianVPGMC2(EPICModel):
 
     def update_default(self) -> None:
         # we actually need to update the default every meta-episode, so this
-        # method is not called frequently enough
+        # method is not called frequently enough, the update is done instead in 
+        # post-meta-episode
         pass
         
 

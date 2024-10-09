@@ -50,6 +50,7 @@ pytorch = { version = "2.4.1.*", channel = "pytorch" }
 
 [tool.pixi.dependencies]
 python = "3.10.*"
+# cpython = { version = "3.10.*", channel = "conda-forge/label/python_debug" }
 box2d-py = ">=2.3.8,<3"
 higher = ">=0.2.1,<0.3"
 numpy = ">=2.1.0,<3"

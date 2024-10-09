@@ -21,7 +21,9 @@ from torch.optim.adamw import AdamW
 import wandb
 from algos.agents.gaussian_ppo_2 import GaussianPPO2
 from algos.agents.gaussian_vpg_2 import GaussianVPGMC2
+from algos.agents.ppo_2 import PPO2
 from algos.agents.sac_basic import VanillaSACv2
+from algos.agents.vpg_2 import VPG2
 from algos.gaussian_sac2 import EpicSAC2
 from algos.types import EPICModel
 from envs import make_pendulum
@@ -149,7 +151,7 @@ class EpicTrainer:
                 .group_by("meta_episode")
                 .agg(pl.col("reward").mean())
             ).item(row=0, column=1)
-            print(f", reward: {meta_episode_reward}")
+            print(f", reward: {meta_episode_reward:.4f}")
             wandb.log({"meta_episode_reward": meta_episode_reward, "meta_episode": meta_episode})
 
             if (meta_episode + 1) % self.meta_update_every == 0:
@@ -235,6 +237,21 @@ def make_model(args, env) -> EPICModel:
             lam_decay=args.prior_lambda_decay,
             enable_epic_regularization=args.enable_epic_regularization,
             optimizer=optimizer
+        )
+        wandb.watch(mdl)
+        return mdl
+    elif args.model == "vpg":
+        mdl = VPG2(
+        m=args.m,
+           env=env,
+           lr=args.lr, 
+        )
+        wandb.watch(mdl)
+        return mdl
+    elif args.model == "ppo":
+        mdl = PPO2(
+            m=args.m,
+            env=env
         )
         wandb.watch(mdl)
         return mdl
