@@ -1,3 +1,8 @@
+# Dependencies
+- gcc 11
+- mujoco
+- [pixi](https://pixi.sh/latest/)
+
 # Code for the Paper
 
 - The required codes(.py files) for this paper are:
