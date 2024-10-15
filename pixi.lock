@@ -219,6 +219,7 @@ environments:
       - pypi: git+ssh://git@github.com/ckchow/jelly-bean-world.git@2a4829971b4cade794e9a5492c5068414c0d0908#subdirectory=api/python
       - pypi: https://files.pythonhosted.org/packages/91/29/df4b9b42f2be0b623cbd5e2140cafcaa2bef0759a00b7b70104dcfe2fb51/joblib-1.4.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/55/91/0a57ce324caf2ff5403edab71c508dd8f648094b18cfbb4c8cc0fde4a6ac/kiwisolver-1.4.7-cp310-cp310-manylinux_2_12_x86_64.manylinux2010_x86_64.whl
+      - pypi: git+ssh://git@github.com/Lifelong-Robot-Learning/LIBERO@f78abd68ee283de9f9be3c8f7e2a9ad60246e95c
       - pypi: https://files.pythonhosted.org/packages/03/62/70f5a0c2dd208f9f3f2f9afd103aec42ee4d9ad2401d78342f75e9b8da36/Mako-1.3.5-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/3f/08/83871f3c50fc983b88547c196d11cf8c3340e37c32d2e9d6152abe2c61f7/Markdown-3.7-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/42/d7/1ec15b46af6af88f19b8e5ffea08fa375d433c998b8a7639e76935c14f1f/markdown_it_py-3.0.0-py3-none-any.whl
@@ -266,7 +267,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/72/55/e0b3821c5595a9a2c8ec98d234b4a0d1142d91daac61f007503d3158f857/torchvision-0.19.1-cp310-cp310-manylinux1_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/a6/ab/7e5f53c3b9d14972843a647d8d7a853969a58aecc7559cb3267302c94774/tzdata-2024.2-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ce/d9/5f4c13cecde62396b0d3fe530a50ccea91e7dfc1ccf0e09c228841bb5ba8/urllib3-2.2.3-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/88/e4/2e6a7e925a44da70248130c763440d87f3fc28791964bb6c0c2b2cfbe55f/wandb-0.17.5-py3-none-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/86/a6/11eaa16c96469b4d6fc0fb3271e70d5bbe2c3a93c15fc677de9a1aa4374a/wandb-0.18.3-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/4b/84/997bbf7c2bf2dc3f09565c6d0b4959fefe5355c18c4096cfd26d83e0785b/werkzeug-3.0.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/49/83/b40bc1ad04a868b5b5bcec86349f06c1ee1ea7afe51dc3e46131e4f39308/wrapt-1.16.0-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/62/8b/5ba542fa83c90e09eac972fc9baca7a88e7e7ca4b221a89251954019308b/zipp-3.20.2-py3-none-any.whl
@@ -425,6 +426,7 @@ environments:
       - pypi: git+ssh://git@github.com/ckchow/jelly-bean-world.git@2a4829971b4cade794e9a5492c5068414c0d0908#subdirectory=api/python
       - pypi: https://files.pythonhosted.org/packages/91/29/df4b9b42f2be0b623cbd5e2140cafcaa2bef0759a00b7b70104dcfe2fb51/joblib-1.4.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ef/fa/65de49c85838681fc9cb05de2a68067a683717321e01ddafb5b8024286f0/kiwisolver-1.4.7-cp310-cp310-macosx_11_0_arm64.whl
+      - pypi: git+ssh://git@github.com/Lifelong-Robot-Learning/LIBERO@f78abd68ee283de9f9be3c8f7e2a9ad60246e95c
       - pypi: https://files.pythonhosted.org/packages/03/62/70f5a0c2dd208f9f3f2f9afd103aec42ee4d9ad2401d78342f75e9b8da36/Mako-1.3.5-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/3f/08/83871f3c50fc983b88547c196d11cf8c3340e37c32d2e9d6152abe2c61f7/Markdown-3.7-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/42/d7/1ec15b46af6af88f19b8e5ffea08fa375d433c998b8a7639e76935c14f1f/markdown_it_py-3.0.0-py3-none-any.whl
@@ -471,7 +473,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/d4/90/cab820b96d4d1a36b088774209d2379cf49eda8210c8fee13552383860b7/torchvision-0.19.1-cp310-cp310-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/a6/ab/7e5f53c3b9d14972843a647d8d7a853969a58aecc7559cb3267302c94774/tzdata-2024.2-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ce/d9/5f4c13cecde62396b0d3fe530a50ccea91e7dfc1ccf0e09c228841bb5ba8/urllib3-2.2.3-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/3f/37/98073eca9a8e0e1ac66c97434b396956e2824623553f7472dbdd30b4b378/wandb-0.17.5-py3-none-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/06/85/b55642d095407369dd7ad1d8ea1e7f410d60fcdb6c29bcc9afb1e5522d51/wandb-0.18.3-py3-none-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/4b/84/997bbf7c2bf2dc3f09565c6d0b4959fefe5355c18c4096cfd26d83e0785b/werkzeug-3.0.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/32/12/e11adfde33444986135d8881b401e4de6cbb4cced046edc6b464e6ad7547/wrapt-1.16.0-cp310-cp310-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/62/8b/5ba542fa83c90e09eac972fc9baca7a88e7e7ca4b221a89251954019308b/zipp-3.20.2-py3-none-any.whl
@@ -1229,12 +1231,13 @@ packages:
   name: epic
   version: 0.1.0
   path: .
-  sha256: 4e701a1054ef39e5b2b4ed3ab8592abdeb0b4edd07d0154f1a331b5025c8183f
+  sha256: 647a49645bd360511f76b639ecc3a13ae54ec90c496d3046b6258a22fb38cacf
   requires_dist:
   - torchvision>=0.19.1,<0.20
   - torchrl>=0.5.0,<0.6
   - gtimer>=1.0.0b5,<2
   - polars
+  - wandb>=0.18.3,<0.19
   requires_python: ~=3.10.0
   editable: true
 - kind: conda
@@ -2891,6 +2894,11 @@ packages:
   purls: []
   size: 54533
   timestamp: 1722820240854
+- kind: pypi
+  name: libero
+  version: 0.1.0
+  url: git+ssh://git@github.com/Lifelong-Robot-Learning/LIBERO@f78abd68ee283de9f9be3c8f7e2a9ad60246e95c
+  requires_python: '>=3'
 - kind: conda
   name: libexpat
   version: 2.6.3
@@ -6996,18 +7004,18 @@ packages:
   requires_python: '>=3.8'
 - kind: pypi
   name: wandb
-  version: 0.17.5
-  url: https://files.pythonhosted.org/packages/3f/37/98073eca9a8e0e1ac66c97434b396956e2824623553f7472dbdd30b4b378/wandb-0.17.5-py3-none-macosx_11_0_arm64.whl
-  sha256: 233b02d3643142cce8c0ae7986c233fe976b3f7ec0f7aded7478dad0d5a74d43
+  version: 0.18.3
+  url: https://files.pythonhosted.org/packages/06/85/b55642d095407369dd7ad1d8ea1e7f410d60fcdb6c29bcc9afb1e5522d51/wandb-0.18.3-py3-none-macosx_11_0_arm64.whl
+  sha256: 741f566e409a2684d3047e4cc25e8e914d78196b901190937b24b6abb8b052e5
   requires_dist:
   - click!=8.0.0,>=7.1
   - docker-pycreds>=0.4.0
   - gitpython!=3.1.29,>=1.0.0
   - platformdirs
-  - protobuf!=4.21.0,<6,>=3.12.0 ; python_full_version < '3.9' and sys_platform == 'linux'
-  - protobuf!=4.21.0,<6,>=3.15.0 ; python_full_version == '3.9.*' and sys_platform == 'linux'
-  - protobuf!=4.21.0,<6,>=3.19.0 ; python_full_version >= '3.10' and sys_platform == 'linux'
-  - protobuf!=4.21.0,<6,>=3.19.0 ; sys_platform != 'linux'
+  - protobuf!=4.21.0,!=5.28.0,<6,>=3.12.0 ; python_full_version < '3.9' and sys_platform == 'linux'
+  - protobuf!=4.21.0,!=5.28.0,<6,>=3.15.0 ; python_full_version == '3.9.*' and sys_platform == 'linux'
+  - protobuf!=4.21.0,!=5.28.0,<6,>=3.19.0 ; python_full_version >= '3.10' and sys_platform == 'linux'
+  - protobuf!=4.21.0,!=5.28.0,<6,>=3.19.0 ; sys_platform != 'linux'
   - psutil>=5.0.0
   - pyyaml
   - requests<3,>=2.0.0
@@ -7021,7 +7029,7 @@ packages:
   - google-cloud-storage ; extra == 'gcp'
   - filelock ; extra == 'importers'
   - mlflow ; extra == 'importers'
-  - polars ; extra == 'importers'
+  - polars<=1.2.1 ; extra == 'importers'
   - rich ; extra == 'importers'
   - tenacity ; extra == 'importers'
   - google-cloud-storage ; extra == 'kubeflow'
@@ -7041,6 +7049,7 @@ packages:
   - google-cloud-compute ; extra == 'launch'
   - google-cloud-storage ; extra == 'launch'
   - iso8601 ; extra == 'launch'
+  - jsonschema ; extra == 'launch'
   - kubernetes ; extra == 'launch'
   - kubernetes-asyncio ; extra == 'launch'
   - nbconvert ; extra == 'launch'
@@ -7051,11 +7060,12 @@ packages:
   - tomli ; extra == 'launch'
   - typing-extensions ; extra == 'launch'
   - bokeh ; extra == 'media'
+  - imageio ; extra == 'media'
   - moviepy ; extra == 'media'
   - numpy ; extra == 'media'
   - pillow ; extra == 'media'
   - plotly>=5.18.0 ; extra == 'media'
-  - rdkit-pypi ; extra == 'media'
+  - rdkit ; extra == 'media'
   - soundfile ; extra == 'media'
   - cloudpickle ; extra == 'models'
   - orjson ; extra == 'perf'
@@ -7064,18 +7074,18 @@ packages:
   requires_python: '>=3.7'
 - kind: pypi
   name: wandb
-  version: 0.17.5
-  url: https://files.pythonhosted.org/packages/88/e4/2e6a7e925a44da70248130c763440d87f3fc28791964bb6c0c2b2cfbe55f/wandb-0.17.5-py3-none-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-  sha256: 10e4b954ce7ff8615ee64b2dd5a04e51e8c64568d47ec39f5995dbbc9df172db
+  version: 0.18.3
+  url: https://files.pythonhosted.org/packages/86/a6/11eaa16c96469b4d6fc0fb3271e70d5bbe2c3a93c15fc677de9a1aa4374a/wandb-0.18.3-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+  sha256: ab81424eb207d78239a8d69c90521a70074fb81e3709055484e43c76fe44dc08
   requires_dist:
   - click!=8.0.0,>=7.1
   - docker-pycreds>=0.4.0
   - gitpython!=3.1.29,>=1.0.0
   - platformdirs
-  - protobuf!=4.21.0,<6,>=3.12.0 ; python_full_version < '3.9' and sys_platform == 'linux'
-  - protobuf!=4.21.0,<6,>=3.15.0 ; python_full_version == '3.9.*' and sys_platform == 'linux'
-  - protobuf!=4.21.0,<6,>=3.19.0 ; python_full_version >= '3.10' and sys_platform == 'linux'
-  - protobuf!=4.21.0,<6,>=3.19.0 ; sys_platform != 'linux'
+  - protobuf!=4.21.0,!=5.28.0,<6,>=3.12.0 ; python_full_version < '3.9' and sys_platform == 'linux'
+  - protobuf!=4.21.0,!=5.28.0,<6,>=3.15.0 ; python_full_version == '3.9.*' and sys_platform == 'linux'
+  - protobuf!=4.21.0,!=5.28.0,<6,>=3.19.0 ; python_full_version >= '3.10' and sys_platform == 'linux'
+  - protobuf!=4.21.0,!=5.28.0,<6,>=3.19.0 ; sys_platform != 'linux'
   - psutil>=5.0.0
   - pyyaml
   - requests<3,>=2.0.0
@@ -7089,7 +7099,7 @@ packages:
   - google-cloud-storage ; extra == 'gcp'
   - filelock ; extra == 'importers'
   - mlflow ; extra == 'importers'
-  - polars ; extra == 'importers'
+  - polars<=1.2.1 ; extra == 'importers'
   - rich ; extra == 'importers'
   - tenacity ; extra == 'importers'
   - google-cloud-storage ; extra == 'kubeflow'
@@ -7109,6 +7119,7 @@ packages:
   - google-cloud-compute ; extra == 'launch'
   - google-cloud-storage ; extra == 'launch'
   - iso8601 ; extra == 'launch'
+  - jsonschema ; extra == 'launch'
   - kubernetes ; extra == 'launch'
   - kubernetes-asyncio ; extra == 'launch'
   - nbconvert ; extra == 'launch'
@@ -7119,11 +7130,12 @@ packages:
   - tomli ; extra == 'launch'
   - typing-extensions ; extra == 'launch'
   - bokeh ; extra == 'media'
+  - imageio ; extra == 'media'
   - moviepy ; extra == 'media'
   - numpy ; extra == 'media'
   - pillow ; extra == 'media'
   - plotly>=5.18.0 ; extra == 'media'
-  - rdkit-pypi ; extra == 'media'
+  - rdkit ; extra == 'media'
   - soundfile ; extra == 'media'
   - cloudpickle ; extra == 'models'
   - orjson ; extra == 'perf'

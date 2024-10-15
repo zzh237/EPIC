@@ -218,7 +218,10 @@ def make_model(args, env) -> EPICModel:
             action_space=env.action_space,
             meta_update_every=args.meta_update_every,
             device=args.device,
-            learning_rate=args.lr
+            learning_rate=args.lr,
+            action_std=args.action_std,
+            delta=args.delta,
+            tau=args.tau
         )
         wandb.watch(mdl)
         return mdl

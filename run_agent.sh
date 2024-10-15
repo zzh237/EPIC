@@ -1,13 +1,14 @@
 #!/bin/bash
 #$ -cwd
-#$ -o qsub_log/joblog.$JOB_ID
+#$ -o qsub_log/joblog.$JOB_ID.$TASK_ID
 #$ -j y
 ## Edit the line below as needed:
 ## needs an intel-gold processor for polars compatibility
-#$ -l h_rt=5:00:00,h_data=16G,arch=intel-gold\*
+#$ -l h_rt=3:00:00,h_data=4G,arch=intel-gold\*
 ## Modify the parallel environment
 ## and the number of cores as needed
 #$ -pe shared 4
+#$ -t 1-10:1
 
 # this script takes two arguments: the agent ID and the number of sweeps to execute
 
