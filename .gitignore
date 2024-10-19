@@ -1,6 +1,7 @@
 .pixi/
 .github/
 wandb/
+bert/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
