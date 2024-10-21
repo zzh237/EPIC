@@ -24,7 +24,6 @@ from omegaconf import OmegaConf
 from epic_libero.algorithm import EPICAlgorithm, MyLifelongAlgo
 import epic_libero.policy
 from libero.lifelong.models.bc_transformer_policy import BCTransformerPolicy
-from bayesian_torch.models.dnn_to_bnn import bnn_conv_layer, bnn_linear_layer, bnn_lstm_layer
 from functools import reduce
 
 hydra.initialize_config_module("libero.configs")
@@ -70,42 +69,13 @@ n_sequences = [data.total_num_sequences for data in datasets]
 
 # TODO determine if it is safe to do this, specifically does the algorithm use the name
 # to reinitialize the policy
-cfg.policy.policy_type = "MyTransformerPolicy"
+cfg.policy.policy_type = "EpicBayesianPolicy"
 cfg.lifelong.algo = "MyLifelongAlgo"
 
 create_experiment_dir(cfg)
 cfg.shape_meta = shape_meta
 
 print(f"experiment directory is: {cfg.experiment_dir}")
-
-def dnn_to_bnn(module: nn.Module, bnn_prior_parameters):
-    for name, m in module.named_modules():
-        if "Conv" in m.__class__.__name__:
-            module.set_submodule(name, bnn_conv_layer(
-                    bnn_prior_parameters,
-                    m))
-        elif "Linear" in m.__class__.__name__:
-            module.set_submodule(name, bnn_linear_layer(
-                bnn_prior_parameters,
-                m))
-        elif "LSTM" in m.__class__.__name__:
-            module.set_submodule(name, bnn_lstm_layer(bnn_prior_parameters, m))
-
-
-def policy_maker(cfg, shape_meta):
-    policy = BCTransformerPolicy(cfg, shape_meta)
-
-    # dnn_to_bnn(policy, {
-    #     "prior_mu": 0.0,
-    #     "prior_sigma": 1.0,
-    #     "posterior_mu_init": 0.0,
-    #     "posterior_rho_init": -3.0,
-    #     "type": "Reparameterization",
-    #     "moped_enable": False,
-    #     "moped_delta": 0.5
-    # })
-
-    return policy
 
 algo = safe_device(MyLifelongAlgo(n_tasks, cfg), cfg.device)
 

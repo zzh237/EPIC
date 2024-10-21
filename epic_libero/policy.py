@@ -13,10 +13,45 @@ from libero.lifelong.models.modules.language_modules import *
 from libero.lifelong.models.base_policy import BasePolicy
 from libero.lifelong.models.policy_head import *
 from libero.lifelong.models.modules.transformer_modules import *
+from libero.lifelong.models.bc_transformer_policy import BCTransformerPolicy
+from bayesian_torch.models.dnn_to_bnn import (
+    bnn_conv_layer,
+    bnn_linear_layer,
+    bnn_lstm_layer,
+)
 
 
-class EpicBayesianPolicy(BasePolicy):
-    pass
+def dnn_to_bnn(module: nn.Module, bnn_prior_parameters):
+    for name, m in module.named_modules():
+        if "Conv" in m.__class__.__name__:
+            module.set_submodule(name, bnn_conv_layer(bnn_prior_parameters, m))
+        elif "Linear" in m.__class__.__name__:
+            module.set_submodule(name, bnn_linear_layer(bnn_prior_parameters, m))
+        elif "LSTM" in m.__class__.__name__:
+            module.set_submodule(name, bnn_lstm_layer(bnn_prior_parameters, m))
+
+
+class EpicBayesianPolicy(BCTransformerPolicy):
+    """
+    Bayesian version of the TransformerPolicy.
+    """
+
+    def __init__(self, cfg, shape_meta):
+        super().__init__(cfg, shape_meta)
+        dnn_to_bnn(
+            self,
+            {
+                "prior_mu": 0.0,
+                "prior_sigma": 1.0,
+                "posterior_mu_init": 0.0,
+                "posterior_rho_init": -3.0,
+                "type": "Reparameterization",  # Flipout or Reparameterization
+                "moped_enable": False,  # True to initialize mu/sigma from the pretrained dnn weights
+                "moped_delta": 0.5,
+            }
+        )
+        self.compile(mode="reduce-overhead")
+
 
 class MyTransformerPolicy(BasePolicy):
     """
@@ -86,11 +121,13 @@ class MyTransformerPolicy(BasePolicy):
 
         self.policy_head = eval(policy_cfg.policy_head.network)(
             **policy_cfg.policy_head.loss_kwargs,
-            **policy_cfg.policy_head.network_kwargs
+            **policy_cfg.policy_head.network_kwargs,
         )
 
         self.latent_queue = []
         self.max_seq_len = policy_cfg.transformer_max_seq_len
+
+        self.compile()
 
     def temporal_encode(self, x):
         pos_emb = self.temporal_position_encoding_fn(x)
@@ -153,22 +190,26 @@ class MyTransformerPolicy(BasePolicy):
     def reset(self):
         self.latent_queue = []
 
-
     def preprocess_input(self, data, train_mode=True):
         # the data on disk has a different channel order than expected by
         # e.g. torchvision
 
         # but we don't need to permute it again
-        obs = data['obs']
+        obs = data["obs"]
 
-        if len(obs['eye_in_hand_rgb'].shape) == 5:
-            obs['eye_in_hand_rgb'] = einops.rearrange(obs['eye_in_hand_rgb'], 'b n h w c -> b n c h w').type(torch.float32)
-        if len(obs['agentview_rgb'].shape) == 5:
-            obs['agentview_rgb'] = einops.rearrange(obs['agentview_rgb'], 'b n h w c -> b n c h w').type(torch.float32)
-        obs['joint_states'] = obs['joint_states'].type(torch.float32)
-        obs['gripper_states'] = obs['gripper_states'].type(torch.float32)
-        
+        if len(obs["eye_in_hand_rgb"].shape) == 5:
+            obs["eye_in_hand_rgb"] = einops.rearrange(
+                obs["eye_in_hand_rgb"], "b n h w c -> b n c h w"
+            ).type(torch.float32)
+        if len(obs["agentview_rgb"].shape) == 5:
+            obs["agentview_rgb"] = einops.rearrange(
+                obs["agentview_rgb"], "b n h w c -> b n c h w"
+            ).type(torch.float32)
+        obs["joint_states"] = obs["joint_states"].type(torch.float32)
+        obs["gripper_states"] = obs["gripper_states"].type(torch.float32)
+
         return super().preprocess_input(data, train_mode)
+
 
 class ExtraModalityTokens(nn.Module):
     def __init__(
@@ -221,12 +262,11 @@ class ExtraModalityTokens(nn.Module):
             self.proprio_mlp = nn.Sequential(*layers)
             self.extra_encoders[modality_name] = {"encoder": self.proprio_mlp}
 
-        for (proprio_dim, use_modality, modality_name) in [
+        for proprio_dim, use_modality, modality_name in [
             (joint_states_dim, self.use_joint, "joint_states"),
             (gripper_states_dim, self.use_gripper, "gripper_states"),
             (ee_dim, self.use_ee, "ee_states"),
         ]:
-
             if use_modality:
                 generate_proprio_mlp_fn(modality_name, proprio_dim)
 
@@ -245,12 +285,11 @@ class ExtraModalityTokens(nn.Module):
         """
         tensor_list = []
 
-        for (use_modality, modality_name) in [
+        for use_modality, modality_name in [
             (self.use_joint, "joint_states"),
             (self.use_gripper, "gripper_states"),
             (self.use_ee, "ee_states"),
         ]:
-
             if use_modality:
                 tensor_list.append(
                     self.extra_encoders[modality_name]["encoder"](

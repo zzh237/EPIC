@@ -4,7 +4,7 @@ Perform EPIC updates on a Bayesian policy for lifelong learning.
 from libero.lifelong.algos.base import Sequential
 from libero.lifelong.models.base_policy import BasePolicy
 from typing import Protocol
-from epic_libero.policy import MyTransformerPolicy
+from epic_libero.policy import *
 
 
 class PolicyMaker(Protocol):
