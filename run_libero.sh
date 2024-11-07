@@ -4,7 +4,7 @@
 #$ -o joblogs/joblog.$JOB_ID
 #$ -j y
 ## Edit the line below as needed:
-#$ -l h_rt=5:00:00,h_data=8G,cuda=1,gpu
+#$ -l h_rt=5:00:00,h_data=8G,cuda=1,gpu,h_vmem=8G,RTX2080Ti
 ## Modify the parallel environment
 ## and the number of cores as needed:
 #$ -pe shared 4
