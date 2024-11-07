@@ -1,0 +1,24 @@
+defaults:
+# load root "config.yaml" from libero configs
+  - config
+
+benchmark_name: libero_10
+
+policy:
+  policy_type: EpicBayesianPolicy
+
+lifelong:
+  algo: MyLifelongAlgo
+
+train:
+  n_epochs: 25
+
+eval:
+  num_procs: 1
+  n_eval: 5
+
+hydra:
+  searchpath:
+    - pkg://libero.configs
+
+
