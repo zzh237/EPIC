@@ -51,6 +51,26 @@ class EpicBayesianPolicy(BCTransformerPolicy):
             }
         )
         self.compile(mode="reduce-overhead")
+        
+    def preprocess_input(self, data, train_mode=True):
+        # the data on disk has a different channel order than expected by
+        # e.g. torchvision
+
+        # but we don't need to permute it again
+        obs = data["obs"]
+
+        if len(obs["eye_in_hand_rgb"].shape) == 5:
+            obs["eye_in_hand_rgb"] = einops.rearrange(
+                obs["eye_in_hand_rgb"], "b n h w c -> b n c h w"
+            ).type(torch.float32)
+        if len(obs["agentview_rgb"].shape) == 5:
+            obs["agentview_rgb"] = einops.rearrange(
+                obs["agentview_rgb"], "b n h w c -> b n c h w"
+            ).type(torch.float32)
+        obs["joint_states"] = obs["joint_states"].type(torch.float32)
+        obs["gripper_states"] = obs["gripper_states"].type(torch.float32)
+
+        return super().preprocess_input(data, train_mode)
 
 
 class MyTransformerPolicy(BasePolicy):
