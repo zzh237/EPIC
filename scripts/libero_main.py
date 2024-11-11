@@ -30,12 +30,12 @@ import imageio
 from libero.libero.envs import OffScreenRenderEnv, DummyVectorEnv
 from libero.lifelong.metric import raw_obs_to_tensor_obs
 
-# hydra.initialize_config_module("libero.configs")
-# hydra_cfg = hydra.compose(config_name="config")
 @hydra.main(config_name="user_config", config_path="../libero_config", version_base=None)
 def main(hydra_cfg: DictConfig):
     yml_cfg = OmegaConf.to_yaml(hydra_cfg)
     cfg = EasyDict(yaml.safe_load(yml_cfg))
+
+    print(f"Beginning experiment run for policy: {cfg.policy.policy_type}, algorithm: {cfg.lifelong.algo}")
 
     cfg.folder = get_libero_path("datasets")
     cfg.bddl_folder = get_libero_path("bddl_files")
