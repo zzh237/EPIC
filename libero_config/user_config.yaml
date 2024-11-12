@@ -2,10 +2,12 @@ defaults:
 # load root "config.yaml" from libero configs
   - config
 
+seed: 90099
+
 benchmark_name: libero_10
 
 policy:
-  policy_type: EpicBayesianPolicy
+  policy_type: MyTransformerPolicy
 
 lifelong:
   algo: MyLifelongAlgo
