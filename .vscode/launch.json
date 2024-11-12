@@ -224,9 +224,9 @@
             "request": "launch",
             "program": "${workspaceFolder}/epic_mc_2.py",
             "args": [
-                "--model=gaussian-vpg",
+                "--model=vpg",
                 "--device=cpu",
-                "--env=jbw",
+                "--env=pendulum-toy",
                 // "--render",
                 "--meta-update-every=1"
             ],

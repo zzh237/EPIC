@@ -120,8 +120,9 @@ class VPG2(EPICModel):
             else:
                 gamma_pow *= self.discount
 
-        self.optimizer_m.zero_grad()
         policy_gradient = torch.stack(policy_gradient).sum()
+
+        self.optimizer_m.zero_grad()
         policy_gradient.backward()
         self.optimizer_m.step()
 
