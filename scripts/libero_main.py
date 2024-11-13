@@ -112,6 +112,7 @@ def main(hydra_cfg: DictConfig):
 
             torch.save(result_summary, os.path.join(cfg.experiment_dir, 'result.pt'))
     
+    print("Starting video eval")
     # single trial rollout on a new task
     env_num = 1
     task_id = n_tasks
