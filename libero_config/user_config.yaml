@@ -4,7 +4,7 @@ defaults:
 
 seed: 90099
 
-benchmark_name: libero_10
+benchmark_name: libero_spatial
 
 policy:
   policy_type: MyTransformerPolicy
@@ -13,7 +13,7 @@ lifelong:
   algo: MyLifelongAlgo
 
 train:
-  n_epochs: 25
+  n_epochs: 1
 
 eval:
   num_procs: 1
