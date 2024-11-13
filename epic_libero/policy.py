@@ -147,7 +147,7 @@ class MyTransformerPolicy(BasePolicy):
         self.latent_queue = []
         self.max_seq_len = policy_cfg.transformer_max_seq_len
 
-        self.compile()
+        self.compile(mode="reduce-overhead")
 
     def temporal_encode(self, x):
         pos_emb = self.temporal_position_encoding_fn(x)
