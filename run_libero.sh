@@ -15,4 +15,5 @@ module load gcc/11.3.0
 module load cuda/12.3
 
 source activate_pixi.sh
-time python ./scripts/libero_main.py
+export MUJOCO_EGL_DEVICE_ID="$CUDA_VISIBLE_DEVICES"
+time python ./scripts/libero_main.py "$@"
