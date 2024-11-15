@@ -7,7 +7,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 # headless rendering
 os.environ["PYOPENGL_PLATFORM"] = "egl"
-os.environ["MUJOCO_EGL_DEVICE_ID"] = "0"
+# os.environ["MUJOCO_EGL_DEVICE_ID"] = "0"
 
 import torch
 # torch.set_default_dtype(torch.float32)
@@ -50,6 +50,9 @@ class bcolors:
 def main(hydra_cfg: DictConfig):
     yml_cfg = OmegaConf.to_yaml(hydra_cfg)
     cfg = EasyDict(yaml.safe_load(yml_cfg))
+
+    if cfg.dev_mode:
+        print(bcolors.WARNING + "WARNING: Running in dev mode" + bcolors.ENDC)
 
     print(f"Beginning experiment run for policy: {cfg.policy.policy_type}, algorithm: {cfg.lifelong.algo}")
 

@@ -13,7 +13,7 @@ lifelong:
   algo: MyLifelongAlgo
 
 train:
-  n_epochs: 1
+  n_epochs: 25
 
 eval:
   num_procs: 1
