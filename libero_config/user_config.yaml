@@ -4,7 +4,7 @@ defaults:
 
 seed: 90099
 
-benchmark_name: libero_spatial
+benchmark_name: libero_10
 
 policy:
   policy_type: MyTransformerPolicy
@@ -24,3 +24,4 @@ hydra:
     - pkg://libero.configs
 
 
+dev_mode: False

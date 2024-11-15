@@ -49,6 +49,8 @@ cuda = { version = "*", channel = "nvidia/label/cuda-11.8.0" }
 torchvision = { version = "0.20.0", channel = "pytorch" }
 pytorch-cuda = { version = "11.8.*", channel = "pytorch" }
 pytorch = { version = "2.5.*", channel = "pytorch" }
+mesa-libegl-cos7-x86_64 = ">=18.3.4,<19"
+mesa-dri-drivers-cos7-x86_64 = ">=18.3.4,<19"
 
 [tool.pixi.target.osx-arm64.dependencies]
 # pytorch = {}

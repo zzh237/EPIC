@@ -4,6 +4,11 @@ Run experiments against libero
 import os
 # I think you can make this true when not debugging
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+# headless rendering
+os.environ["PYOPENGL_PLATFORM"] = "egl"
+os.environ["MUJOCO_EGL_DEVICE_ID"] = "0"
+
 import torch
 # torch.set_default_dtype(torch.float32)
 
@@ -29,6 +34,17 @@ import imageio
 
 from libero.libero.envs import OffScreenRenderEnv, DummyVectorEnv
 from libero.lifelong.metric import raw_obs_to_tensor_obs
+
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
 @hydra.main(config_name="user_config", config_path="../libero_config", version_base=None)
 def main(hydra_cfg: DictConfig):
@@ -66,12 +82,6 @@ def main(hydra_cfg: DictConfig):
     n_demos = [data.n_demos for data in datasets]
     n_sequences = [data.total_num_sequences for data in datasets]
 
-
-    # TODO determine if it is safe to do this, specifically does the algorithm use the name
-    # to reinitialize the policy
-    # cfg.policy.policy_type = "EpicBayesianPolicy"
-    # cfg.lifelong.algo = "MyLifelongAlgo"
-
     create_experiment_dir(cfg)
     cfg.shape_meta = shape_meta
 
@@ -93,7 +103,9 @@ def main(hydra_cfg: DictConfig):
     if (cfg.eval.n_eval < 20):
         print(f"NOTE: the number of evaluation episodes used in this example is intentionally reduced to {cfg.train.n_epochs} for simplicity.")
 
-    for i in trange(n_tasks):
+    # save 1 task for eval
+    n_train_tasks = (n_tasks - 1) if not cfg.dev_mode else 0
+    for i in trange(n_train_tasks):
         algo.train()
         d = datasets[i]
         s_fwd, l_fwd = algo.learn_one_task(d, i, benchmark, result_summary)
@@ -112,16 +124,16 @@ def main(hydra_cfg: DictConfig):
 
             torch.save(result_summary, os.path.join(cfg.experiment_dir, 'result.pt'))
     
-    print("Starting video eval")
+    print(bcolors.OKCYAN + "Starting video eval" + bcolors.ENDC)
     # single trial rollout on a new task
     env_num = 1
     task_id = n_tasks
-    task = benchmark.get_task(task_id)
-    task_emb = benchmark.get_task_emb(task_id)
+    task = benchmark.get_task(task_id - 1)
+    task_emb = benchmark.get_task_emb(task_id - 1)
 
     algo.eval()
     env_args = {
-        "bddl_file_name": os.path.join(cfg.bddl_folder, task.probelm_folder, task.bddl_file),
+        "bddl_file_name": os.path.join(cfg.bddl_folder, task.problem_folder, task.bddl_file),
         "camera_heights": cfg.data.img_h,
         "camera_widths": cfg.data.img_w,
     }
@@ -165,10 +177,15 @@ def main(hydra_cfg: DictConfig):
 
     images = [img[::-1] for img in obs_tensors[0]]
     fps = 30
-    writer = imageio.get_writer(os.path.join(cfg.experiment_dir, "agentview.mp4"), fps=fps)
+    outfile_name = os.path.join(cfg.experiment_dir, "agentview_eval.mp4")
+    writer = imageio.get_writer(outfile_name, fps=fps)
     for image in images:
         writer.append_data(image)
     writer.close()
+
+    print(bcolors.OKCYAN + "Video saved to: " + outfile_name + bcolors.ENDC)
+
+    env.close()
 
 
 if __name__ == "__main__":
